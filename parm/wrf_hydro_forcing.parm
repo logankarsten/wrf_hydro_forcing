@@ -1,0 +1,140 @@
+#
+# wrf_hydro_forcing_param
+#
+
+# This is a Python config file used by the WRF-Hydro_forcing.py script. 
+# WRF-Hydro_forcing.py is the forcing engine that encompasses the work 
+# flow for WRF-Hydro and acts as a wrapper to the various regridding and
+# processing scripts written in NCL. The config file is employed to avoid 
+# hard-coding input parameters and directory paths in any scripts.  This
+# is a practice that is accepted by NCEP and already employed by HWRF.
+
+
+
+#--------------------------------------------------
+# Logging levels
+#--------------------------------------------------
+
+[log_level]
+# Select one of the following logging levels to determine
+# the "verbosity" of logging.  DEBUG will be the most verbose
+# but unnecessary in a production environment.
+# forcing script logging levels are :
+#   DEBUG - detailed, useful for diagnosing problems
+#   INFO  - confirmation that things are working
+#   WARNING - something unexpected occurred or harbinger of something.
+#            code is still working as expected.
+#   ERROR - more serious problem, code cannot perform its task
+#   CRITICAL -  serious error, the code may not be able to continue running
+forcing_engine_log_level = DEBUG
+
+
+#--------------------------------------------------
+# Default environment variables
+#-------------------------------------------------
+
+[default_env_vars]
+# Probably only relevant for NCAR
+#ncarg_root = /opt/ncl
+# Use 6.3.0 so the grib tables are up-to-date for reading MRMS
+ncarg_root = /opt/ncl-6.3.0
+#-------------------------------------------------
+#   Data Directories
+#-------------------------------------------------
+
+[data_dir]
+# This section contains the directory paths for the static data
+# NOTE: This will be replaced with real-time data for Operational
+# use.  The static data is used for initial development and testing purposes.
+
+HRRR_data = /d4/hydro-dm/IOC/test/HRRR
+MRMS_data = /d4/hydro-dm/IOC/test/MRMS/
+#NAM_data = /d4/hydro-dm/IOC/test/NAM218
+# NAM227 as directed by NCEP
+NAM_data = /d4/hydro-dm/IOC/data/nam227
+GFS_data = /d4/hydro-dm/IOC/data/GFS_0.25
+
+#-------------------------------------------------
+#    Output Directories
+#-------------------------------------------------
+
+[output_dir]
+HRRR_output_dir = /d4/hydro-dm/IOC/regridded/HRRR
+MRMS_output_dir = /d4/hydro-dm/IOC/regridded/MRMS
+NAM_output_dir = /d4/hydro-dm/IOC/regridded/NAM
+GFS_output_dir = /d4/hydro-dm/IOC/regridded/GFS
+
+
+#-------------------------------------------------
+#    Paths to executables and other scripts
+#-------------------------------------------------
+
+[exe]
+# ESMF, NCL
+esmf_exe=/usr/local/esmf
+#ncl_exe = /opt/ncl/bin/ncl
+# Use version 6.3.0 for latest grib tables
+ncl_exe = /opt/ncl-6.3.0/bin/ncl
+
+# Regridding
+#HRRR_regridding_exe = /d4/hydro-dm/IOC/code/HRRR-2-WRF_Hydro_ESMF_regrid.ncl
+HRRR_regridding_exe = ./HRRR-2-WRF_Hydro_ESMF_regrid.ncl
+#MRMS_regridding_exe = /d4/hydro-dm/IOC/code/MRMS-2-WRF_Hydro_ESMF_regrid.ncl
+MRMS_regridding_exe = ./MRMS-2-WRF_Hydro_ESMF_regrid.ncl
+#NAM_regridding_exe =  /d4/hydro-dm/IOC/code/NAM-2-WRF_Hydro_ESMF_regrid.ncl
+NAM_regridding_exe =  ./NAM-2-WRF_Hydro_ESMF_regrid.ncl
+GFS_regridding_exe = ./GFS2Hydro_forcing_ESMFregrid.ncl
+
+# Downscaling
+#HRRR_downscaling_exe = /d4/hydro-dm/IOC/code/HRRR-2-WRF_Hydro_downscale.ncl
+HRRR_downscaling_exe = ./HRRR-2-WRF_Hydro_downscale.ncl
+#NAM_downscaling_exe = /d4/hydro-dm/IOC/code/NAM-2-WRF_Hydro_downscale.ncl
+NAM_downscaling_exe = ./NAM-2-WRF_Hydro_downscale.ncl
+
+
+#-------------------------------------------------
+#    Parameters needed to run regridding scripts
+#-------------------------------------------------
+
+[regridding]
+# This is common to all data for regridding
+dst_grid_name = /d4/hydro-dm/IOC/data/geo_dst.nc
+
+#HRRR-specific
+HRRR_wgt_bilinear  = /d4/hydro-dm/IOC/weighting/HRRR1km/HRRR2HYDRO_d01_weight_bilinear.nc
+
+#MRMS-specific
+MRMS_wgt_bilinear =  /d4/hydro-dm/IOC/weighting/RADAR_GAUGE1km/RADAR2HYDRO_d01_weight_bilinear.nc
+
+#NAM-specific
+#Currently for NAM227, as required by NCEP.
+NAM_wgt_bilinear  = /d4/hydro-dm/IOC/weighting/NAM227/NAM2HYDRO_d01_weight_bilinear.nc
+
+#GFS-specific
+#For GFS_0.25 data
+GFS_wgt_bilinear = /d4/hydro-dm/IOC/weighting/GFS_0.25/GFS2HYDRO_d01_weight_bilinear.nc
+
+#-------------------------------------------------
+#    Parameters needed to run downscaling scripts
+#
+#    NOTE:  MRMS does NOT require downscaling
+#-------------------------------------------------
+
+[downscaling]
+
+# Common to all products for downscaling
+lapse_rate_file = /d4/hydro-dm/IOC/weighting/NARRlapse1km.nc
+
+
+# HRRR
+HRRR_data_to_downscale = /d4/hydro-dm/IOC/regridded/HRRR
+HRRR_hgt_data = /d4/hydro-dm/IOC/weighting/HRRR1km/HRRRhgt.nc
+HRRR_geo_data = /d4/hydro-dm/IOC/weighting/HRRR1km/geo_dst.nc
+HRRR_downscale_output_dir = /d4/hydro-dm/IOC/downscaled/HRRR
+
+# NAM 
+# Currently, this is NAM227, as required by NCEP
+NAM_data_to_downscale = /d4/hydro-dm/IOC/regridded/NAM
+NAM_hgt_data = /d4/hydro-dm/IOC/weighting/NAM1km/NAMhgt.nc
+NAM_geo_data = /d4/hydro-dm/IOC/weighting/NAM1km/geo_dst.nc
+NAM_downscale_output_dir = /d4/hydro-dm/IOC/downscaled/NAM
