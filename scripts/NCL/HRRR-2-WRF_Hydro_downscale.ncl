@@ -48,6 +48,11 @@ begin
            T2D  = f3->T2D
            Q2D  = f3->Q2D
 	   PSFC = f3->PSFC
+           U2D  = f3->U2D
+           V2D  = f3->V2D
+           RAINRATE = f3->RAINRATE
+           LWDOWN = f3->LWDOWN
+           SWDOWN = f3->SWDOWN
 ; calculation 
 	   W2D  = Q2D/(1-Q2D)
 	   RH = relhum(T2D,W2D,PSFC)
@@ -57,9 +62,16 @@ begin
 	   PSFC = PSFC+DHGT*PSFC/287.05/T2D*9.8
 	   Q2D = mixhum_ptrh (PSFC/100., T2D, RH, 2) 
 ; output
+; include the other variables: LWDOWN, RAINRATE,
+; U2D, and V2D
            fout->T2D  = T2D
            fout->Q2D  = Q2D
+           fout->U2D  = U2D
+           fout->V2D  = V2D
            fout->PSFC = PSFC 
+           fout->RAINRATE = RAINRATE
+           fout->SWDOWN = SWDOWN
+           fout->LWDOWN = LWDOWN
 	   delete(T2D)
 ;
 
