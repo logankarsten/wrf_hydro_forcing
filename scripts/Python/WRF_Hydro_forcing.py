@@ -2,8 +2,6 @@ import os
 import errno
 import logging
 import re
-import datetime
-import calendar
 import time
 import numpy as np
 from ConfigParser import SafeConfigParser
@@ -33,7 +31,7 @@ def regrid_data( product_name, parser ):
     HRRR-2-WRF_Hydro_ESMF_forcing.ncl script is invoked.
     For MRMS data MRMS-2-WRF_Hydro_ESMF_forcing.ncl is invoked.
     Finally, for NAM212 data, NAM-2-WRF_Hydro_ESMF_forcing.ncl 
-    is invoked.  All product files (HRRR, MRMS, NAM, etc.) are
+    is invoked.  All product files (HRRR, MRMS, NAM, RAP etc.) are
     retrieved and stored in a list. The appropriate regridding
     script is invoked for each file in the list.  The regridded
     files are stored in an output directory defined in the
@@ -99,6 +97,16 @@ def regrid_data( product_name, parser ):
        #Values needed for running the regridding script
        wgt_file = parser.get('regridding','GFS_wgt_bilinear')
        output_dir_root = parser.get('output_dir','GFS_output_dir')
+    elif product == 'RAP':
+       logging.info("Regridding RAP")
+       wgt_file = parser.get('regridding', 'RAP_wgt_bilinear')
+       data_dir =  parser.get('data_dir', 'RAP_data')
+       regridding_exec = parser.get('exe', 'RAP_regridding_exe')
+       data_files_to_process = get_filepaths(data_dir)
+       #Values needed for running the regridding script
+       wgt_file = parser.get('regridding','RAP_wgt_bilinear')
+       output_dir_root = parser.get('output_dir','RAP_output_dir')
+
 
 
     # For each file in the data directory,
@@ -123,15 +131,15 @@ def regrid_data( product_name, parser ):
 
         # Create the output filename following the RAL 
         # naming convention: 
-        (subdir_file_path,hydro_filename) = create_output_name_and_subdir(product,data_file_to_process, 
-                                         data_dir)
+        (subdir_file_path,hydro_filename) = create_output_name_and_subdir(product,data_file_to_process, data_dir)
    
         # Create the full path to the output directory and assigning
         # this to the output directory parameter. 
         output_file_dir = output_dir_root + "/" + subdir_file_path
         outdir_param = "'outdir=" + '"' + output_file_dir + '"' + "' " 
 
-        if product == "HRRR" or product == "NAM" or product == "GFS":
+        if product == "HRRR" or product == "NAM" \
+           or product == "GFS" or product == "RAP":
            full_output_file = output_file_dir + "/"  + subdir_file_path
            logging.info("Full output filename for %s: %s", product, full_output_file)
            # Create the new output file subdirectory
@@ -250,7 +258,8 @@ def create_output_name_and_subdir(product, filename, input_data_file):
     # comparison.
     product_name = product.upper() 
 
-    if product == 'HRRR' or product == 'GFS' or product == "NAM":
+    if product == 'HRRR' or product == 'GFS' \
+       or product == "NAM" or product == 'RAP':
         match = re.match(r'.*([0-9]{8})_(i[0-9]{2})_(f[0-9]{2,4})',filename)
         if match:
             year_month_day = match.group(1)
@@ -349,6 +358,7 @@ def downscale_data(product_name, parser):
     # Create an array to store the elapsed times for
     # downscaling each file.
     elapsed_array = []
+    downscale_exe = parser.get('exe', 'downscaling_exe')
 
     if product  == 'HRRR':
         logging.info("Downscaling HRRR")
@@ -356,14 +366,25 @@ def downscale_data(product_name, parser):
         hgt_data_file = parser.get('downscaling','HRRR_hgt_data')
         geo_data_file = parser.get('downscaling','HRRR_geo_data')
         downscale_output_dir = parser.get('downscaling', 'HRRR_downscale_output_dir')
-        downscale_exe = parser.get('exe', 'HRRR_downscaling_exe')
     elif product == 'NAM':
         logging.info("Downscaling NAM")
         data_to_downscale_dir = parser.get('downscaling','NAM_data_to_downscale')
         hgt_data_file = parser.get('downscaling','NAM_hgt_data')
         geo_data_file = parser.get('downscaling','NAM_geo_data')
         downscale_output_dir = parser.get('downscaling', 'NAM_downscale_output_dir')
-        downscale_exe = parser.get('exe', 'NAM_downscaling_exe')
+    elif product == 'GFS':
+        logging.info("Downscaling GFS")
+        data_to_downscale_dir = parser.get('downscaling','GFS_data_to_downscale')
+        hgt_data_file = parser.get('downscaling','GFS_hgt_data')
+        geo_data_file = parser.get('downscaling','GFS_geo_data')
+        downscale_output_dir = parser.get('downscaling', 'GFS_downscale_output_dir')
+    elif product == 'RAP':
+        logging.info("Downscaling RAP")
+        data_to_downscale_dir = parser.get('downscaling','RAP_data_to_downscale')
+        hgt_data_file = parser.get('downscaling','RAP_hgt_data')
+        geo_data_file = parser.get('downscaling','RAP_geo_data')
+        downscale_output_dir = parser.get('downscaling', 'RAP_downscale_output_dir')
+  
   
     
     # Get the data to downscale, and for each file, call the 
@@ -409,7 +430,7 @@ def downscale_data(product_name, parser):
         end = time.time()
         elapsed = end - start
         elapsed_array.append(elapsed)
-        logging.info("*Benchmark* Time to regrid %s= %s secs", product_name, elapsed)
+        #logging.info("*Benchmark* Time to regrid %s= %s secs", product_name, elapsed)
     
         if return_value != 0:
             logging.info('ERROR: The downscaling of %s was unsuccessful, \
@@ -449,11 +470,13 @@ def create_benchmark_summary(product, activity, elapsed_times):
     min_time = np.min(elapsed_array)
     max_time = np.max(elapsed_array)
     avg_time = np.mean(elapsed_array)
+    med_time = np.median(elapsed_array) 
 
     logging.info("=========================================")
     logging.info("SUMMARY for %s %s ", activity,product) 
     logging.info("=========================================")
     logging.info("Average elapsed time (sec): %s", avg_time)
+    logging.info("Median elapsed time (sec): %s", med_time)
     logging.info("Min elapsed time (sec): %s ", min_time)
     logging.info("Max elapsedtime (sec): %s ", max_time)
     
@@ -464,6 +487,9 @@ if __name__ == "__main__":
     # Parse the config/parm file 
     parser = SafeConfigParser()
     parser.read('wrf_hydro_forcing.parm')
+    
+    # Identify which product to process: HRRR, MRMS, GFS, etc.
+    product = "GFS"   
 
     # From the config/parm file, get any relevant executables...
     ncl_exec = parser.get('exe', 'ncl_exe')
@@ -488,8 +514,9 @@ if __name__ == "__main__":
  
  
     # Configure the log file format to include a timestamp
+    logging_filename = product + "_forcing.log" 
     logging.basicConfig(format='%(asctime)s %(message)s', 
-                        filename="hrrr-ds.log", level=set_level)
+                        filename=logging_filename, level=set_level)
      
  
     # Check for the NCARG_ROOT environment variable. If it is not set,
@@ -497,8 +524,10 @@ if __name__ == "__main__":
     ncarg_root_found = os.getenv("NCARG_ROOT")
     if ncarg_root_found is None:
         ncarg_root = os.environ["NCARG_ROOT"] = ncarg_root
-    product = "HRRR"   
+    #elapsed_time_array = regrid_data(product,parser)
+    #create_benchmark_summary(product,"Regridded", elapsed_time_array)
     elapsed_time_array = downscale_data(product,parser)
+    logging.info("elapsed time array size: %s", len(elapsed_time_array)
     create_benchmark_summary(product,"Downscaled", elapsed_time_array)
 
     
