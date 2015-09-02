@@ -1,8 +1,7 @@
-import Test as whf
+import WRF_Hydro_forcing as whf
 import logging
 import os
 from ConfigParser import SafeConfigParser
-#import WRF-Hydro_forcing
 
 #----------------------------------------------
 
