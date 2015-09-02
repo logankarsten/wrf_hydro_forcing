@@ -3,11 +3,20 @@ import logging
 import os
 from ConfigParser import SafeConfigParser
 
+"""Analysis_Assimilation_Forcing
+Performs the regridding and downscaling 
+associated with the Analysis and Assimilation
+forcing configuration.  Uses methods in the
+WRF_Hydro_forcing module and input parameters
+that are defined in the wrf_hydro_forcing.parm
+parameter/configuration file.
+"""
+
 #----------------------------------------------
 
 if __name__ == "__main__":
     parser = SafeConfigParser()
-    parser.read('test.parm')
+    parser.read('wrf_hydro_forcing.parm')
 
     ncl_exec = parser.get('exe', 'ncl_exe')
     ncarg_root = parser.get('default_env_vars', 'ncarg_root')
@@ -33,26 +42,26 @@ if __name__ == "__main__":
     else:
         set_level = logging.CRITICAL
 
-    logging_filename = forcing_config_label + ".log" 
+    logging_filename =  forcing_config_label + ".log" 
     logging.basicConfig(format='%(asctime)s %(message)s',
                          filename=logging_filename, level=set_level)
 
     # Regrid the MRMS, NAM, and HRRR data.
-    MRMS_regrids = whf.regrid_data("MRMS",parser)     
+#    MRMS_regrids = whf.regrid_data("MRMS",parser)     
     NAM_regrids = whf.regrid_data("NAM", parser)
-    HRRR_regrids = whf.regrid_data("HRRR", parser)
+#    HRRR_regrids = whf.regrid_data("HRRR", parser)
     
     # Downscale the NAM and HRRR data; the MRMS data does not require
     # downscaling. 
     NAM_downscalings = whf.downscale_data("NAM",parser)
-    HRRR_downscalings = whf.downscale_data("HRRR", parser)
+#    HRRR_downscalings = whf.downscale_data("HRRR", parser)
    
     # Generate the metrics for regridding and downscaling and write to the
     # logfile, which by default is saved to the directory from which this
     # 
-    whf.create_benchmark("MRMS","Regridding", MRMS_regrids)
-    whf.create_benchmark("MRMS","Downscaling", MRMS_downscalings)
-    whf.create_benchmark("NAM","Regridding", NAM_regrids)
+#    whf.create_benchmark("MRMS","Regridding", MRMS_regrids)
+#    whf.create_benchmark("MRMS","Downscaling", MRMS_downscalings)
+#    whf.create_benchmark("NAM","Regridding", NAM_regrids)
     whf.create_benchmark("NAM","Downscaling", NAM_downscalings)
-    whf.create_benchmark("HRRR","Regridding", HRRR_regrids)
-    whf.create_benchmark("HRRR","Downscaling", HRRR_downscalings)
+#    whf.create_benchmark("HRRR","Regridding", HRRR_regrids)
+#    whf.create_benchmark("HRRR","Downscaling", HRRR_downscalings)
