@@ -136,26 +136,29 @@ topo_adj_fortran_exe = /d4/hydro-dm/IOC/code/topo_adjf90.so
 #-------------------------------------------------
 
 [regridding]
-# This is common to all data for regridding
-dst_grid_name = /d4/hydro-dm/IOC/data/geo_dst.nc
 
 #HRRR-specific
 HRRR_wgt_bilinear  = /d4/hydro-dm/IOC/weighting/HRRR1km/HRRR2HYDRO_d01_weight_bilinear.nc
+dst_grid_name = /d4/hydro-dm/IOC/weighting/HRRR1km/geo_dst.nc
 
 #MRMS-specific
 MRMS_wgt_bilinear =  /d4/hydro-dm/IOC/weighting/RADAR_GAUGE1km/RADAR2HYDRO_d01_weight_bilinear.nc
+dst_grid_name = /d4/hydro-dm/IOC/weighting/RADAR_GAUGE1km/geo_dst.nc
 
 #NAM-specific
 #Currently for NAM227, as required by NCEP.
 NAM_wgt_bilinear  = /d4/hydro-dm/IOC/weighting/NAM227/NAM2HYDRO_d01_weight_bilinear.nc
+dst_grid_name = /d4/hydro-dm/IOC/weighting/NAM227/geo_dst.nc
 
 #GFS-specific
 #For GFS_0.25 data
 GFS_wgt_bilinear = /d4/hydro-dm/IOC/weighting/GFS1km_25/GFS2HYDRO_d01_weight_bilinear.nc
+dst_grid_name = /d4/hydro-dm/IOC/weighting/GFS1km_25/geo_dst.nc
 
 
 #RAP-specific
 RAP_wgt_bilinear = /d4/hydro-dm/IOC/weighting/RAP1km/RAP2HYDRO_d01_weight_bilinear.nc
+dst_grid_name = /d4/hydro-dm/IOC/weighting/RAP1km/geo_dst.nc
 
 #-------------------------------------------------
 #    Parameters needed to run downscaling scripts
