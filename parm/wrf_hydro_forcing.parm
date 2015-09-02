@@ -27,6 +27,7 @@
 #   ERROR - more serious problem, code cannot perform its task
 #   CRITICAL -  serious error, the code may not be able to continue running
 forcing_engine_log_level = DEBUG
+output_log_directory = "/tmp"
 
 
 #--------------------------------------------------
@@ -38,6 +39,7 @@ forcing_engine_log_level = DEBUG
 #ncarg_root = /opt/ncl
 # Use 6.3.0 so the grib tables are up-to-date for reading MRMS
 ncarg_root = /opt/ncl-6.3.0
+
 #-------------------------------------------------
 #   Data Directories
 #-------------------------------------------------
@@ -53,16 +55,48 @@ MRMS_data = /d4/hydro-dm/IOC/test/MRMS/
 # NAM227 as directed by NCEP
 NAM_data = /d4/hydro-dm/IOC/data/nam227
 GFS_data = /d4/hydro-dm/IOC/data/GFS_0.25
+RAP_data = /d4/hydro-dm/IOC/data/RAP
+
+#-------------------------------------------------
+#   Data Sub-categories
+#-------------------------------------------------
+
+[data_sub_category]
+# To differentiate different sub-categories of data e.g.
+# NAM281 vs. NAM227 vs NAM212, this will manifest
+# itself in the output directory structure.  Now 
+# you can run the a forcing engine configuration 
+# for two different model subcategories and the 
+# data will be in separate subdirectories.
+# To run a forcing engine with a different 
+# data subcategory, simply replace the value
+# below with the subcategory of interest.  
+# For instance, if you already ran the
+# Analysis and Assimilation forcing configuration
+# using NAM227 but want to run it again using
+# NAM212, simply replace the 227 with 212 and
+# re-run the forcing engine.  The NAM227 output
+# will be saved to a <root>/NAM/NAM227 directory,
+# and the NAM212 output will be saved to a
+# <root>/NAM/NAM212 directory.
+
+NAM_subcategory = 227
+GFS_subcategory = 0.25
+HRRR_subcategory = None
+MRMS_subcategory = None
+RAP_subcategory = None
+
 
 #-------------------------------------------------
 #    Output Directories
 #-------------------------------------------------
 
 [output_dir]
-HRRR_output_dir = /d4/hydro-dm/IOC/regridded/HRRR
-MRMS_output_dir = /d4/hydro-dm/IOC/regridded/MRMS
-NAM_output_dir = /d4/hydro-dm/IOC/regridded/NAM
-GFS_output_dir = /d4/hydro-dm/IOC/regridded/GFS
+HRRR_output_dir = /d6/forcing_test/regridded/HRRR
+MRMS_output_dir = /d6/forcing_test/regridded/MRMS
+NAM_output_dir = /d6/forcing_test/regridded/NAM
+GFS_output_dir = /d6/forcing_test/regridded/GFS
+RAP_output_dir = /d6/forcing_test/regridded/RAP
 
 
 #-------------------------------------------------
@@ -84,12 +118,17 @@ MRMS_regridding_exe = ./MRMS-2-WRF_Hydro_ESMF_regrid.ncl
 #NAM_regridding_exe =  /d4/hydro-dm/IOC/code/NAM-2-WRF_Hydro_ESMF_regrid.ncl
 NAM_regridding_exe =  ./NAM-2-WRF_Hydro_ESMF_regrid.ncl
 GFS_regridding_exe = ./GFS2Hydro_forcing_ESMFregrid.ncl
+RAP_regridding_exe = ./RAP-2-WRF_Hydro_ESMF_regrid.ncl
 
 # Downscaling
-#HRRR_downscaling_exe = /d4/hydro-dm/IOC/code/HRRR-2-WRF_Hydro_downscale.ncl
-HRRR_downscaling_exe = ./HRRR-2-WRF_Hydro_downscale.ncl
-#NAM_downscaling_exe = /d4/hydro-dm/IOC/code/NAM-2-WRF_Hydro_downscale.ncl
-NAM_downscaling_exe = ./NAM-2-WRF_Hydro_downscale.ncl
+# Use the same downscaling script for all products; the hgt file, geo file, and
+# input file (data to downscale) are the only input and these are all defined in 
+# this config file.
+HRRR_downscaling_exe = ./WRF_Hydro_downscale.ncl
+NAM_downscaling_exe = ./WRF_Hydro_downscale.ncl
+GFS_downscaling_exe = ./WRF_Hydro_downscale.ncl
+RAP_downscaling_exe = ./RAP-2-WRF_Hydro_downscale.ncl
+topo_adj_fortran_exe = /d4/hydro-dm/IOC/code/topo_adjf90.so
 
 
 #-------------------------------------------------
@@ -112,7 +151,11 @@ NAM_wgt_bilinear  = /d4/hydro-dm/IOC/weighting/NAM227/NAM2HYDRO_d01_weight_bilin
 
 #GFS-specific
 #For GFS_0.25 data
-GFS_wgt_bilinear = /d4/hydro-dm/IOC/weighting/GFS_0.25/GFS2HYDRO_d01_weight_bilinear.nc
+GFS_wgt_bilinear = /d4/hydro-dm/IOC/weighting/GFS1km_25/GFS2HYDRO_d01_weight_bilinear.nc
+
+
+#RAP-specific
+RAP_wgt_bilinear = /d4/hydro-dm/IOC/weighting/RAP1km/RAP2HYDRO_d01_weight_bilinear.nc
 
 #-------------------------------------------------
 #    Parameters needed to run downscaling scripts
@@ -127,14 +170,29 @@ lapse_rate_file = /d4/hydro-dm/IOC/weighting/NARRlapse1km.nc
 
 
 # HRRR
-HRRR_data_to_downscale = /d4/hydro-dm/IOC/regridded/HRRR
+HRRR_data_to_downscale = /d6/forcing_test/regridded/HRRR
 HRRR_hgt_data = /d4/hydro-dm/IOC/weighting/HRRR1km/HRRRhgt.nc
 HRRR_geo_data = /d4/hydro-dm/IOC/weighting/HRRR1km/geo_dst.nc
 HRRR_downscale_output_dir = /d4/hydro-dm/IOC/downscaled/HRRR
 
 # NAM 
 # Currently, this is NAM227, as required by NCEP
-NAM_data_to_downscale = /d4/hydro-dm/IOC/regridded/NAM
+NAM_data_to_downscale = /d6/forcing_test/regridded/NAM
 NAM_hgt_data = /d4/hydro-dm/IOC/weighting/NAM1km/NAMhgt.nc
 NAM_geo_data = /d4/hydro-dm/IOC/weighting/NAM1km/geo_dst.nc
 NAM_downscale_output_dir = /d4/hydro-dm/IOC/downscaled/NAM
+
+# GFS 
+# Currently GFS 0.25 degree data
+GFS_data_to_downscale = /d4/hydro-dm/IOC/regridded/GFS
+GFS_hgt_data = /d4/hydro-dm/IOC/weighting/GFS1km_25/GFShgt.nc
+GFS_geo_data = /d4/hydro-dm/IOC/weighting/GFS1km_25/geo_dst.nc
+GFS_downscale_output_dir = /d4/hydro-dm/IOC/downscaled/GFS
+
+
+# RAP
+RAP_data_to_downscale = /d4/hydro-dm/IOC/regridded/RAP
+RAP_hgt_data = /d4/hydro-dm/IOC/weighting/RAP1km/RAPhgt.nc
+RAP_geo_data = /d4/hydro-dm/IOC/weighting/RAP1km/geo_dst.nc
+RAP_downscale_output_dir = /d4/hydro-dm/IOC/downscaled/RAP
+
