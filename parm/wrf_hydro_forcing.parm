@@ -55,7 +55,7 @@ MRMS_data = /d4/hydro-dm/IOC/test/MRMS/
 # NAM227 as directed by NCEP
 NAM_data = /d4/hydro-dm/IOC/data/nam227
 GFS_data = /d4/hydro-dm/IOC/data/GFS_0.25
-RAP_data = /d4/hydro-dm/IOC/data/RAP
+RAP_data = /d4/hydro-dm/IOC/data/RAP1km
 
 #-------------------------------------------------
 #   Data Sub-categories
@@ -66,8 +66,8 @@ RAP_data = /d4/hydro-dm/IOC/data/RAP
 # NAM281 vs. NAM227 vs NAM212, this will manifest
 # itself in the output directory structure.  Now 
 # you can run the a forcing engine configuration 
-# for two different model subcategories and the 
-# data will be in separate subdirectories.
+# for two different model subcategories and the finished
+# data will be stored in separate subdirectories.
 # To run a forcing engine with a different 
 # data subcategory, simply replace the value
 # below with the subcategory of interest.  
@@ -80,6 +80,8 @@ RAP_data = /d4/hydro-dm/IOC/data/RAP
 # and the NAM212 output will be saved to a
 # <root>/NAM/NAM212 directory.
 
+
+#Indicate no category with None.
 NAM_subcategory = 227
 GFS_subcategory = 0.25
 HRRR_subcategory = None
@@ -95,6 +97,7 @@ RAP_subcategory = None
 HRRR_output_dir = /d6/forcing_test/regridded/HRRR
 MRMS_output_dir = /d6/forcing_test/regridded/MRMS
 NAM_output_dir = /d6/forcing_test/regridded/NAM
+#GFS_output_dir = /d4/hydro-dm/IOC/regridded/GFS
 GFS_output_dir = /d6/forcing_test/regridded/GFS
 RAP_output_dir = /d6/forcing_test/regridded/RAP
 
@@ -121,14 +124,16 @@ GFS_regridding_exe = ./GFS2Hydro_forcing_ESMFregrid.ncl
 RAP_regridding_exe = ./RAP-2-WRF_Hydro_ESMF_regrid.ncl
 
 # Downscaling
-# Use the same downscaling script for all products; the hgt file, geo file, and
+# Use the same downscaling script for all products. The hgt file, geo file, and
 # input file (data to downscale) are the only input and these are all defined in 
 # this config file.
-HRRR_downscaling_exe = ./WRF_Hydro_downscale.ncl
-NAM_downscaling_exe = ./WRF_Hydro_downscale.ncl
-GFS_downscaling_exe = ./WRF_Hydro_downscale.ncl
-RAP_downscaling_exe = ./RAP-2-WRF_Hydro_downscale.ncl
+HRRR_downscaling_exe = ./All_WRF_Hydro_downscale.ncl
+NAM_downscaling_exe = ./All_WRF_Hydro_downscale.ncl
+GFS_downscaling_exe = ./All_WRF_Hydro_downscale.ncl
+RAP_downscaling_exe = ./All_WRF_Hydro_downscale.ncl
 topo_adj_fortran_exe = /d4/hydro-dm/IOC/code/topo_adjf90.so
+#topo_adj_exe = /d4/hydro-dm/IOC/code/topo_adj.ncl
+shortwave_downscaling_exe = ./topo_adj.ncl
 
 
 #-------------------------------------------------
@@ -187,14 +192,17 @@ NAM_downscale_output_dir = /d4/hydro-dm/IOC/downscaled/NAM
 
 # GFS 
 # Currently GFS 0.25 degree data
-GFS_data_to_downscale = /d4/hydro-dm/IOC/regridded/GFS
+#GFS_data_to_downscale = /d4/hydro-dm/IOC/regridded/GFS
+GFS_data_to_downscale = /d6/forcing_test/regridded/GFS
 GFS_hgt_data = /d4/hydro-dm/IOC/weighting/GFS1km_25/GFShgt.nc
 GFS_geo_data = /d4/hydro-dm/IOC/weighting/GFS1km_25/geo_dst.nc
-GFS_downscale_output_dir = /d4/hydro-dm/IOC/downscaled/GFS
+#GFS_downscale_output_dir = /d4/hydro-dm/IOC/downscaled/GFS
+GFS_downscale_output_dir = /d6/forcing_test/downscaled/GFS
 
 
 # RAP
-RAP_data_to_downscale = /d4/hydro-dm/IOC/regridded/RAP
+#RAP_data_to_downscale = /d4/hydro-dm/IOC/regridded/RAP
+RAP_data_to_downscale = /d6/forcing_test/regridded/RAP
 RAP_hgt_data = /d4/hydro-dm/IOC/weighting/RAP1km/RAPhgt.nc
 RAP_geo_data = /d4/hydro-dm/IOC/weighting/RAP1km/geo_dst.nc
 RAP_downscale_output_dir = /d4/hydro-dm/IOC/downscaled/RAP
