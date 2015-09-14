@@ -6,8 +6,12 @@ This repository contains all scripts (NCL, Python) used in the WRF-Hydro forcing
     Long Range Forcing
     Retrospective Forcing
     
-USAGE:
-Check out the regridding and downscaling scripts from the scripts/NCL directory, the WRF-Hydro forcing engine, WRF-Hydro_forcing.py from the scripts/Python directory, and the config/parm file wrf_hydro_forcing.parm from the parm directory.  Indicate the directory where your input data is located, where you wish the output data to reside, and where the regridding and downscaling scripts are located.  In the main section of the <forcing config>.py, indicate your logging level, the name of your logging file, the product to process, the location of the weighting files, and indicate which action you wish to perform (ie regridding, downscaling).  To run, do the following at the command line:
+How to run:
+1) Check out the regridding and downscaling scripts from the scripts/NCL directory.
+2) Check out the WRF-Hydro forcing engine, WRF-Hydro_forcing.py from the scripts/Python directory.
+3) Check out the config/parm file wrf_hydro_forcing.parm from the parm directory.  
+4) In the wrf_hydro_forcing.parm file, indicate things such as: a)the directory where your input data is located, b) where you wish the output data to reside, and c) the location of the regridding and downscaling scripts.  
+5) In the main section of the <forcing config>.py, indicate information such as your logging level, the name of your logging file, the product to process, the location of the weighting files, and indicate which action you wish to perform (ie regridding, downscaling).  To run, do the following at the command line:
 
     python <forcing config name>.py
     
