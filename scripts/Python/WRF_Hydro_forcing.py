@@ -109,11 +109,12 @@ def regrid_data( product_name, parser ):
     # generate the key-value pairs for 
     # input to the regridding script.
     # The key-value pairs for the input should look like: 
-    #    'srcfilename="/d4/hydro-dm/IOC/data/HRRR/20150723_i23_f010_HRRR.grb2"' 
-    #    'wgtFileName_in = "/d4/hydro-dm/IOC/weighting/HRRR1km/HRRR2HYDRO_d01_weight_bilinear.nc"'
-    #    'dstGridName="/d4/hydro-dm/IOC/data/geo_dst.nc"' 
-    #    'outdir="/d4/hydro-dm/IOC/regridded/HRRR/20150723/i09"'
-    #    'outFile="20150724_i09_f010_HRRR.nc"' 
+    #  'srcfilename="/d4/hydro-dm/IOC/data/HRRR/20150723_i23_f010_HRRR.grb2"' 
+    #  'wgtFileName_in=
+    #     "d4/hydro-dm/IOC/weighting/HRRR1km/HRRR2HYDRO_d01_weight_bilinear.nc"'
+    #  'dstGridName="/d4/hydro-dm/IOC/data/geo_dst.nc"' 
+    #  'outdir="/d4/hydro-dm/IOC/regridded/HRRR/20150723/i09"'
+    #  'outFile="20150724_i09_f010_HRRR.nc"' 
 
     for data_file_to_process in data_files_to_process:
         #input_filename = data_dir + '/' + data_file_to_process
@@ -127,28 +128,29 @@ def regrid_data( product_name, parser ):
 
         # Create the output filename following the RAL 
         # naming convention: 
-        (subdir_file_path,hydro_filename) = create_output_name_and_subdir(product,data_file_to_process, data_dir)
+        (subdir_file_path,hydro_filename) = \
+            create_output_name_and_subdir(product,data_file_to_process,data_dir)
    
-        # Create the full path to the output directory and assigning
-        # this to the output directory parameter. 
+        #logging.info("hydro filename: %s", hydro_filename)
+        # Create the full path to the output directory
+        # and assign it to the output directory parameter
         output_file_dir = output_dir_root + "/" + subdir_file_path
         outdir_param = "'outdir=" + '"' + output_file_dir + '"' + "' " 
+        #logging.info("outdir_param: %s", outdir_param)
 
         if product == "HRRR" or product == "NAM" \
            or product == "GFS" or product == "RAP":
-           full_output_file = output_file_dir + "/"  + subdir_file_path
-           #logging.info("Full output filename for %s: %s", product, full_output_file)
+           #full_output_file = output_file_dir + "/"  + subdir_file_path
+           full_output_file = output_file_dir + "/"  
            # Create the new output file subdirectory
            mkdir_p(output_file_dir)
            outFile_param = "'outFile=" + '"' + hydro_filename+ '"' + "' "
-           
         elif product == "MRMS":
            # !!!!!!NOTE!!!!!
            # MRMS regridding script differs from the HRRR and NAM scripts in that it does not
            # accept an outdir variable.  Incorporate the output directory (outdir)
            # into the outFile variable.
            full_output_file = output_file_dir + "/"  + hydro_filename
-           #logging.info("Full output filename for %s: %s", product, full_output_file)
            mkdir_p(output_file_dir)
            outFile_param = "'outFile=" + '"' + full_output_file + '"' + "' "
    
@@ -158,7 +160,7 @@ def regrid_data( product_name, parser ):
         regrid_prod_cmd = ncl_exec + " "  + regrid_params + " " + \
                           regridding_exec
         
-        #logging.debug("regridding command: %s",regrid_prod_cmd)
+        logging.debug("regridding command: %s",regrid_prod_cmd)
         # Measure how long it takes to run the NCL script for regridding.
         start_NCL_regridding = time.time()
         return_value = os.system(regrid_prod_cmd)
@@ -302,12 +304,6 @@ def mkdir_p(dir):
                  exist.
 
     """
-    #logging.info("Directory to be made: %s",dir)
-#    if not os.path.exists(os.path.dirname(dir)):
-#       logging.info("inside mkdir_p...creating directory: %s", dir)
-#       os.makedirs(os.path.dirname(dir))
-#    else:
-#       logging.info("Directory path %s already exists", dir)
     try:
        os.makedirs(dir)
     except OSError as exc:
@@ -316,10 +312,19 @@ def mkdir_p(dir):
         else: raise            
 
 
-def downscale_data(product_name, parser, shortwave=False):
+def downscale_data(product_name, parser, downscale_shortwave=False):
     """
     Performs downscaling of data by calling the necessary
-    NCL or Fortran code.  
+    NCL code (specific to the model/product).  There is an
+    additional option to downscale the short wave radiation, SWDOWN.  
+    If downscaling SWDOWN (shortwave radiation) is requested  
+    then a second NCL script is invoked (topo_adj.ncl).  This second 
+    NCL script invokes a Fortran application (topo_adjf90.so, 
+    built from topo_adj.f90). 
+
+    NOTE:  If the additional downscaling
+    (of shortwave radiation) is requested, the adj_topo.ncl script
+    will "clobber" the previously created downscaled files.
 
 
     Args:
@@ -330,20 +335,17 @@ def downscale_data(product_name, parser, shortwave=False):
                                 and retrieve the file names and locations
                                 of input.
 
-        shortwave (boolean) :   True if downscaling of shortwave 
-                                radiation (SWDOWN) is necessary, in which
-                                case invoke the NCL wrapper to the Fortan
-                                code that performs the downscaling.
-                                False by default- don't downscale
-                                the shortwave radiation.
+        downscale_shortwave (boolean) : 'True' if downscaling of 
+                                shortwave radiation (SWDOWN) is 
+                                requested; invoke topo_adj.ncl, 
+                                the NCL wrapper to the Fortan
+                                code.
+                                Set to 'False' by default.
     Returns:
         elapsed_array (List):  A list of the elapsed time for
                                performing the downscaling. Each entry 
                                represents the time to downscale a file.  
 
-                               In addition, the output files are saved
-                               with the name and location (both 
-                               specified in the config file).
                                
                               
         
@@ -355,12 +357,6 @@ def downscale_data(product_name, parser, shortwave=False):
     lapse_rate_file = parser.get('downscaling','lapse_rate_file')
     ncl_exec = parser.get('exe', 'ncl_exe')
     
-
-    # Set a default return value for downscaling the shortwave
-    # radiation to 0 for success, since we may sometimes 
-    # omit downscaling SWDOWN.
-    swdown_return_value = 0
- 
  
     # Create an array to store the elapsed times for
     # downscaling each file.
@@ -388,44 +384,43 @@ def downscale_data(product_name, parser, shortwave=False):
         downscale_output_dir = parser.get('downscaling', 'GFS_downscale_output_dir')
         logging.info("GFS data to downscale: %s ", downscale_output_dir)
         downscale_exe = parser.get('exe', 'GFS_downscaling_exe')
-
-        # Retrieve the executable for downscaling SWDOWN, shortwave radiation.
-        if shortwave:
-            downscale_swdown_exe = parser.get('exe', 'shortwave_downscaling_exe') 
-
     elif product == 'RAP':
         logging.info("Downscaling RAP")
         data_to_downscale_dir = parser.get('downscaling','RAP_data_to_downscale')
         hgt_data_file = parser.get('downscaling','RAP_hgt_data')
         geo_data_file = parser.get('downscaling','RAP_geo_data')
         downscale_output_dir = parser.get('downscaling', 'RAP_downscale_output_dir')
+        #DEBUGXXX
+        logging.info("output dir for downscaled data %s", downscale_output_dir)
         downscale_exe = parser.get('exe', 'RAP_downscaling_exe')
-  
-  
+ 
     
     # Get the data to downscale, and for each file, call the 
-    # corresponding downscale script
+    # corresponding downscaling script
     #logging.info("dir with downscaled data: %s", data_to_downscale_dir)
     data_to_downscale = get_filepaths(data_to_downscale_dir)
     
     for data in data_to_downscale:
-
-        # Create the full output filename by replacing the 
-        # 'regridded' subdirectory with the 'downscaled' 
-        # subdirectory, thus maintaining the same 
-        # structure and naming format.
-        p = re.compile('regridded')
-        full_output_filename = p.sub('downscaled',data)        
-        #logging.debug("Full output filename: %s" , full_output_filename)
-       
-        match = re.match(r'(.*)/[0-9]{8}_i[0-9]{2}_f.*',full_output_filename)
+        match = re.match(r'(.*)/(([0-9]{8})_(i[0-9]{2})_f.*)',data)
         if match:
-            subdir = match.group(1)
+            yr_month_day = match.group(3)
+            downscaled_file = match.group(2)
+            init_hr = match.group(4)
         else:
             logging.error("ERROR: regridded file's name: %s is an unexpected format",\
                            data)
-        # Make the nested subdirectories.
-        mkdir_p(subdir) 
+        
+       
+        full_downscaled_dir = downscale_output_dir + "/" + yr_month_day + "/"\
+                                + init_hr  
+        full_downscaled_file = full_downscaled_dir + "/" +  downscaled_file
+        # Create the full output directory for the downscaled data if it doesn't 
+        # already exist. 
+        mkdir_p(full_downscaled_dir) 
+        #mkdir_p(downscale_output_dir) 
+
+        logging.info("full_downscaled_file: %s", full_downscaled_file)
+        logging.debug("Full output filename for second downscaling: %s" , full_downscaled_file)
  
         # Create the key-value pairs that make up the
         # input for the NCL script responsible for
@@ -433,46 +428,69 @@ def downscale_data(product_name, parser, shortwave=False):
         input_file1_param = "'inputFile1=" + '"' + hgt_data_file + '"' + "' "
         input_file2_param = "'inputFile2=" + '"' + geo_data_file + '"' + "' "
         input_file3_param = "'inputFile3=" + '"' + data + '"' + "' "
-        lapse_file_param = "'lapseFile=" + '"' + lapse_rate_file + '"' + "' "
-        output_file_param = "'outFile=" + '"' + full_output_filename + '"' + "' "
+        lapse_file_param =  "'lapseFile=" + '"' + lapse_rate_file + '"' + "' "
+        output_file_param = "'outFile=" + '"' + full_downscaled_file + '"' + "' "
         downscale_params =  input_file1_param + input_file2_param + \
-                            input_file3_param + lapse_file_param + \
-                            output_file_param 
+                  input_file3_param + lapse_file_param +  output_file_param 
         downscale_cmd = ncl_exec + " " + downscale_params + " " + downscale_exe
         logging.debug("Downscale command : %s", downscale_cmd)
 
+        # Downscale the shortwave radiation, if requested...
         # Key-value pairs for downscaling SWDOWN, shortwave radiation.
-        if shortwave:
+        if downscale_shortwave:
             logging.info("Shortwave downscaling requested...")
-            swdown_output_file_param = "'outFile=" + '"' + full_output_filename + '"' + "' "
-            mkdir_p(swdown_output_file_param)
+            downscale_swdown_exe = parser.get('exe', 'shortwave_downscaling_exe') 
+            swdown_output_file_param = "'outFile=" + '"' + \
+                                       full_downscaled_file + '"' + "' "
+
             swdown_geo_file_param = "'inputGeo=" + '"' + geo_data_file + '"' + "' "
             swdown_params = swdown_geo_file_param + " " + swdown_output_file_param
             downscale_shortwave_cmd = ncl_exec + " " + swdown_params + " " \
                                       + downscale_swdown_exe 
-            logging.debug("Shortwave Downscale command : %s", downscale_shortwave_cmd)
-
-        # Crude measurement of performance.
-        start = time.time()
-        return_value = os.system(downscale_cmd)
-
-        if shortwave:
-            swdown_return_value = os.system(downscale_shortwave_cmd)
             logging.info("SWDOWN downscale command: %s", downscale_shortwave_cmd)
 
-        end = time.time()
-        elapsed = end - start
-        elapsed_array.append(elapsed)
-    
-        if return_value != 0 or swdown_return_value != 0:
-            logging.info('ERROR: The downscaling of %s was unsuccessful, \
-                          return value of %s', product,return_value)
-       
-            #TO DO: Determine the proper action to take when the NCL file 
-            #fails. For now, exit.
-            exit()
+            # Crude measurement of performance for downscaling.
+            # Wall clock time used to determine the elapsed time
+            # for downscaling each file.
+            start = time.time()
+
+            #Invoke the NCL script for performing a single downscaling.
+            return_value = os.system(downscale_cmd)
+            swdown_return_value = os.system(downscale_shortwave_cmd)
+            end = time.time()
+            elapsed = end - start
+            elapsed_array.append(elapsed)
+
+            # Check for successful or unsuccessful downscaling
+            # of the required and shortwave radiation
+            if return_value != 0 or swdown_return_value != 0:
+                logging.info('ERROR: The downscaling of %s was unsuccessful, \
+                             return value of %s', product,return_value)
+                exit()
+
+        else:
+            # Only one downscaling, no additional downscaling of
+            # the short wave radiation.
+
+            # Crude measurement of performance for downscaling.
+            start = time.time()
+
+            #Invoke the NCL script for performing the generic downscaling.
+            return_value = os.system(downscale_cmd)
+            end = time.time()
+            elapsed = end - start
+            elapsed_array.append(elapsed)
+
+            # Check for successful or unsuccessful downscaling
+            if return_value != 0:
+                logging.info('ERROR: The downscaling of %s was unsuccessful, \
+                             return value of %s', product,return_value)
+                #TO DO: Determine the proper action to take when the NCL file 
+                #fails. For now, exit.
+                exit()
 
     return elapsed_array
+
 
 
 def create_benchmark_summary(product, activity, elapsed_times):
@@ -513,8 +531,10 @@ def create_benchmark_summary(product, activity, elapsed_times):
         logging.info("Min elapsed time (sec): %s ", min_time)
         logging.info("Max elapsedtime (sec): %s ", max_time)
     else:
-        logging.error("Nothing was returned....")
+        logging.error("ERROR: Nothing was returned....")
     
+
+
 
 #--------------------Define the Workflow -------------------------
 
