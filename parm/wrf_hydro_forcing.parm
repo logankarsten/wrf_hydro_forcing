@@ -36,9 +36,22 @@ output_log_directory = "/tmp"
 
 [default_env_vars]
 # Probably only relevant for NCAR
-#ncarg_root = /opt/ncl
+ncarg_root = /opt/ncl
 # Use 6.3.0 so the grib tables are up-to-date for reading MRMS
-ncarg_root = /opt/ncl-6.3.0
+#ncarg_root = /opt/ncl-6.3.0
+
+# Set the NCL_DEF_LIB_DIR environment variable where all the
+# shared objects reside
+# For example:
+#    setenv NCL_DEF_LIB_DIR /home/hydro/shared_objects
+# In your NCL script (ie adj_topo.ncl), call the shared
+# object just like a built-in NCL function, no need to load
+# the shared object using 'external' and no need to 
+# call func or procedures by preceding with tow colons + 
+# the name of the shared object.
+
+#ncl_def_lib_dir = /d4/hydro-dm/IOC/code/
+ncl_def_lib_dir = /home/minnawin/IOC/ncl_shared_objs
 
 #-------------------------------------------------
 #   Data Directories
@@ -55,7 +68,8 @@ MRMS_data = /d4/hydro-dm/IOC/test/MRMS/
 # NAM227 as directed by NCEP
 NAM_data = /d4/hydro-dm/IOC/data/nam227
 GFS_data = /d4/hydro-dm/IOC/data/GFS_0.25
-RAP_data = /d4/hydro-dm/IOC/data/RAP1km
+#RAP_data = /d4/hydro-dm/IOC/data/RAP1km
+RAP_data = /d4/hydro-dm/IOC/data/RAP1km_testing
 
 #-------------------------------------------------
 #   Data Sub-categories
@@ -99,7 +113,8 @@ MRMS_output_dir = /d6/forcing_test/regridded/MRMS
 NAM_output_dir = /d6/forcing_test/regridded/NAM
 #GFS_output_dir = /d4/hydro-dm/IOC/regridded/GFS
 GFS_output_dir = /d6/forcing_test/regridded/GFS
-RAP_output_dir = /d6/forcing_test/regridded/RAP
+#RAP_output_dir = /d6/forcing_test/regridded/RAP
+RAP_output_dir = /d4/hydro-dm/IOC/regridded/RAP
 
 
 #-------------------------------------------------
@@ -201,9 +216,10 @@ GFS_downscale_output_dir = /d6/forcing_test/downscaled/GFS
 
 
 # RAP
-#RAP_data_to_downscale = /d4/hydro-dm/IOC/regridded/RAP
-RAP_data_to_downscale = /d6/forcing_test/regridded/RAP
+RAP_data_to_downscale = /d4/hydro-dm/IOC/regridded/RAP
+#RAP_data_to_downscale = /d6/forcing_test/regridded/RAP
 RAP_hgt_data = /d4/hydro-dm/IOC/weighting/RAP1km/RAPhgt.nc
 RAP_geo_data = /d4/hydro-dm/IOC/weighting/RAP1km/geo_dst.nc
-RAP_downscale_output_dir = /d4/hydro-dm/IOC/downscaled/RAP
+#RAP_downscale_output_dir = /d4/hydro-dm/IOC/downscaled/RAP
+RAP_downscale_output_dir = /d6/forcing_test/downscaled/RAP
 
