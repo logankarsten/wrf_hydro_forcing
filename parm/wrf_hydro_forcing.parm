@@ -47,7 +47,7 @@ ncarg_root = /opt/ncl
 # In your NCL script (ie adj_topo.ncl), call the shared
 # object just like a built-in NCL function, no need to load
 # the shared object using 'external' and no need to 
-# call func or procedures by preceding with tow colons + 
+# call func or procedures by preceding with two colons + 
 # the name of the shared object.
 
 #ncl_def_lib_dir = /d4/hydro-dm/IOC/code/
@@ -70,51 +70,6 @@ NAM_data = /d4/hydro-dm/IOC/data/nam227
 GFS_data = /d4/hydro-dm/IOC/data/GFS_0.25
 #RAP_data = /d4/hydro-dm/IOC/data/RAP1km
 RAP_data = /d4/hydro-dm/IOC/data/RAP1km_testing
-
-#-------------------------------------------------
-#   Data Sub-categories
-#-------------------------------------------------
-
-[data_sub_category]
-# To differentiate different sub-categories of data e.g.
-# NAM281 vs. NAM227 vs NAM212, this will manifest
-# itself in the output directory structure.  Now 
-# you can run the a forcing engine configuration 
-# for two different model subcategories and the finished
-# data will be stored in separate subdirectories.
-# To run a forcing engine with a different 
-# data subcategory, simply replace the value
-# below with the subcategory of interest.  
-# For instance, if you already ran the
-# Analysis and Assimilation forcing configuration
-# using NAM227 but want to run it again using
-# NAM212, simply replace the 227 with 212 and
-# re-run the forcing engine.  The NAM227 output
-# will be saved to a <root>/NAM/NAM227 directory,
-# and the NAM212 output will be saved to a
-# <root>/NAM/NAM212 directory.
-
-
-#Indicate no category with None.
-NAM_subcategory = 227
-GFS_subcategory = 0.25
-HRRR_subcategory = None
-MRMS_subcategory = None
-RAP_subcategory = None
-
-
-#-------------------------------------------------
-#    Output Directories
-#-------------------------------------------------
-
-[output_dir]
-HRRR_output_dir = /d6/forcing_test/regridded/HRRR
-MRMS_output_dir = /d6/forcing_test/regridded/MRMS
-NAM_output_dir = /d6/forcing_test/regridded/NAM
-#GFS_output_dir = /d4/hydro-dm/IOC/regridded/GFS
-GFS_output_dir = /d6/forcing_test/regridded/GFS
-#RAP_output_dir = /d6/forcing_test/regridded/RAP
-RAP_output_dir = /d4/hydro-dm/IOC/regridded/RAP
 
 
 #-------------------------------------------------
@@ -150,6 +105,11 @@ topo_adj_fortran_exe = /d4/hydro-dm/IOC/code/topo_adjf90.so
 #topo_adj_exe = /d4/hydro-dm/IOC/code/topo_adj.ncl
 shortwave_downscaling_exe = ./topo_adj.ncl
 
+# Layering and contingency
+#Analysis_Assimilation_layering = /d4/hydro-dm/IOC/code/combine.ncl
+Analysis_Assimilation_layering = ./combine.ncl
+
+
 
 #-------------------------------------------------
 #    Parameters needed to run regridding scripts
@@ -160,25 +120,31 @@ shortwave_downscaling_exe = ./topo_adj.ncl
 #HRRR-specific
 HRRR_wgt_bilinear  = /d4/hydro-dm/IOC/weighting/HRRR1km/HRRR2HYDRO_d01_weight_bilinear.nc
 dst_grid_name = /d4/hydro-dm/IOC/weighting/HRRR1km/geo_dst.nc
+HRRR_output_dir = /d6/forcing_test/regridded/HRRR
 
 #MRMS-specific
 MRMS_wgt_bilinear =  /d4/hydro-dm/IOC/weighting/RADAR_GAUGE1km/RADAR2HYDRO_d01_weight_bilinear.nc
 dst_grid_name = /d4/hydro-dm/IOC/weighting/RADAR_GAUGE1km/geo_dst.nc
+MRMS_output_dir = /d6/forcing_test/regridded/MRMS
 
 #NAM-specific
 #Currently for NAM227, as required by NCEP.
 NAM_wgt_bilinear  = /d4/hydro-dm/IOC/weighting/NAM227/NAM2HYDRO_d01_weight_bilinear.nc
 dst_grid_name = /d4/hydro-dm/IOC/weighting/NAM227/geo_dst.nc
+NAM_output_dir = /d6/forcing_test/regridded/NAM
 
 #GFS-specific
 #For GFS_0.25 data
 GFS_wgt_bilinear = /d4/hydro-dm/IOC/weighting/GFS1km_25/GFS2HYDRO_d01_weight_bilinear.nc
 dst_grid_name = /d4/hydro-dm/IOC/weighting/GFS1km_25/geo_dst.nc
-
+GFS_output_dir = /d4/hydro-dm/IOC/regridded/GFS
+#GFS_output_dir = /d6/forcing_test/regridded/GFS
 
 #RAP-specific
 RAP_wgt_bilinear = /d4/hydro-dm/IOC/weighting/RAP1km/RAP2HYDRO_d01_weight_bilinear.nc
 dst_grid_name = /d4/hydro-dm/IOC/weighting/RAP1km/geo_dst.nc
+#RAP_output_dir = /d6/forcing_test/regridded/RAP
+RAP_output_dir = /d4/hydro-dm/IOC/regridded/RAP
 
 #-------------------------------------------------
 #    Parameters needed to run downscaling scripts
@@ -211,8 +177,8 @@ NAM_downscale_output_dir = /d4/hydro-dm/IOC/downscaled/NAM
 GFS_data_to_downscale = /d6/forcing_test/regridded/GFS
 GFS_hgt_data = /d4/hydro-dm/IOC/weighting/GFS1km_25/GFShgt.nc
 GFS_geo_data = /d4/hydro-dm/IOC/weighting/GFS1km_25/geo_dst.nc
-#GFS_downscale_output_dir = /d4/hydro-dm/IOC/downscaled/GFS
-GFS_downscale_output_dir = /d6/forcing_test/downscaled/GFS
+GFS_downscale_output_dir = /d4/hydro-dm/IOC/downscaled/GFS
+#GFS_downscale_output_dir = /d6/forcing_test/downscaled/GFS
 
 
 # RAP
@@ -223,3 +189,21 @@ RAP_geo_data = /d4/hydro-dm/IOC/weighting/RAP1km/geo_dst.nc
 #RAP_downscale_output_dir = /d4/hydro-dm/IOC/downscaled/RAP
 RAP_downscale_output_dir = /d6/forcing_test/downscaled/RAP
 
+
+
+#-------------------------------------------------
+#
+#  Parameters needed for layering/mixing
+#
+#
+#
+#-------------------------------------------------
+[layering]
+
+# HRRR and RAP used for Analysis and Assimilation
+# Forcing Configuration
+analysis_assimilation_first = %(HRRR_downscale_output_dir)s
+analysis_assimilation_second = %(RAP_downscale_output_dir)s
+output_dir = /d4/hydro-dm/IOC/layering/analysis_assimilation
+#index_file_location = /d4/hydro-dm/IOC/layering/analysis_assimilation
+index_file_location = %(output_dir)s/temp_files
