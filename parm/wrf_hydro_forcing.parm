@@ -202,8 +202,8 @@ RAP_downscale_output_dir = /d6/forcing_test/downscaled/RAP
 
 # HRRR and RAP used for Analysis and Assimilation
 # Forcing Configuration
-analysis_assimilation_first = %(HRRR_downscale_output_dir)s
-analysis_assimilation_second = %(RAP_downscale_output_dir)s
+analysis_assimilation_primary = %(HRRR_downscale_output_dir)s
+analysis_assimilation_secondary = %(RAP_downscale_output_dir)s
 output_dir = /d4/hydro-dm/IOC/layering/analysis_assimilation
 #index_file_location = /d4/hydro-dm/IOC/layering/analysis_assimilation
 index_file_location = %(output_dir)s/temp_files
