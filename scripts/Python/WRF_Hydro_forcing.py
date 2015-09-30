@@ -69,7 +69,7 @@ def regrid_data( product_name, parser ):
        regridding_exec = parser.get('exe', 'HRRR_regridding_exe')
        data_files_to_process = get_filepaths(data_dir)   
        #Values needed for running the regridding script
-       output_dir_root = parser.get('output_dir','HRRR_output_dir')
+       output_dir_root = parser.get('regridding','HRRR_output_dir')
     elif product == 'MRMS':
        logging.info("Regridding MRMS")
        wgt_file = parser.get('regridding', 'MRMS_wgt_bilinear')
@@ -77,7 +77,7 @@ def regrid_data( product_name, parser ):
        regridding_exec = parser.get('exe', 'MRMS_regridding_exe')
        data_files_to_process = get_filepaths(data_dir)   
        #Values needed for running the regridding script
-       output_dir_root = parser.get('output_dir','MRMS_output_dir')
+       output_dir_root = parser.get('regridding','MRMS_output_dir')
     elif product == 'NAM':
        logging.info("Regridding NAM")
        wgt_file = parser.get('regridding', 'NAM_wgt_bilinear')
@@ -85,7 +85,7 @@ def regrid_data( product_name, parser ):
        regridding_exec = parser.get('exe', 'NAM_regridding_exe')
        data_files_to_process = get_filepaths(data_dir)
        #Values needed for running the regridding script
-       output_dir_root = parser.get('output_dir','NAM_output_dir')
+       output_dir_root = parser.get('regridding','NAM_output_dir')
     elif product == 'GFS':
        logging.info("Regridding GFS")
        wgt_file = parser.get('regridding', 'GFS_wgt_bilinear')
@@ -93,7 +93,7 @@ def regrid_data( product_name, parser ):
        regridding_exec = parser.get('exe', 'GFS_regridding_exe')
        data_files_to_process = get_filepaths(data_dir)
        #Values needed for running the regridding script
-       output_dir_root = parser.get('output_dir','GFS_output_dir')
+       output_dir_root = parser.get('regridding','GFS_output_dir')
     elif product == 'RAP':
        logging.info("Regridding RAP")
        wgt_file = parser.get('regridding', 'RAP_wgt_bilinear')
@@ -101,7 +101,7 @@ def regrid_data( product_name, parser ):
        regridding_exec = parser.get('exe', 'RAP_regridding_exe')
        data_files_to_process = get_filepaths(data_dir)
        #Values needed for running the regridding script
-       output_dir_root = parser.get('output_dir','RAP_output_dir')
+       output_dir_root = parser.get('regridding','RAP_output_dir')
 
 
 
