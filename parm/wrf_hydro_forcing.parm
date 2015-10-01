@@ -62,14 +62,14 @@ ncl_def_lib_dir = /home/minnawin/IOC/ncl_shared_objs
 # NOTE: This will be replaced with real-time data for Operational
 # use.  The static data is used for initial development and testing purposes.
 
-HRRR_data = /d4/hydro-dm/IOC/test/HRRR
-MRMS_data = /d4/hydro-dm/IOC/test/MRMS/
+HRRR_data = /var/autofs/mnt/rapdmg2/data/grib/HRRR-wrfprs/20150929
+MRMS_data = /d2/hydro-dm/var/data/nsslMosaic/grib2/GaugeCorr_QPE/01H/20150929
 #NAM_data = /d4/hydro-dm/IOC/test/NAM218
 # NAM227 as directed by NCEP
 NAM_data = /d4/hydro-dm/IOC/data/nam227
 GFS_data = /d4/hydro-dm/IOC/data/GFS_0.25
 #RAP_data = /d4/hydro-dm/IOC/data/RAP1km
-RAP_data = /d4/hydro-dm/IOC/data/RAP1km_testing
+RAP_data = /var/autofs/mnt/rapdmg1/data/grib/WRF-RR-CONUS-wrfprs/20150929
 
 
 #-------------------------------------------------
@@ -120,12 +120,12 @@ Analysis_Assimilation_layering = ./combine.ncl
 #HRRR-specific
 HRRR_wgt_bilinear  = /d4/hydro-dm/IOC/weighting/HRRR1km/HRRR2HYDRO_d01_weight_bilinear.nc
 dst_grid_name = /d4/hydro-dm/IOC/weighting/HRRR1km/geo_dst.nc
-HRRR_output_dir = /d6/forcing_test/regridded/HRRR
+HRRR_output_dir = /d4/hydro-dm/IOC/regridded/HRRR
 
 #MRMS-specific
 MRMS_wgt_bilinear =  /d4/hydro-dm/IOC/weighting/RADAR_GAUGE1km/RADAR2HYDRO_d01_weight_bilinear.nc
 dst_grid_name = /d4/hydro-dm/IOC/weighting/RADAR_GAUGE1km/geo_dst.nc
-MRMS_output_dir = /d6/forcing_test/regridded/MRMS
+MRMS_output_dir = /d4/hydro-dm/IOC/regridded/MRMS
 
 #NAM-specific
 #Currently for NAM227, as required by NCEP.
@@ -159,35 +159,40 @@ lapse_rate_file = /d4/hydro-dm/IOC/weighting/NARRlapse1km.nc
 
 
 # HRRR
-HRRR_data_to_downscale = /d6/forcing_test/regridded/HRRR
+# Currently, this is NAM227, as required by NCEP
+# Directory where regridded HRRR data to BE DOWNSCALED is located
+HRRR_data_to_downscale = /d4/hydro-dm/IOC/regridded/HRRR
 HRRR_hgt_data = /d4/hydro-dm/IOC/weighting/HRRR1km/HRRRhgt.nc
 HRRR_geo_data = /d4/hydro-dm/IOC/weighting/HRRR1km/geo_dst.nc
+# Directory where downscaled data should be saved
 HRRR_downscale_output_dir = /d4/hydro-dm/IOC/downscaled/HRRR
 
 # NAM 
 # Currently, this is NAM227, as required by NCEP
-NAM_data_to_downscale = /d6/forcing_test/regridded/NAM
+# Directory where regridded NAM data to BE DOWNSCALED is located
+NAM_data_to_downscale = /d4/hydro-dm/IOC/regridded/NAM
 NAM_hgt_data = /d4/hydro-dm/IOC/weighting/NAM1km/NAMhgt.nc
 NAM_geo_data = /d4/hydro-dm/IOC/weighting/NAM1km/geo_dst.nc
+# Directory where downscaled data should be saved
 NAM_downscale_output_dir = /d4/hydro-dm/IOC/downscaled/NAM
 
 # GFS 
 # Currently GFS 0.25 degree data
-#GFS_data_to_downscale = /d4/hydro-dm/IOC/regridded/GFS
-GFS_data_to_downscale = /d6/forcing_test/regridded/GFS
+# Directory where regridded GFS data to BE DOWNSCALED is located
+GFS_data_to_downscale = /d4/hydro-dm/IOC/regridded/GFS
 GFS_hgt_data = /d4/hydro-dm/IOC/weighting/GFS1km_25/GFShgt.nc
 GFS_geo_data = /d4/hydro-dm/IOC/weighting/GFS1km_25/geo_dst.nc
+# Directory where downscaled data should be saved
 GFS_downscale_output_dir = /d4/hydro-dm/IOC/downscaled/GFS
-#GFS_downscale_output_dir = /d6/forcing_test/downscaled/GFS
 
 
 # RAP
+# Directory where regridded RAP data to BE DOWNSCALED is located
 RAP_data_to_downscale = /d4/hydro-dm/IOC/regridded/RAP
-#RAP_data_to_downscale = /d6/forcing_test/regridded/RAP
 RAP_hgt_data = /d4/hydro-dm/IOC/weighting/RAP1km/RAPhgt.nc
 RAP_geo_data = /d4/hydro-dm/IOC/weighting/RAP1km/geo_dst.nc
-#RAP_downscale_output_dir = /d4/hydro-dm/IOC/downscaled/RAP
-RAP_downscale_output_dir = /d6/forcing_test/downscaled/RAP
+# Directory where downscaled data should be saved
+RAP_downscale_output_dir = /d4/hydro-dm/IOC/downscaled/RAP
 
 
 
