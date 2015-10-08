@@ -536,6 +536,198 @@ def create_benchmark_summary(product, activity, elapsed_times):
 
 
 
+# STUB for BIAS CORRECTION, TO BE
+# IMPLEMENTED LATER...
+def bias_correction(parser)
+    """ STUB TO BE IMPLEMENTED
+    """
+#
+#
+
+
+
+def layer_data(parser, primary_data, secondary_data):
+    """ Invokes the NCL script, combine.ncl
+        to layer/combine two files:  a primary and secondary
+        file (with identical date/time, model run time, and
+        forecast time) are found by iterating through a list
+        of primary files and determining if the corresponding
+        secondary file exists.
+
+
+        Args:
+              parser (ConfigParser):  The parser to the config/parm
+                                      file containing all the defined
+                                      values.
+              primary_data (string):  The name of the primary product
+ 
+              secondary_data (string): The name of the secondary product
+
+        Output:
+              None:  For each primary and secondary file that is
+                     combined/layered, create a file
+                     (name and location defined in the config/parm 
+                     file).
+    """
+
+    # Retrieve any necessary parameters from the wrf_hydro_forcing config/parm
+    # file...
+    # 1) directory where HRRR and RAP downscaled data reside
+    # 2) output directory where layered files will be saved
+    # 3) location of any executables/scripts
+    ncl_exe = parser.get('exe', 'ncl_exe')
+    layering_exe = parser.get('exe','Analysis_Assimilation_layering')
+    downscaled_primary_dir = parser.get('layering','analysis_assimilation_primary')
+    downscaled_secondary_dir = parser.get('layering','analysis_assimilation_secondary')
+    layered_output_dir = parser.get('layering','output_dir')
+
+
+    # Loop through any available files in
+    # the directory that defines the first choice/priority data.
+    # Assemble the name of the corresponding secondary filename
+    # by deriving the date (YYYYMMDD), modelrun (ihh), and 
+    # forecast time (_fhhh) from the primary filename and path.
+    # Then check if this file exists, if so, then pass this pair into
+    # a list of tuples comprised of (primary file, secondary file).
+    # After a list of paired files has been completed, these files
+    # will be layered/combined by invoking the NCL script, combine.ncl.
+    primary_files = get_filepaths(downscaled_primary_dir)
+    
+    # Determine which primary and secondary files we can layer, based on
+    # matching dates, model runs, and forecast times.
+    list_paired_files = find_layering_files(primary_files, downscaled_secondary_dir)
+    
+    # Now we have all the paired files to layer, create the key-value pair of
+    # input needed to run the NCL layering script.
+    num_matched_pairs = len(list_paired_files)
+    for pair in list_paired_files:
+        hrrrFile_param = "'hrrrFile=" + '"' + pair[0] + '"' + "' "
+        rapFile_param =  "'rapFile="  + '"' + pair[1] + '"' + "' "
+        full_layered_outfile = layered_output_dir + "/" + pair[2]
+        outFile_param = "'outFile=" + '"' + full_layered_outfile + '"' + "' "
+        mkdir_p(full_layered_outfile)
+        init_indexFlag = "false"
+        indexFlag = "true"
+        init_indexFlag_param = "'indexFlag=" + '"' +  init_indexFlag + '"' + "' "
+        indexFlag_param = "'indexFlag=" + '"' + indexFlag + '"' + "' "
+        init_layering_params = hrrrFile_param + rapFile_param + init_indexFlag_param\
+                               + outFile_param 
+        layering_params = hrrrFile_param + rapFile_param + indexFlag_param\
+                          + outFile_param
+        init_layering_cmd = ncl_exe + " " + init_layering_params + " " + \
+                            layering_exe
+        layering_cmd = ncl_exe + " " + layering_params + " " + \
+                            layering_exe
+         
+        init_return_value = os.system(init_layering_cmd)
+        return_value = os.system(layering_cmd) 
+    
+    
+def find_layering_files(primary_files,downscaled_secondary_dir):
+    """Given a list of the primary files (full path + filename),
+    retrieve the corresponding secondary file if it exists.  
+    Create and return a list of tuples: (primary file, secondary file, 
+    layered file). 
+
+    Args:
+        primary_files(list):  A list of the primary files
+                              which we are trying to find
+                              a corresponding "match" in
+                              the secondary file directory
+        downscaled_secondary_dir(string): The name of the
+                                          directory for the
+                                          secondary data.
+    Output:
+        list_paired_files (list): A list of tuples, where 
+                                  the tuple consists of 
+                                  (primary file, secondary
+                                   file, and layered file name)
+        
+ 
+    """
+    secondary_product = "RAP"
+    list_paired_files = []
+    paired_files = ()
+
+    for primary_file in primary_files:
+        match = re.match(r'.*/downscaled/([A-Za-z]{3,4})/([0-9]{8})/i([0-9]{2})/[0-9]{8}_i[0-9]{2}_f([0-9]{3})_[A-Za-z]{3,4}.nc',primary_file)
+        if match:
+            product = match.group(1)
+            date = match.group(2)
+            modelrun_str = match.group(3)
+            fcst_hr_str = match.group(4)
+            # Assemble the corresponding secondary file based on the date, modelrun, 
+            # and forecast hour. 
+            secondary_file = downscaled_secondary_dir +  \
+                             "/" + date + "/i" + modelrun_str + "/" + date +\
+                             "_i"+ modelrun_str + "_f" + fcst_hr_str + "_" +\
+                             secondary_product + ".nc"  
+            layered_filename = date + "_i" + modelrun_str + "_f" + \
+                               fcst_hr_str + "_Analysis-Assimilation.nc"
+               
+        
+            # Determine if this "manufactured" secondary file exists, if so, then 
+            # create a tuple to represent this pair: (primary file, 
+            # secondary file, layered file) then add this tuple of 
+            # files to the list and continue. If not, then continue 
+            # with the next primary file in the primary_files list.
+            if os.path.isfile(secondary_file):
+                paired_files = (primary_file, secondary_file,layered_filename)
+                list_paired_files.append(paired_files)
+                num = len(list_paired_files)
+            else:
+                logging.info("No matching date, or model run or forecast time for\
+                             #secondary file")
+                continue
+        else:
+            logging.error('ERROR: filename structure is not what was expected')
+
+
+
+    return list_paired_files
+
+
+def create_benchmark_summary(product, activity, elapsed_times):
+    
+    """ Create a summary of the min, max, and mean
+        time to perform a processing activity for 
+        each data file. The information is placed 
+        in the log file.
+
+        Args:
+           product (string):  The name of the product under
+                              consideration.
+           activity (string): The processing activity: 
+                              regridding, downscaling, etc.
+           elapsed_times (ndarray): Numpy ndarray of elapsed 
+                                   times (wall clock time 
+                                   for now) for each of the
+                                   files that were processed.
+       
+       Output:
+           None:  Generates an entry in the log file, as
+                  an "info" entry, which states the min,
+                  max, and average time in seconds.
+     
+    """
+    if len(elapsed_times) > 0:
+        elapsed_array = np.array(elapsed_times)
+        min_time = np.min(elapsed_array)
+        max_time = np.max(elapsed_array)
+        avg_time = np.mean(elapsed_array)
+        med_time = np.median(elapsed_array) 
+
+        logging.info("=========================================")
+        logging.info("SUMMARY for %s %s ", activity,product) 
+        logging.info("=========================================")
+        logging.info("Average elapsed time (sec): %s", avg_time)
+        logging.info("Median elapsed time (sec): %s", med_time)
+        logging.info("Min elapsed time (sec): %s ", min_time)
+        logging.info("Max elapsedtime (sec): %s ", max_time)
+    else:
+        logging.error("ERROR: Nothing was returned....")
+    
+
 #--------------------Define the Workflow -------------------------
 
 if __name__ == "__main__":
