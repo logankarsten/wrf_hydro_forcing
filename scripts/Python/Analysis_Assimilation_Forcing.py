@@ -45,23 +45,31 @@ if __name__ == "__main__":
     logging_filename =  forcing_config_label + ".log" 
     logging.basicConfig(format='%(asctime)s %(message)s',
                          filename=logging_filename, level=set_level)
+    # STUB- TO BE IMPLEMENTED  
+    # Bias correction 
+    # MRMS_<prod>  = whf.bias_corr("<prod>", parser)
 
-    # Regrid the MRMS, NAM, and HRRR data.
-#    MRMS_regrids = whf.regrid_data("MRMS",parser)     
-    NAM_regrids = whf.regrid_data("NAM", parser)
-#    HRRR_regrids = whf.regrid_data("HRRR", parser)
+    # Regrid the MRMS, RAP, and HRRR data.
+    MRMS_regrids = whf.regrid_data("MRMS",parser)     
+    RAP_regrids = whf.regrid_data("RAP", parser)
+    HRRR_regrids = whf.regrid_data("HRRR", parser)
     
-    # Downscale the NAM and HRRR data; the MRMS data does not require
+    # Downscale the RAP and HRRR data; the MRMS data does not require
     # downscaling. 
-    NAM_downscalings = whf.downscale_data("NAM",parser)
-#    HRRR_downscalings = whf.downscale_data("HRRR", parser)
+    RAP_downscalings = whf.downscale_data("RAP",parser)
+    HRRR_downscalings = whf.downscale_data("HRRR", parser)
+
+    # Layering the HRRR (primary) and RAP (secondary) data.
+    Analysis_Assimilation_Layering = whf.layer_data(parser, "HRRR","RAP")
    
-    # Generate the metrics for regridding and downscaling and write to the
-    # logfile, which by default is saved to the directory from which this
+    # Generate the metrics for regridding, downscaling and layering. 
+    # Write to the logfile, which by default is saved to the directory 
+    # from which this application is run.
     # 
-#    whf.create_benchmark("MRMS","Regridding", MRMS_regrids)
-#    whf.create_benchmark("MRMS","Downscaling", MRMS_downscalings)
-#    whf.create_benchmark("NAM","Regridding", NAM_regrids)
-    whf.create_benchmark("NAM","Downscaling", NAM_downscalings)
-#    whf.create_benchmark("HRRR","Regridding", HRRR_regrids)
-#    whf.create_benchmark("HRRR","Downscaling", HRRR_downscalings)
+    whf.create_benchmark("MRMS","Regridding", MRMS_regrids)
+    whf.create_benchmark("MRMS","Downscaling", MRMS_downscalings)
+    whf.create_benchmark("RAP","Regridding", RAP_regrids)
+    whf.create_benchmark("RAP","Downscaling", RAP_downscalings)
+    whf.create_benchmark("HRRR","Regridding", HRRR_regrids)
+    whf.create_benchmark("HRRR","Downscaling", HRRR_downscalings)
+    whf.create_benchmark("HRRR-RAP", "Layering", Analysis_Assimilation_Layering)
