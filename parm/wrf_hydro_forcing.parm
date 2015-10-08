@@ -195,14 +195,6 @@ RAP_geo_data = /d4/hydro-dm/IOC/weighting/RAP1km/geo_dst.nc
 RAP_downscale_output_dir = /d4/hydro-dm/IOC/downscaled/RAP
 
 
-
-#-------------------------------------------------
-#
-#  Parameters needed for layering/mixing
-#
-#
-#
-
 #------------------------------------------------- 
 #
 #  Parameters needed for layering/mixing
