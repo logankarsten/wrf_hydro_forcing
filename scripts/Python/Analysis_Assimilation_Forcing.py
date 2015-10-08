@@ -80,13 +80,3 @@ if __name__ == "__main__":
     whf.create_benchmark_summary("HRRR_RAP","Layering", HRRR_RAP_layering)
 
 
-
-
-
-
-
-    # Generate the metrics for regridding,downscaling, and layering,
-    # and write to the logfile, which by default is saved to the
-    # directory from which this
-
-
