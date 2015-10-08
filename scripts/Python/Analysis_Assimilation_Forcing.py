@@ -45,9 +45,14 @@ if __name__ == "__main__":
     logging_filename =  forcing_config_label + ".log" 
     logging.basicConfig(format='%(asctime)s %(message)s',
                          filename=logging_filename, level=set_level)
-    # STUB- TO BE IMPLEMENTED  
+
     # Bias correction 
     # MRMS_<prod>  = whf.bias_corr("<prod>", parser)
+    # TO BE IMPLEMENTED in WRF_Hydro_forcing.py
+    # Perform bias correction on any necessary input data.
+    #
+    # bias_correction("HRRR")
+    # bias_correction("RAP")
 
     # Regrid the MRMS, RAP, and HRRR data.
     MRMS_regrids = whf.regrid_data("MRMS",parser)     
@@ -72,4 +77,16 @@ if __name__ == "__main__":
     whf.create_benchmark("RAP","Downscaling", RAP_downscalings)
     whf.create_benchmark("HRRR","Regridding", HRRR_regrids)
     whf.create_benchmark("HRRR","Downscaling", HRRR_downscalings)
-    whf.create_benchmark("HRRR-RAP", "Layering", Analysis_Assimilation_Layering)
+    whf.create_benchmark_summary("HRRR_RAP","Layering", HRRR_RAP_layering)
+
+
+
+
+
+
+
+    # Generate the metrics for regridding,downscaling, and layering,
+    # and write to the logfile, which by default is saved to the
+    # directory from which this
+
+
