@@ -1,10 +1,7 @@
 # wrf_hydro_forcing
-This repository contains all scripts (NCL, Python) and shared objects (from Fortran) used in the WRF-Hydro forcing engine.  The following forcing configurations will be supported:
-    Analysis & assimilation
-    Short Range Forcing 
-    Medium Range Forcing
-    Long Range Forcing
-    Retrospective Forcing (omit for now, not included for IOC)
+This repository contains all scripts (NCL, Python) and shared objects (from Fortran) used in the WRF-Hydro forcing engine.  The following forcing configurations will be supported for IOC (Initial Operating Capability):
+    Analysis & assimilation, Short Range Forcing, Medium Range Forcing, and Long Range Forcing
+   
     
 How to run:
 1) Check out the regridding, downscaling and layering/combining scripts from the scripts/NCL directory.
