@@ -538,7 +538,7 @@ def create_benchmark_summary(product, activity, elapsed_times):
 
 # STUB for BIAS CORRECTION, TO BE
 # IMPLEMENTED LATER...
-def bias_correction(parser)
+def bias_correction(parser):
     """ STUB TO BE IMPLEMENTED
     """
 #
