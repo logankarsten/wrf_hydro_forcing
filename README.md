@@ -19,6 +19,6 @@ How to run:
     Make sure you have the config/parm file, the forcing config file and the WRF_Hydro_forcing.py file in the same 
     directory from which you are invoking.
     
-**Note: The weightings files should be available for every model type.  These will usually reside on the test host.  Currently, they are found in hydro-c1:/d4/hydro-dm/IOC/weightings. The weightings files are too large to check into GitHub, so please remember to include these when you are deploying to another environment.
+**Note: The weightings files should be available for every model type.  These will usually reside on the test host.  Currently, they are found in hydro-c1:/d4/hydro-dm/IOC/weightings. The weightings files are too large to check into GitHub, so please remember to include these when you are deploying to another environment. In addition, there is a lapse rate file (another .nc) which is also too large to check into GitHub.  Please make sure you have the "correct" version when deploying to another environment.
     
     
