@@ -1,19 +1,19 @@
+import WRF-Hydro_forcing as whf
 import logging
 import os
 from ConfigParser import SafeConfigParser
-import WRF-Hydro_forcing
 
 #----------------------------------------------
 
 if __name__ == "__main__":
     parser = SafeConfigParser()
-    parser.read('test.parm')
+    parser.read('wrf_hydro_forcing.parm')
 
     ncl_exec = parser.get('exe', 'ncl_exe')
     ncarg_root = parser.get('default_env_vars', 'ncarg_root')
     logging_level = parser.get('log_level', 'forcing_engine_log_level')
     log_file_dir = parser.get('log_level', 'output_log_directory')
-    forcing_config_label = "Medium Range Forcing Configuration"
+    forcing_config_label = "Medium-Range"
 
     # Check for the NCARG_ROOT environment variable. If it is not set,
     # use an appropriate default, defined in the configuration file.
