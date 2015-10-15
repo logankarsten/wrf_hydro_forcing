@@ -37,11 +37,17 @@ if __name__ == "__main__":
     logging.basicConfig(format='%(asctime)s %(message)s',
                          filename=logging_filename, level=set_level)
 
+    # Bias correction if necessary
+    # TO BE IMPLEMENTED
+    # GFS_bias_corrections = whf.bias_corr("GFS", parser)
+
+
+
     # Regrid the GFS data.
-    GFS_regrids = whf.regrid_data("GFS",parser, ncl_exec)     
+    GFS_regrids = whf.regrid_data("GFS",parser)     
     
     # Downscale the GFS data.
-    GFS_downscalings = whr.downscale_data("GFS", parser, ncl_exec)
+    GFS_downscalings = whr.downscale_data("GFS", parser)
    
     # Generate the metrics for regridding and downscaling and write to the
     # logfile, which by default is saved to the directory from which this
