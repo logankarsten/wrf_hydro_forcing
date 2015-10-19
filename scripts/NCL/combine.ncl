@@ -1,17 +1,50 @@
+;
+; Performs the combining/layering of two data products (HRRR and RAP) 
+; for WRF-Hydro Analysis and Assimilation Forcing Configuration.
+;
+; Input: 
+;      hrrrFile    The first data source, currently HRRR model data
+;      rapFile    The second data source, currently RAP model data
+;      outFile     The full path to the output file, containing the
+;                          mixed HRRR and RAP data.
+;      indexFlag           Set to "false" for the initial run, to 
+;                          create an index.nc file. Run this script
+;                          for second time with indexFlag set to
+;                          "true", to do the actual layering/
+;                          combining.  
+;
+; Output:
+;     Creates an output file indicated by the outFile variable by combining/ 
+;     layering HRRR and RAP data.     
+
+
 begin
-           hrrrFile = getenv("hrrrFile") ; HRRR data
-           gfsFile = getenv("rapFile") ; RAP data
-           outFile = getenv("outFile") ; outFile data
-           indexFlag = getenv("INDEX")
+           ; These values are defined in the wrf_hydro_forcing.parm parameter/config file, 
+           ; they are no longer set as environment variables.
+           ;setenv hrrrFile /d4/hydro-dm/IOC/test/HRRR/20150813/i000/20150812_i00_f001_HRRR.nc
+           ;setenv rapFile /d4/hydro-dm/IOC/test/RAP/20150813/i17/20150813_i17_f000_RAP.nc
+           ;setenv INDEX true
+           ;setenv outFile /d4/hydro-dm/IOC/layering/analysis_assimilation/20150812_HRRR_RAP.nc
+           ;setenv outDir /d4/hydro-dm/IOC/layering/analysis_assimilation
+           ;hrrrFile = getenv("hrrrFile") ; HRRR data
+           ;rapFile = getenv("rapFile") ; RAP data
+           ;outFile = getenv("outFile") ; outFile data
+           ;indexFlag = getenv("INDEX")
+
+          
+           print( "hrrFile: " + hrrrFile)
+           print( "rapFile: " + rapFile)
+           print( "indexFlag: " + indexFlag)
+           print( "outfile: " + outFile)
            
            if(indexFlag .eq. "true") then
-              indexf = addfile("index.nc","r") 
+              indexf = addfile( "index.nc","r") 
               index = indexf->index
            end if
      
            f1 = addfile(hrrrFile,"r") 
-           f2 = addfile(gfsFile,"r") 
-           system("rm -f "+outFile)
+           f2 = addfile(rapFile,"r") 
+           system("rm -rf "+outFile)
 
            fout = addfile(outFile,"c")
 
