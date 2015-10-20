@@ -37,6 +37,11 @@ def main(argv):
     ncarg_root_found = os.getenv("NCARG_ROOT")
     if ncarg_root_found is None:
         ncarg_root = os.environ["NCARG_ROOT"] = ncarg_root
+   
+    # Set the NCL_DEF_LIB_DIR to indicate where ALL shared objects
+    # reside.
+    ncl_def_lib_dir = parser.get('default_env_vars','ncl_def_lib_dir')
+    ncl_def_lib_dir = os.environ["NCL_DEF_LIB_DIR"] = ncl_def_lib_dir
     
     # Set the logging level based on what was defined in the parm/config file
     if logging_level == 'DEBUG':
@@ -75,8 +80,8 @@ def main(argv):
             print 'downscaling data...'
             RAP_downscalings = whf.downscale_data("RAP",parser, True)
             whf.create_benchmark("RAP","Downscaling", RAP_downscalings)
-            HRRR_downscalings = whf.downscale_data("HRRR", parser, True)
-            whf.create_benchmark("HRRR","Downscaling", HRRR_downscalings)
+#            HRRR_downscalings = whf.downscale_data("HRRR", parser, True)
+#            whf.create_benchmark("HRRR","Downscaling", HRRR_downscalings)
         elif opt == '-l' or opt == '--layer':
             print 'layering data...'
             HRRR_RAP_layer_data = layer_data(parser, "HRRR", "RAP")
