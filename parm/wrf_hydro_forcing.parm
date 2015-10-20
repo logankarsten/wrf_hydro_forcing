@@ -27,7 +27,6 @@
 #   ERROR - more serious problem, code cannot perform its task
 #   CRITICAL -  serious error, the code may not be able to continue running
 forcing_engine_log_level = DEBUG
-output_log_directory = "/tmp"
 
 
 #--------------------------------------------------
@@ -62,14 +61,14 @@ ncl_def_lib_dir = /home/minnawin/IOC/ncl_shared_objs
 # NOTE: This will be replaced with real-time data for Operational
 # use.  The static data is used for initial development and testing purposes.
 
-HRRR_data = /var/autofs/mnt/rapdmg2/data/grib/HRRR-wrfprs/20150929
-MRMS_data = /d2/hydro-dm/var/data/nsslMosaic/grib2/GaugeCorr_QPE/01H/20150929
+HRRR_data = /var/autofs/mnt/rapdmg2/data/grib/HRRR-wrfprs/20151018
+MRMS_data = /d2/hydro-dm/var/data/nsslMosaic/grib2/GaugeCorr_QPE/01H/201501018
 #NAM_data = /d4/hydro-dm/IOC/test/NAM218
 # NAM227 as directed by NCEP
 NAM_data = /d4/hydro-dm/IOC/data/nam227
 GFS_data = /d4/hydro-dm/IOC/data/GFS_0.25
 #RAP_data = /d4/hydro-dm/IOC/data/RAP1km
-RAP_data = /var/autofs/mnt/rapdmg1/data/grib/WRF-RR-CONUS-wrfprs/20150929
+RAP_data = /var/autofs/mnt/rapdmg1/data/grib/WRF-RR-CONUS-wrfprs/20151018
 
 
 #-------------------------------------------------
@@ -95,18 +94,15 @@ RAP_regridding_exe = ./RAP-2-WRF_Hydro_ESMF_regrid.ncl
 
 # Downscaling
 # Use the same downscaling script for all products. The hgt file, geo file, and
-# input file (data to downscale) are the only input and these are all defined in 
-# this config file.
+# input file (data to downscale) are the only input and these are all defined in # this config file.
 HRRR_downscaling_exe = ./All_WRF_Hydro_downscale.ncl
 NAM_downscaling_exe = ./All_WRF_Hydro_downscale.ncl
 GFS_downscaling_exe = ./All_WRF_Hydro_downscale.ncl
 RAP_downscaling_exe = ./All_WRF_Hydro_downscale.ncl
 topo_adj_fortran_exe = /d4/hydro-dm/IOC/code/topo_adjf90.so
-#topo_adj_exe = /d4/hydro-dm/IOC/code/topo_adj.ncl
 shortwave_downscaling_exe = ./topo_adj.ncl
 
 # Layering and contingency
-#Analysis_Assimilation_layering = /d4/hydro-dm/IOC/code/combine.ncl
 Analysis_Assimilation_layering = ./combine.ncl
 
 
@@ -119,31 +115,23 @@ Analysis_Assimilation_layering = ./combine.ncl
 
 #HRRR-specific
 HRRR_wgt_bilinear  = /d4/hydro-dm/IOC/weighting/HRRR1km/HRRR2HYDRO_d01_weight_bilinear.nc
-dst_grid_name = /d4/hydro-dm/IOC/weighting/HRRR1km/geo_dst.nc
+HRRR_dst_grid_name = /d4/hydro-dm/IOC/weighting/HRRR1km/geo_dst.nc
 HRRR_output_dir = /d4/hydro-dm/IOC/regridded/HRRR
 
 #MRMS-specific
 MRMS_wgt_bilinear =  /d4/hydro-dm/IOC/weighting/RADAR_GAUGE1km/RADAR2HYDRO_d01_weight_bilinear.nc
-dst_grid_name = /d4/hydro-dm/IOC/weighting/RADAR_GAUGE1km/geo_dst.nc
+MRMS_dst_grid_name = /d4/hydro-dm/IOC/weighting/RADAR_GAUGE1km/geo_dst.nc
 MRMS_output_dir = /d4/hydro-dm/IOC/regridded/MRMS
-
-#NAM-specific
-#Currently for NAM227, as required by NCEP.
-NAM_wgt_bilinear  = /d4/hydro-dm/IOC/weighting/NAM227/NAM2HYDRO_d01_weight_bilinear.nc
-dst_grid_name = /d4/hydro-dm/IOC/weighting/NAM227/geo_dst.nc
-NAM_output_dir = /d6/forcing_test/regridded/NAM
 
 #GFS-specific
 #For GFS_0.25 data
 GFS_wgt_bilinear = /d4/hydro-dm/IOC/weighting/GFS1km_25/GFS2HYDRO_d01_weight_bilinear.nc
-dst_grid_name = /d4/hydro-dm/IOC/weighting/GFS1km_25/geo_dst.nc
+GFS_dst_grid_name = /d4/hydro-dm/IOC/weighting/GFS1km_25/geo_dst.nc
 GFS_output_dir = /d4/hydro-dm/IOC/regridded/GFS
-#GFS_output_dir = /d6/forcing_test/regridded/GFS
 
 #RAP-specific
 RAP_wgt_bilinear = /d4/hydro-dm/IOC/weighting/RAP1km/RAP2HYDRO_d01_weight_bilinear.nc
-dst_grid_name = /d4/hydro-dm/IOC/weighting/RAP1km/geo_dst.nc
-#RAP_output_dir = /d6/forcing_test/regridded/RAP
+RAP_dst_grid_name = /d4/hydro-dm/IOC/weighting/RAP1km/geo_dst.nc
 RAP_output_dir = /d4/hydro-dm/IOC/regridded/RAP
 
 #-------------------------------------------------
@@ -195,27 +183,19 @@ RAP_geo_data = /d4/hydro-dm/IOC/weighting/RAP1km/geo_dst.nc
 RAP_downscale_output_dir = /d4/hydro-dm/IOC/downscaled/RAP
 
 
-#------------------------------------------------- 
+
+#-------------------------------------------------
 #
 #  Parameters needed for layering/mixing
-# 
-# 
-# 
+#
+#
+#
 #-------------------------------------------------
 [layering]
 
 # HRRR and RAP used for Analysis and Assimilation
 # Forcing Configuration
-
-# NOTE: Use the IDENTICAL directory you defined in the [downscaling]
-# section for HRRR_downscale_output_dir
 analysis_assimilation_primary = /d4/hydro-dm/IOC/downscaled/HRRR
-
-# NOTE: Use the IDENTICAL directory you defined in the [downscaling]
-# section for RAP_downscale_output_dir
 analysis_assimilation_secondary = /d4/hydro-dm/IOC/downscaled/RAP
-
-# Location to save the layered/combined files.
-output_dir = /d6/forcing_test/layering/analysis_assimilation
-
-
+output_dir = /d4/hydro-dm/IOC/layering/analysis_assimilation
+index_file_location = /d4/hydro-dm/IOC/layering/analysis_assimilation
