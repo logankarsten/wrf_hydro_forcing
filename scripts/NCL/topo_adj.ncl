@@ -17,9 +17,9 @@
 ;Cannot hard-code the location of the executable when used 
 ;in an operational environment. Will we be able to place 
 ;the topo_adjf90.so in a pre-determined library directory?
-; !!!!FIND A WORK AROUND OR DEFINITIVE PROCEDURE !!!!
+; In the wrf_hydro_forcing.parm file, indicate where all
+; shared objects should reside. 
 ;external TOPO_ADJF90 "$HOME/HYDRO/REGRID/DOWN/topo_adjf90.so"
-external TOPO_ADJF90 "/d4/hydro-dm/IOC/code/topo_adjf90.so"
 
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_code.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_csm.ncl"
@@ -95,8 +95,10 @@ begin
        julian = day_of_year(yyyy,mon,dd)
        print(julian)
 	print(xtime)
-
-   TOPO_ADJF90:: topo_adj(hgt,xlat,xlong,dx,dy,nx,ny,cosa, sina, xtime, julian,swdown_in, swdown_out)
+   ; Do NOT use the TOPO_ADJF90:: topo_adj syntax, now that we are defining
+   ; a single directory where ALL shared objects should reside.
+   ;TOPO_ADJF90:: topo_adj(hgt,xlat,xlong,dx,dy,nx,ny,cosa, sina, xtime, julian,swdown_in, swdown_out)
+   topo_adj(hgt,xlat,xlong,dx,dy,nx,ny,cosa, sina, xtime, julian,swdown_in, swdown_out)
 
 	fout->SWDOWN=swdown_out
 
