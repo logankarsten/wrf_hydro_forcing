@@ -728,6 +728,28 @@ def create_benchmark_summary(product, activity, elapsed_times):
         logging.error("ERROR: Nothing was returned....")
     
 
+def read_input():
+    parser = argparse.ArgumentParser(description='Forcing Configurations for WRF-Hydro')
+    # Actions
+    parser.add_argument('--regrid_downscale', action='store_true', help='regrid and downscale')
+    parser.add_argument('--bias', action='store_true', help='bias correction')
+    parser.add_argument('--layer', action='store_true', help='layer')
+
+    # Model name of input data
+    parser.add_argument('--InputDataName', required = True, choices=['MRMS','RAP','HRRR','GFS','CFS'],help='input data name: MRMS, RAP, HRRR, GFS, CFS')
+
+
+    # Input file
+    parser.add_argument('InputFileName', nargs=1, type=argparse.FileType('r'))
+    args = parser.parse_args()
+    if not (args.regrid_downscale or args.layer or args.bias) :
+        parser.error('No action was requested, request regridding/downscaling, bias-correction, or layering')
+
+    return args
+
+
+
+
 #--------------------Define the Workflow -------------------------
 
 if __name__ == "__main__":
