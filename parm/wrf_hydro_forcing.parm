@@ -72,6 +72,18 @@ RAP_data = /var/autofs/mnt/rapdmg1/data/grib/WRF-RR-CONUS-wrfprs/20151018
 
 
 #-------------------------------------------------
+#   Forecast hour cutoff times
+#-------------------------------------------------
+
+[fcsthr_max]
+# Last forecast hour for the specified 
+# input model data (HRRR, RAP, etc.) to be included in the forcing
+RAP_fcsthr_max = 18
+HRRR_fcsthr_max = 18
+GFS_fcsthr_max = 240
+CFS_fcsthr_max = 720
+
+#-------------------------------------------------
 #    Paths to executables and other scripts
 #-------------------------------------------------
 
