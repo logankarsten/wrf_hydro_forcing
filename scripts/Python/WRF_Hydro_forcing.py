@@ -4,7 +4,6 @@ import logging
 import re
 import time
 import numpy as np
-import sys
 import argparse
 from ConfigParser import SafeConfigParser
 
@@ -27,7 +26,7 @@ from ConfigParser import SafeConfigParser
 
 
 
-def regrid_data( product_name, parser ):
+def regrid_data( product_name, file_to_process, parser, substitute_f0 = False ):
     """Provides a wrapper to the regridding scripts originally
     written in NCL.  For HRRR data regridding, the
     HRRR-2-WRF_Hydro_ESMF_forcing.ncl script is invoked.
@@ -42,13 +41,23 @@ def regrid_data( product_name, parser ):
     Args:
         product_name (string):  The name of the product 
                                 e.g. HRRR, MRMS, NAM
+        file_to_process (string): The filename of the
+                                  input data to process.
         parser (ConfigParser):  The parser to the config/parm
                                 file containing all defined values
                                 necessary for running the regridding.
+        substitute_f0 (bool):  Default = False If this is a 0 hr
+                               forecast file, then skip regridding,
+                               it will need to be replaced with
+                               another file during the 
+                               downscale_data() step.
     Returns:
-        elapsed_times (numpy array):  A Numpy array containing the 
-                                      elapsed time in seconds for 
-                                      regridding each file.
+        regridded_output (string): The full filepath and filename
+                                   of the regridded file.  If thd data
+                                   product is GFS or RAP and it is the
+                                   f000 file, then just create an
+                                   empty file that follows the naming
+                                   convention of a regridded file.
 
     """
 
@@ -57,119 +66,129 @@ def regrid_data( product_name, parser ):
     # which are needed to invoke the regridding 
     # scripts.
     product = product_name.upper()
-    dst_grid_name = parser.get('regridding','dst_grid_name')
     ncl_exec = parser.get('exe', 'ncl_exe')
 
-    # Create an array to store the elapsed times for
-    # regridding each file.
-    elapsed_array = []
 
     if product == 'HRRR':
        logging.info("Regridding HRRR")
        wgt_file = parser.get('regridding', 'HRRR_wgt_bilinear')
        data_dir =  parser.get('data_dir', 'HRRR_data')
        regridding_exec = parser.get('exe', 'HRRR_regridding_exe')
-       data_files_to_process = get_filepaths(data_dir)   
        #Values needed for running the regridding script
        output_dir_root = parser.get('regridding','HRRR_output_dir')
+       dst_grid_name = parser.get('regridding','HRRR_dst_grid_name')
     elif product == 'MRMS':
        logging.info("Regridding MRMS")
        wgt_file = parser.get('regridding', 'MRMS_wgt_bilinear')
        data_dir =  parser.get('data_dir', 'MRMS_data')
        regridding_exec = parser.get('exe', 'MRMS_regridding_exe')
-       data_files_to_process = get_filepaths(data_dir)   
+       #data_files_to_process = get_filepaths(data_dir)   
        #Values needed for running the regridding script
        output_dir_root = parser.get('regridding','MRMS_output_dir')
+       dst_grid_name = parser.get('regridding','MRMS_dst_grid_name')
     elif product == 'NAM':
        logging.info("Regridding NAM")
        wgt_file = parser.get('regridding', 'NAM_wgt_bilinear')
        data_dir =  parser.get('data_dir', 'NAM_data')
        regridding_exec = parser.get('exe', 'NAM_regridding_exe')
-       data_files_to_process = get_filepaths(data_dir)
        #Values needed for running the regridding script
        output_dir_root = parser.get('regridding','NAM_output_dir')
+       dst_grid_name = parser.get('regridding','NAM_dst_grid_name')
     elif product == 'GFS':
        logging.info("Regridding GFS")
        wgt_file = parser.get('regridding', 'GFS_wgt_bilinear')
        data_dir =  parser.get('data_dir', 'GFS_data')
        regridding_exec = parser.get('exe', 'GFS_regridding_exe')
-       data_files_to_process = get_filepaths(data_dir)
        #Values needed for running the regridding script
        output_dir_root = parser.get('regridding','GFS_output_dir')
+       dst_grid_name = parser.get('regridding','GFS_dst_grid_name')
     elif product == 'RAP':
        logging.info("Regridding RAP")
        wgt_file = parser.get('regridding', 'RAP_wgt_bilinear')
        data_dir =  parser.get('data_dir', 'RAP_data')
        regridding_exec = parser.get('exe', 'RAP_regridding_exe')
-       data_files_to_process = get_filepaths(data_dir)
        #Values needed for running the regridding script
        output_dir_root = parser.get('regridding','RAP_output_dir')
+       dst_grid_name = parser.get('regridding','RAP_dst_grid_name')
 
 
+    # If this is a 0hr forecast and the data product is either GFS or RAP, then do
+    # nothing for now, it will need to be replaced during the
+    # downscaling step.
+    if substitute_f0:
+        logging.info("Inside regrid_data(). Skip regridding f0 RAP...")
+        (subdir_file_path,hydro_filename) = \
+            create_output_name_and_subdir(product,file_to_process,data_dir)
+        regridded_file_path = output_dir_root + "/" + subdir_file_path 
+        regridded_file = output_dir_root + "/" + subdir_file_path + "/" + hydro_filename 
+        mkdir_p(regridded_file_path)
+        touch_cmd = "touch " + regridded_file
+        os.system(touch_cmd)
+        return regridded_file  
+        
+    else:
 
-    # For each file in the data directory,
-    # generate the key-value pairs for 
-    # input to the regridding script.
-    # The key-value pairs for the input should look like: 
-    #  'srcfilename="/d4/hydro-dm/IOC/data/HRRR/20150723_i23_f010_HRRR.grb2"' 
-    #  'wgtFileName_in=
-    #     "d4/hydro-dm/IOC/weighting/HRRR1km/HRRR2HYDRO_d01_weight_bilinear.nc"'
-    #  'dstGridName="/d4/hydro-dm/IOC/data/geo_dst.nc"' 
-    #  'outdir="/d4/hydro-dm/IOC/regridded/HRRR/20150723/i09"'
-    #  'outFile="20150724_i09_f010_HRRR.nc"' 
-
-    for data_file_to_process in data_files_to_process:
-        #input_filename = data_dir + '/' + data_file_to_process
-        input_filename =  data_file_to_process
-        srcfilename_param =  "'srcfilename=" + '"' + input_filename +  \
-                             '"' + "' "
-       # logging.info("input data file: %s", data_file_to_process)
+        # Generate the key-value pairs for 
+        # input to the regridding script.
+        # The key-value pairs for the input should look like: 
+        #  'srcfilename="/d4/hydro-dm/IOC/data/HRRR/20150723_i23_f010_HRRR.grb2"' 
+        #  'wgtFileName_in=
+        #     "d4/hydro-dm/IOC/weighting/HRRR1km/HRRR2HYDRO_d01_weight_bilinear.nc"'
+        #  'dstGridName="/d4/hydro-dm/IOC/data/geo_dst.nc"' 
+        #  'outdir="/d4/hydro-dm/IOC/regridded/HRRR/20150723/i09"'
+        #  'outFile="20150724_i09_f010_HRRR.nc"' 
+       
+        (date,model,fcsthr) = extract_file_info(file_to_process)  
+        data_file_to_process = data_dir + "/" + date + "/" + file_to_process 
+        srcfilename_param =  "'srcfilename=" + '"' + data_file_to_process +  \
+                                 '"' + "' "
+        # logging.info("input data file: %s", file_to_process)
         wgtFileName_in_param =  "'wgtFileName_in = " + '"' + wgt_file + \
-                                '"' + "' "
+                                    '"' + "' "
         dstGridName_param =  "'dstGridName=" + '"' + dst_grid_name + '"' + "' "
-
+    
         # Create the output filename following the RAL 
         # naming convention: 
         (subdir_file_path,hydro_filename) = \
             create_output_name_and_subdir(product,data_file_to_process,data_dir)
-   
+       
         #logging.info("hydro filename: %s", hydro_filename)
         # Create the full path to the output directory
         # and assign it to the output directory parameter
         output_file_dir = output_dir_root + "/" + subdir_file_path
         outdir_param = "'outdir=" + '"' + output_file_dir + '"' + "' " 
-        #logging.info("outdir_param: %s", outdir_param)
+        regridded_file = output_file_dir + hydro_filename
 
         if product == "HRRR" or product == "NAM" \
            or product == "GFS" or product == "RAP":
-           #full_output_file = output_file_dir + "/"  + subdir_file_path
            full_output_file = output_file_dir + "/"  
            # Create the new output file subdirectory
            mkdir_p(output_file_dir)
            outFile_param = "'outFile=" + '"' + hydro_filename+ '"' + "' "
         elif product == "MRMS":
            # !!!!!!NOTE!!!!!
-           # MRMS regridding script differs from the HRRR and NAM scripts in that it does not
-           # accept an outdir variable.  Incorporate the output directory (outdir)
-           # into the outFile variable.
+           # MRMS regridding script differs from the HRRR and NAM scripts in that 
+           # it does not # accept an outdir variable.  Incorporate the output
+           # directory (outdir) into the outFile variable.
            full_output_file = output_file_dir + "/"  + hydro_filename
            mkdir_p(output_file_dir)
            outFile_param = "'outFile=" + '"' + full_output_file + '"' + "' "
-   
+
         regrid_params = srcfilename_param + wgtFileName_in_param + \
-                        dstGridName_param + outdir_param + \
-                        outFile_param
+                    dstGridName_param + outdir_param + \
+                    outFile_param
         regrid_prod_cmd = ncl_exec + " "  + regrid_params + " " + \
-                          regridding_exec
-        
+                      regridding_exec
+    
         logging.debug("regridding command: %s",regrid_prod_cmd)
+
         # Measure how long it takes to run the NCL script for regridding.
         start_NCL_regridding = time.time()
         return_value = os.system(regrid_prod_cmd)
         end_NCL_regridding = time.time()
         elapsed_time_sec = end_NCL_regridding - start_NCL_regridding
-        elapsed_array.append(elapsed_time_sec)
-     
+        logging.info("Time(sec) to regrid file  %s" %  elapsed_time_sec)
+ 
 
         if return_value != 0:
             logging.info('ERROR: The regridding of %s was unsuccessful, \
@@ -177,10 +196,9 @@ def regrid_data( product_name, parser ):
             #TO DO: Determine the proper action to take when the NCL file h
             #fails. For now, exit.
             exit()
-        
-    return elapsed_array
+    
 
-
+    return regridded_file
 
 def get_filepaths(dir):
     """ Generates the file names in a directory tree
@@ -314,7 +332,8 @@ def mkdir_p(dir):
         else: raise            
 
 
-def downscale_data(product_name, parser, downscale_shortwave=False):
+def downscale_data(product_name, file_to_process, parser, downscale_shortwave=False,
+                   substitute_f0=False):
     """
     Performs downscaling of data by calling the necessary
     NCL code (specific to the model/product).  There is an
@@ -331,6 +350,8 @@ def downscale_data(product_name, parser, downscale_shortwave=False):
 
     Args:
         product_name (string):  The product name: ie HRRR, NAM, GFS, etc. 
+      
+        file_to_process (string): The file to be processed.
 
         parser (ConfigParser) : The ConfigParser which can access the
                                 Python config file wrf_hydro_forcing.parm
@@ -343,6 +364,13 @@ def downscale_data(product_name, parser, downscale_shortwave=False):
                                 the NCL wrapper to the Fortan
                                 code.
                                 Set to 'False' by default.
+
+        substitute_f0 (boolean) : 'True'- if this is an F000 UTC 
+                                  copy the downscaled file from 
+                                  a previous model run with the 
+                                  same valid time and rename it.
+                                  forecast, 'False' by default.
+                                  
     Returns:
         elapsed_array (List):  A list of the elapsed time for
                                performing the downscaling. Each entry 
@@ -392,9 +420,9 @@ def downscale_data(product_name, parser, downscale_shortwave=False):
         hgt_data_file = parser.get('downscaling','RAP_hgt_data')
         geo_data_file = parser.get('downscaling','RAP_geo_data')
         downscale_output_dir = parser.get('downscaling', 'RAP_downscale_output_dir')
-        #DEBUGXXX
-        logging.info("output dir for downscaled data %s", downscale_output_dir)
         downscale_exe = parser.get('exe', 'RAP_downscaling_exe')
+    else:
+        logging.info("Requested downscaling of unsupported data product %s", product)
  
     
     # Get the data to downscale, and for each file, call the 
@@ -737,12 +765,12 @@ def read_input():
     parser.add_argument('--bias', action='store_true', help='bias correction')
     parser.add_argument('--layer', action='store_true', help='layer')
 
-    # Model name of input data
-    parser.add_argument('--InputDataName', required = True, choices=['MRMS','RAP','HRRR','GFS','CFS'],help='input data name: MRMS, RAP, HRRR, GFS, CFS')
+    # Product name of input data
+    parser.add_argument('--DataProductName', required = True, choices=['MRMS','RAP','HRRR','GFS','CFS'],help='input data name: MRMS, RAP, HRRR, GFS, CFS')
 
 
     # Input file
-    parser.add_argument('InputFileName', nargs=1, type=argparse.FileType('r'))
+    parser.add_argument('InputFileName')
     args = parser.parse_args()
     if not (args.regrid_downscale or args.layer or args.bias) :
         parser.error('No action was requested, request regridding/downscaling, bias-correction, or layering')
@@ -751,8 +779,159 @@ def read_input():
 
 
 
+def initial_setup(parser,forcing_config_label):
+    """  Set up any environment variables, logging levels, etc.
+         before any processing begins.
 
-#--------------------Define the Workflow -------------------------
+         Input:
+            parser (SafeConfigParser):  the parsing object 
+                                          necessary for parsing
+                                          the config/parm file.
+            forcing_config_label (string):  The name of the log
+                                          file to associate with
+                                          the forcing configuration.
+                            
+        Returns:
+            logging (logging):  The logging object to which we can
+                                write.   
+                                           
+    """
+
+    #Read in all relevant params from the config/param file
+    ncl_exec = parser.get('exe', 'ncl_exe')
+    ncarg_root = parser.get('default_env_vars', 'ncarg_root')
+    logging_level = parser.get('log_level', 'forcing_engine_log_level')
+
+    # Check for the NCARG_ROOT environment variable. If it is not set,
+    # use an appropriate default, defined in the configuration file.
+    ncarg_root_found = os.getenv("NCARG_ROOT")
+    if ncarg_root_found is None:
+        ncarg_root = os.environ["NCARG_ROOT"] = ncarg_root
+
+    # Set the NCL_DEF_LIB_DIR to indicate where ALL shared objects
+    # reside.
+    ncl_def_lib_dir = parser.get('default_env_vars','ncl_def_lib_dir')
+    ncl_def_lib_dir = os.environ["NCL_DEF_LIB_DIR"] = ncl_def_lib_dir
+
+    # Set the logging level based on what was defined in the parm/config file
+    if logging_level == 'DEBUG':
+        set_level = logging.DEBUG
+    elif logging_level == 'INFO':
+        set_level = logging.INFO
+    elif logging_level == 'WARNING':
+        set_level = logging.WARNING
+    elif logging_level == 'ERROR':
+        set_level = logging.ERROR
+    else:
+        set_level = logging.CRITICAL
+
+    logging_filename =  forcing_config_label + ".log"
+    logging.basicConfig(format='%(asctime)s %(message)s',
+                         filename=logging_filename, level=set_level)
+
+    return logging     
+
+def extract_file_info(input_file):
+
+    """ Extract the date, model run time (UTC) and
+        forecast hour (UTC) from the input file name.
+
+        Input:
+            input_file (string):  Contains the date, model run
+                                  time (UTC) and the forecast
+                                  time in UTC.
+        Returns:
+            date (string):  YYYYMMDD
+            model_run (int): HH
+            fcst_hr (int):  HHH
+    """
+
+    # Regexp check for model data
+    match = re.match(r'([0-9]{8})_i([0-9]{2})_f([0-9]{3,4}).*.grb', input_file)
+
+    # Regexp check for MRMS data
+    match2 = re.match(r'(GaugeCorr_QPE_00.00)_([0-9]{8})_([0-9]{6})',input_file)
+    if match:
+       date = match.group(1)
+       model_run = int(match.group(2))
+       fcst_hr  = int(match.group(3))
+       return (date, model_run, fcst_hr)
+    elif match2:
+       date = match2.group(2)
+       model_run = match2.group(3)
+       fcst_hr = 0
+       return (date, model_run, fcst_hr)
+    else:
+        logging.error("ERROR: File name doesn't follow expected format")
+
+
+def is_in_fcst_range(product_name,fcsthr, parser):
+    """  Determine if this current file to be processed has a forecast
+         hour that falls within the range bound by the max forecast hour 
+         Supports checking for RAP, HRRR, and GFS data.  
+         
+         Input:
+            fcsthr (int):  The current file's (i.e. the data file under
+                           consideration) forecast hour.
+            parser (SafeConfigParser): The parser object. 
+     
+         Returns:
+            boolean:  True if this is within the max forecast hour
+                      False otherwise.
+                           
+    """
+
+    # Determine whether this current file lies within the forecast range
+    # for this data (e.g. if processing RAP, use only the 0hr-18hr forecasts).
+    # Skip if this file corresponds to a forecast hour outside of the range.
+    if product_name == 'RAP':
+        fcst_max = int(parser.get('fcsthr_max','RAP_fcsthr_max'))
+    elif product_name == 'HRRR':
+        fcst_max = int(parser.get('fcsthr_max','HRRR_fcsthr_max'))
+    elif product_name == 'GFS':
+        fcst_max = int(parser.get('fcsthr_max','GFS_fcsthr_max'))
+    elif product_name == 'CFS':
+        fcst_max = int(parser.get('fcsthr_max','CFS_fcsthr_max'))
+    elif product_name == 'MRMS':
+        return True
+        
+      
+    if fcsthr >= fcst_max:
+        logging.info("Skip file, fcst hour %d is outside of fcst max %d",fcsthr,fcst_max)
+        return False
+    else:
+        return True
+
+
+
+
+def substitute_f0(parser, product):
+    """   For the 0hr forecasts of GFS or RAP data,
+          substitute with the processed data from the previous
+          model run with the same valid time, where valid time
+          is the model run time (UTC) + forecast hour (UTC).
+   
+          Input:
+
+
+
+          Returns:
+
+    """
+
+    # Initialize any variables here.
+    rap_model_times = range(0,24)
+    gfs_model_times = [0,6,12,18]
+
+    if product == 'RAP':
+        print "substitute RAP "
+        
+    
+    elif product == 'GFS':
+        print "Substitue GFS"
+    
+
+#--------------------Defin the Workflow -------------------------
 
 if __name__ == "__main__":
     # Replace pass with anything you wish if you want to
