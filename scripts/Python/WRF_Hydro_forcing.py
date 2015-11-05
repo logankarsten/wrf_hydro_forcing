@@ -26,7 +26,7 @@ from ConfigParser import SafeConfigParser
 
 
 
-def regrid_data( product_name, file_to_process, parser, substitute_f0 = False ):
+def regrid_data( product_name, file_to_process, parser, substitute_fcst0hr = False ):
     """Provides a wrapper to the regridding scripts originally
     written in NCL.  For HRRR data regridding, the
     HRRR-2-WRF_Hydro_ESMF_forcing.ncl script is invoked.
@@ -46,7 +46,7 @@ def regrid_data( product_name, file_to_process, parser, substitute_f0 = False ):
         parser (ConfigParser):  The parser to the config/parm
                                 file containing all defined values
                                 necessary for running the regridding.
-        substitute_f0 (bool):  Default = False If this is a 0 hr
+        substitute_fcst0hr (bool):  Default = False If this is a 0 hr
                                forecast file, then skip regridding,
                                it will need to be replaced with
                                another file during the 
@@ -115,7 +115,7 @@ def regrid_data( product_name, file_to_process, parser, substitute_f0 = False ):
     # If this is a 0hr forecast and the data product is either GFS or RAP, then do
     # nothing for now, it will need to be replaced during the
     # downscaling step.
-    if substitute_f0:
+    if substitute_fcst0hr:
         logging.info("Inside regrid_data(). Skip regridding f0 RAP...")
         (subdir_file_path,hydro_filename) = \
             create_output_name_and_subdir(product,file_to_process,data_dir)
@@ -333,7 +333,7 @@ def mkdir_p(dir):
 
 
 def downscale_data(product_name, file_to_process, parser, downscale_shortwave=False,
-                   substitute_f0=False):
+                   substitute_fcst0hr=False):
     """
     Performs downscaling of data by calling the necessary
     NCL code (specific to the model/product).  There is an
@@ -351,7 +351,9 @@ def downscale_data(product_name, file_to_process, parser, downscale_shortwave=Fa
     Args:
         product_name (string):  The product name: ie HRRR, NAM, GFS, etc. 
       
-        file_to_process (string): The file to be processed.
+        file_to_downscale (string): The file to be downscaled, this is 
+                                 the full file path to the regridded
+                                 file.
 
         parser (ConfigParser) : The ConfigParser which can access the
                                 Python config file wrf_hydro_forcing.parm
@@ -365,19 +367,15 @@ def downscale_data(product_name, file_to_process, parser, downscale_shortwave=Fa
                                 code.
                                 Set to 'False' by default.
 
-        substitute_f0 (boolean) : 'True'- if this is an F000 UTC 
-                                  copy the downscaled file from 
-                                  a previous model run with the 
-                                  same valid time and rename it.
-                                  forecast, 'False' by default.
+        substitute_fcst0hr (boolean) : 'True'- if this is a zero hour 
+                                  forecast, then copy the downscaled 
+                                  file from a previous model run with 
+                                  the same valid time and rename it.
+                                  'False' by default.
                                   
     Returns:
-        elapsed_array (List):  A list of the elapsed time for
-                               performing the downscaling. Each entry 
-                               represents the time to downscale a file.  
+        None
 
-                               
-                              
         
     """
 
@@ -387,10 +385,6 @@ def downscale_data(product_name, file_to_process, parser, downscale_shortwave=Fa
     lapse_rate_file = parser.get('downscaling','lapse_rate_file')
     ncl_exec = parser.get('exe', 'ncl_exe')
     
- 
-    # Create an array to store the elapsed times for
-    # downscaling each file.
-    elapsed_array = []
 
     if product  == 'HRRR':
         logging.info("Downscaling HRRR")
@@ -424,34 +418,41 @@ def downscale_data(product_name, file_to_process, parser, downscale_shortwave=Fa
     else:
         logging.info("Requested downscaling of unsupported data product %s", product)
  
-    
-    # Get the data to downscale, and for each file, call the 
-    # corresponding downscaling script
-    #logging.info("dir with downscaled data: %s", data_to_downscale_dir)
-    data_to_downscale = get_filepaths(data_to_downscale_dir)
-    
-    for data in data_to_downscale:
-        match = re.match(r'(.*)/(([0-9]{8})_(i[0-9]{2})_f.*)',data)
+     
+    # If this is an f000 file and RAP or GFS, then search for
+    # a suitable replacement since this file will have one or more 
+    # missing variable(s).
+    # Otherwise, proceed with creating the request to downscale.
+ 
+    if substitute_fcst0hr:
+        # Don't downscale, find another downscaled file from the previous model
+        # run with the same valid time (model run + fcst hour = valid time) and
+        # copy to this f000 file.
+        logging.info("Searching for f000 substitute...")
+
+    else:
+        # Downscale as usual
+
+        match = re.match(r'(.*)/(([0-9]{8})_(i[0-9]{2})_f.*)',file_to_downscale)
         if match:
             yr_month_day = match.group(3)
             downscaled_file = match.group(2)
             init_hr = match.group(4)
         else:
             logging.error("ERROR: regridded file's name: %s is an unexpected format",\
-                           data)
-        
-       
+                               data)
+    
+   
         full_downscaled_dir = downscale_output_dir + "/" + yr_month_day + "/"\
                                 + init_hr  
         full_downscaled_file = full_downscaled_dir + "/" +  downscaled_file
         # Create the full output directory for the downscaled data if it doesn't 
         # already exist. 
         mkdir_p(full_downscaled_dir) 
-        #mkdir_p(downscale_output_dir) 
-
+    
         logging.info("full_downscaled_file: %s", full_downscaled_file)
         logging.debug("Full output filename for second downscaling: %s" , full_downscaled_file)
- 
+    
         # Create the key-value pairs that make up the
         # input for the NCL script responsible for
         # the downscaling.
@@ -464,7 +465,7 @@ def downscale_data(product_name, file_to_process, parser, downscale_shortwave=Fa
                   input_file3_param + lapse_file_param +  output_file_param 
         downscale_cmd = ncl_exec + " " + downscale_params + " " + downscale_exe
         logging.debug("Downscale command : %s", downscale_cmd)
-
+    
         # Downscale the shortwave radiation, if requested...
         # Key-value pairs for downscaling SWDOWN, shortwave radiation.
         if downscale_shortwave:
@@ -472,45 +473,44 @@ def downscale_data(product_name, file_to_process, parser, downscale_shortwave=Fa
             downscale_swdown_exe = parser.get('exe', 'shortwave_downscaling_exe') 
             swdown_output_file_param = "'outFile=" + '"' + \
                                        full_downscaled_file + '"' + "' "
-
+    
             swdown_geo_file_param = "'inputGeo=" + '"' + geo_data_file + '"' + "' "
             swdown_params = swdown_geo_file_param + " " + swdown_output_file_param
             downscale_shortwave_cmd = ncl_exec + " " + swdown_params + " " \
                                       + downscale_swdown_exe 
             logging.info("SWDOWN downscale command: %s", downscale_shortwave_cmd)
-
+    
             # Crude measurement of performance for downscaling.
             # Wall clock time used to determine the elapsed time
             # for downscaling each file.
             start = time.time()
-
+    
             #Invoke the NCL script for performing a single downscaling.
             return_value = os.system(downscale_cmd)
             swdown_return_value = os.system(downscale_shortwave_cmd)
             end = time.time()
             elapsed = end - start
-            elapsed_array.append(elapsed)
-
+    
             # Check for successful or unsuccessful downscaling
             # of the required and shortwave radiation
             if return_value != 0 or swdown_return_value != 0:
                 logging.info('ERROR: The downscaling of %s was unsuccessful, \
                              return value of %s', product,return_value)
                 exit()
-
+    
         else:
-            # Only one downscaling, no additional downscaling of
-            # the short wave radiation.
-
+            # No additional downscaling of
+            # the short wave radiation is required.
+    
             # Crude measurement of performance for downscaling.
             start = time.time()
-
+    
             #Invoke the NCL script for performing the generic downscaling.
             return_value = os.system(downscale_cmd)
             end = time.time()
             elapsed = end - start
-            elapsed_array.append(elapsed)
-
+            logging.info("Elapsed time (sec) for downscaling: %s",elapsed)
+    
             # Check for successful or unsuccessful downscaling
             if return_value != 0:
                 logging.info('ERROR: The downscaling of %s was unsuccessful, \
@@ -518,11 +518,31 @@ def downscale_data(product_name, file_to_process, parser, downscale_shortwave=Fa
                 #TO DO: Determine the proper action to take when the NCL file 
                 #fails. For now, exit.
                 exit()
+    
+def find_fcst0hr_replacement(product, file_to_replace):
+    """ Search the downscaling directory for the 
+        previous model run to this input file with the
+        same valid time (valid time = model run + fcst hr)
+        and copy it to this file's directory, maintaining
+        the f000 file's original name.
 
-    return elapsed_array
+        Args:
+            product (string): The name of the product for this
+                              file (ie. GFS, RAP, etc.)
 
+           file_to_replace (string): The f000 forecast file
+                                     which we need to 
+                                     substitute to avoid containing
+                                     any missing variables.
 
-
+       Returns:
+           None               Makes a copy of a downscaled file 
+                              from a previous model run, with the
+                              same valid time as this input file.
+      
+    """    
+    
+    
 def create_benchmark_summary(product, activity, elapsed_times):
     
     """ Create a summary of the min, max, and mean
@@ -675,7 +695,7 @@ def find_layering_files(primary_files,downscaled_secondary_dir):
         
  
     """
-    secondary_product = "RAP"
+    second_product = "RAP"
     list_paired_files = []
     paired_files = ()
 
@@ -691,7 +711,7 @@ def find_layering_files(primary_files,downscaled_secondary_dir):
             secondary_file = downscaled_secondary_dir +  \
                              "/" + date + "/i" + modelrun_str + "/" + date +\
                              "_i"+ modelrun_str + "_f" + fcst_hr_str + "_" +\
-                             secondary_product + ".nc"  
+                             second_product + ".nc"  
             layered_filename = date + "_i" + modelrun_str + "_f" + \
                                fcst_hr_str + "_Analysis-Assimilation.nc"
                
@@ -759,6 +779,16 @@ def create_benchmark_summary(product, activity, elapsed_times):
     
 
 def read_input():
+    """   Reads in the command line arguments.
+
+
+          Args:
+            None
+  
+          Returns:
+            args (args structure from argparse):  The struct from argparse
+ 
+    """
     parser = argparse.ArgumentParser(description='Forcing Configurations for WRF-Hydro')
     # Actions
     parser.add_argument('--regrid_downscale', action='store_true', help='regrid and downscale')
@@ -783,7 +813,7 @@ def initial_setup(parser,forcing_config_label):
     """  Set up any environment variables, logging levels, etc.
          before any processing begins.
 
-         Input:
+         Args:
             parser (SafeConfigParser):  the parsing object 
                                           necessary for parsing
                                           the config/parm file.
@@ -791,7 +821,7 @@ def initial_setup(parser,forcing_config_label):
                                           file to associate with
                                           the forcing configuration.
                             
-        Returns:
+         Returns:
             logging (logging):  The logging object to which we can
                                 write.   
                                            
@@ -836,7 +866,7 @@ def extract_file_info(input_file):
     """ Extract the date, model run time (UTC) and
         forecast hour (UTC) from the input file name.
 
-        Input:
+        Args:
             input_file (string):  Contains the date, model run
                                   time (UTC) and the forecast
                                   time in UTC.
@@ -870,7 +900,7 @@ def is_in_fcst_range(product_name,fcsthr, parser):
          hour that falls within the range bound by the max forecast hour 
          Supports checking for RAP, HRRR, and GFS data.  
          
-         Input:
+         Args:
             fcsthr (int):  The current file's (i.e. the data file under
                            consideration) forecast hour.
             parser (SafeConfigParser): The parser object. 
@@ -905,17 +935,28 @@ def is_in_fcst_range(product_name,fcsthr, parser):
 
 
 
-def substitute_f0(parser, product):
+def substitute_fcst0hr(parser, product):
     """   For the 0hr forecasts of GFS or RAP data,
-          substitute with the processed data from the previous
+          substitute with the downscaled data from the previous
           model run with the same valid time, where valid time
           is the model run time (UTC) + forecast hour (UTC).
+          This is necessary, as there are some missing variables
+          in the 0hr forecast for RAP and GFS, which cause
+          problems when input to the WRF-Hydro model.
    
-          Input:
+          Args:
+             parser (SafeConfigParser): parser object used to
+                                        read values set in the
+                                        param/config file.
+             product (string):  The name of the model product
+                                (e.g. RAP, GFS, etc.)
 
 
 
           Returns:
+             None        Creates a copy of the file and renames
+                         it to be consistent with the original 
+                         f000 file.
 
     """
 
