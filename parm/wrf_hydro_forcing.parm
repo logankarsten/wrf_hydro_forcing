@@ -61,14 +61,14 @@ ncl_def_lib_dir = /home/minnawin/IOC/ncl_shared_objs
 # NOTE: This will be replaced with real-time data for Operational
 # use.  The static data is used for initial development and testing purposes.
 
-HRRR_data = /var/autofs/mnt/rapdmg2/data/grib/HRRR-wrfprs/20151018
-MRMS_data = /d2/hydro-dm/var/data/nsslMosaic/grib2/GaugeCorr_QPE/01H/201501018
+HRRR_data = /var/autofs/mnt/rapdmg2/data/grib/HRRR-wrfprs
+MRMS_data = /d2/hydro-dm/var/data/nsslMosaic/grib2/GaugeCorr_QPE/01H
 #NAM_data = /d4/hydro-dm/IOC/test/NAM218
 # NAM227 as directed by NCEP
 NAM_data = /d4/hydro-dm/IOC/data/nam227
 GFS_data = /d4/hydro-dm/IOC/data/GFS_0.25
 #RAP_data = /d4/hydro-dm/IOC/data/RAP1km
-RAP_data = /var/autofs/mnt/rapdmg1/data/grib/WRF-RR-CONUS-wrfprs/20151018
+RAP_data = /var/autofs/mnt/rapdmg1/data/grib/WRF-RR-CONUS-wrfprs
 
 
 #-------------------------------------------------
@@ -83,6 +83,8 @@ HRRR_fcsthr_max = 18
 GFS_fcsthr_max = 240
 CFS_fcsthr_max = 720
 
+
+
 #-------------------------------------------------
 #    Paths to executables and other scripts
 #-------------------------------------------------
@@ -96,26 +98,26 @@ ncl_exe = /opt/ncl-6.3.0/bin/ncl
 
 # Regridding
 #HRRR_regridding_exe = /d4/hydro-dm/IOC/code/HRRR-2-WRF_Hydro_ESMF_regrid.ncl
-HRRR_regridding_exe = ./HRRR-2-WRF_Hydro_ESMF_regrid.ncl
+HRRR_regridding_exe = ../NCL/HRRR-2-WRF_Hydro_ESMF_regrid.ncl
 #MRMS_regridding_exe = /d4/hydro-dm/IOC/code/MRMS-2-WRF_Hydro_ESMF_regrid.ncl
-MRMS_regridding_exe = ./MRMS-2-WRF_Hydro_ESMF_regrid.ncl
+MRMS_regridding_exe = ../NCL/MRMS-2-WRF_Hydro_ESMF_regrid.ncl
 #NAM_regridding_exe =  /d4/hydro-dm/IOC/code/NAM-2-WRF_Hydro_ESMF_regrid.ncl
-NAM_regridding_exe =  ./NAM-2-WRF_Hydro_ESMF_regrid.ncl
-GFS_regridding_exe = ./GFS2Hydro_forcing_ESMFregrid.ncl
-RAP_regridding_exe = ./RAP-2-WRF_Hydro_ESMF_regrid.ncl
+NAM_regridding_exe =  ../NCL/NAM-2-WRF_Hydro_ESMF_regrid.ncl
+GFS_regridding_exe = ../NCL/GFS2Hydro_forcing_ESMFregrid.ncl
+RAP_regridding_exe = ../NCL/RAP-2-WRF_Hydro_ESMF_regrid.ncl
 
 # Downscaling
 # Use the same downscaling script for all products. The hgt file, geo file, and
 # input file (data to downscale) are the only input and these are all defined in # this config file.
-HRRR_downscaling_exe = ./All_WRF_Hydro_downscale.ncl
-NAM_downscaling_exe = ./All_WRF_Hydro_downscale.ncl
-GFS_downscaling_exe = ./All_WRF_Hydro_downscale.ncl
-RAP_downscaling_exe = ./All_WRF_Hydro_downscale.ncl
+HRRR_downscaling_exe = ../NCL/All_WRF_Hydro_downscale.ncl
+NAM_downscaling_exe = ../NCL/All_WRF_Hydro_downscale.ncl
+GFS_downscaling_exe = ../NCL/All_WRF_Hydro_downscale.ncl
+RAP_downscaling_exe = ../NCL/All_WRF_Hydro_downscale.ncl
 topo_adj_fortran_exe = /d4/hydro-dm/IOC/code/topo_adjf90.so
-shortwave_downscaling_exe = ./topo_adj.ncl
+shortwave_downscaling_exe = ../NCL/topo_adj.ncl
 
 # Layering and contingency
-Analysis_Assimilation_layering = ./combine.ncl
+Analysis_Assimilation_layering = ../NCL/combine.ncl
 
 
 
