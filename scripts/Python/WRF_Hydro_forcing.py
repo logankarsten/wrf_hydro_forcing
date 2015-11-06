@@ -5,6 +5,7 @@ import re
 import time
 import numpy as np
 import argparse
+import datetime
 from ConfigParser import SafeConfigParser
 
 
@@ -26,7 +27,7 @@ from ConfigParser import SafeConfigParser
 
 
 
-def regrid_data( product_name, file_to_process, parser, substitute_fcst0hr = False ):
+def regrid_data( product_name, file_to_regrid, parser, substitute_fcst = False ):
     """Provides a wrapper to the regridding scripts originally
     written in NCL.  For HRRR data regridding, the
     HRRR-2-WRF_Hydro_ESMF_forcing.ncl script is invoked.
@@ -41,12 +42,12 @@ def regrid_data( product_name, file_to_process, parser, substitute_fcst0hr = Fal
     Args:
         product_name (string):  The name of the product 
                                 e.g. HRRR, MRMS, NAM
-        file_to_process (string): The filename of the
+        file_to_regrid (string): The filename of the
                                   input data to process.
         parser (ConfigParser):  The parser to the config/parm
                                 file containing all defined values
                                 necessary for running the regridding.
-        substitute_fcst0hr (bool):  Default = False If this is a 0 hr
+        substitute_fcst (bool):  Default = False If this is a 0 hr
                                forecast file, then skip regridding,
                                it will need to be replaced with
                                another file during the 
@@ -115,10 +116,10 @@ def regrid_data( product_name, file_to_process, parser, substitute_fcst0hr = Fal
     # If this is a 0hr forecast and the data product is either GFS or RAP, then do
     # nothing for now, it will need to be replaced during the
     # downscaling step.
-    if substitute_fcst0hr:
+    if substitute_fcst:
         logging.info("Inside regrid_data(). Skip regridding f0 RAP...")
         (subdir_file_path,hydro_filename) = \
-            create_output_name_and_subdir(product,file_to_process,data_dir)
+            create_output_name_and_subdir(product,file_to_regrid,data_dir)
         regridded_file_path = output_dir_root + "/" + subdir_file_path 
         regridded_file = output_dir_root + "/" + subdir_file_path + "/" + hydro_filename 
         mkdir_p(regridded_file_path)
@@ -138,11 +139,11 @@ def regrid_data( product_name, file_to_process, parser, substitute_fcst0hr = Fal
         #  'outdir="/d4/hydro-dm/IOC/regridded/HRRR/20150723/i09"'
         #  'outFile="20150724_i09_f010_HRRR.nc"' 
        
-        (date,model,fcsthr) = extract_file_info(file_to_process)  
-        data_file_to_process = data_dir + "/" + date + "/" + file_to_process 
-        srcfilename_param =  "'srcfilename=" + '"' + data_file_to_process +  \
+        (date,model,fcsthr) = extract_file_info(file_to_regrid)  
+        data_file_to_regrid= data_dir + "/" + date + "/" + file_to_regrid 
+        srcfilename_param =  "'srcfilename=" + '"' + data_file_to_regrid +  \
                                  '"' + "' "
-        # logging.info("input data file: %s", file_to_process)
+        # logging.info("input data file: %s", file_to_regrid)
         wgtFileName_in_param =  "'wgtFileName_in = " + '"' + wgt_file + \
                                     '"' + "' "
         dstGridName_param =  "'dstGridName=" + '"' + dst_grid_name + '"' + "' "
@@ -150,7 +151,7 @@ def regrid_data( product_name, file_to_process, parser, substitute_fcst0hr = Fal
         # Create the output filename following the RAL 
         # naming convention: 
         (subdir_file_path,hydro_filename) = \
-            create_output_name_and_subdir(product,data_file_to_process,data_dir)
+            create_output_name_and_subdir(product,data_file_to_regrid,data_dir)
        
         #logging.info("hydro filename: %s", hydro_filename)
         # Create the full path to the output directory
@@ -195,7 +196,7 @@ def regrid_data( product_name, file_to_process, parser, substitute_fcst0hr = Fal
                           return value of %s', product,return_value)
             #TO DO: Determine the proper action to take when the NCL file h
             #fails. For now, exit.
-            exit()
+            sys.exit(1)
     
 
     return regridded_file
@@ -287,7 +288,7 @@ def create_output_name_and_subdir(product, filename, input_data_file):
         else:
             logging.error("ERROR: %s data filename %s has an unexpected name.", \
                            product_name,filename) 
-            exit()
+            sys.exit(1)
 
     elif product == 'MRMS':
         match = re.match(r'.*([0-9]{8})_([0-9]{2}).*',filename) 
@@ -301,7 +302,7 @@ def create_output_name_and_subdir(product, filename, input_data_file):
            logging.error("ERROR: MRMS data filename %s \
                           has an unexpected file name.",\
                           filename) 
-           exit()
+           sys.exit(1)
 
     # Assemble the filename and the full output directory path
     hydro_filename = year_month_day + "_" + init_hr + \
@@ -332,8 +333,8 @@ def mkdir_p(dir):
         else: raise            
 
 
-def downscale_data(product_name, file_to_process, parser, downscale_shortwave=False,
-                   substitute_fcst0hr=False):
+def downscale_data(product_name, file_to_downscale, parser, downscale_shortwave=False,
+                   substitute_fcst=False):
     """
     Performs downscaling of data by calling the necessary
     NCL code (specific to the model/product).  There is an
@@ -367,7 +368,7 @@ def downscale_data(product_name, file_to_process, parser, downscale_shortwave=Fa
                                 code.
                                 Set to 'False' by default.
 
-        substitute_fcst0hr (boolean) : 'True'- if this is a zero hour 
+        substitute_fcst (boolean) : 'True'- if this is a zero hour 
                                   forecast, then copy the downscaled 
                                   file from a previous model run with 
                                   the same valid time and rename it.
@@ -419,16 +420,17 @@ def downscale_data(product_name, file_to_process, parser, downscale_shortwave=Fa
         logging.info("Requested downscaling of unsupported data product %s", product)
  
      
-    # If this is an f000 file and RAP or GFS, then search for
+    # If this is an f000 file and is either RAP or GFS, then search for
     # a suitable replacement since this file will have one or more 
     # missing variable(s).
     # Otherwise, proceed with creating the request to downscale.
  
-    if substitute_fcst0hr:
+    if substitute_fcst:
         # Don't downscale, find another downscaled file from the previous model
         # run with the same valid time (model run + fcst hour = valid time) and
         # copy to this f000 file.
         logging.info("Searching for f000 substitute...")
+        replace_fcst0hr(product, file_to_downscale)
 
     else:
         # Downscale as usual
@@ -441,7 +443,7 @@ def downscale_data(product_name, file_to_process, parser, downscale_shortwave=Fa
         else:
             logging.error("ERROR: regridded file's name: %s is an unexpected format",\
                                data)
-    
+            sys.exit(1) 
    
         full_downscaled_dir = downscale_output_dir + "/" + yr_month_day + "/"\
                                 + init_hr  
@@ -496,7 +498,7 @@ def downscale_data(product_name, file_to_process, parser, downscale_shortwave=Fa
             if return_value != 0 or swdown_return_value != 0:
                 logging.info('ERROR: The downscaling of %s was unsuccessful, \
                              return value of %s', product,return_value)
-                exit()
+                sys.exit(1)
     
         else:
             # No additional downscaling of
@@ -517,72 +519,12 @@ def downscale_data(product_name, file_to_process, parser, downscale_shortwave=Fa
                              return value of %s', product,return_value)
                 #TO DO: Determine the proper action to take when the NCL file 
                 #fails. For now, exit.
-                exit()
-    
-def find_fcst0hr_replacement(product, file_to_replace):
-    """ Search the downscaling directory for the 
-        previous model run to this input file with the
-        same valid time (valid time = model run + fcst hr)
-        and copy it to this file's directory, maintaining
-        the f000 file's original name.
-
-        Args:
-            product (string): The name of the product for this
-                              file (ie. GFS, RAP, etc.)
-
-           file_to_replace (string): The f000 forecast file
-                                     which we need to 
-                                     substitute to avoid containing
-                                     any missing variables.
-
-       Returns:
-           None               Makes a copy of a downscaled file 
-                              from a previous model run, with the
-                              same valid time as this input file.
-      
-    """    
+                sys.exit(1)
     
     
-def create_benchmark_summary(product, activity, elapsed_times):
-    
-    """ Create a summary of the min, max, and mean
-        time to perform a processing activity for 
-        each data file. The information is placed 
-        in the log file.
 
-        Args:
-           product (string):  The name of the product under
-                              consideration.
-           activity (string): The processing activity: 
-                              regridding, downscaling, etc.
-           elapsed_times (ndarray): Numpy ndarray of elapsed 
-                                   times (wall clock time 
-                                   for now) for each of the
-                                   files that were processed.
-       
-       Output:
-           None:  Generates an entry in the log file, as
-                  an "info" entry, which states the min,
-                  max, and average time in seconds.
-     
-    """
-    if len(elapsed_times) > 0:
-        elapsed_array = np.array(elapsed_times)
-        min_time = np.min(elapsed_array)
-        max_time = np.max(elapsed_array)
-        avg_time = np.mean(elapsed_array)
-        med_time = np.median(elapsed_array) 
 
-        logging.info("=========================================")
-        logging.info("SUMMARY for %s %s ", activity,product) 
-        logging.info("=========================================")
-        logging.info("Average elapsed time (sec): %s", avg_time)
-        logging.info("Median elapsed time (sec): %s", med_time)
-        logging.info("Min elapsed time (sec): %s ", min_time)
-        logging.info("Max elapsedtime (sec): %s ", max_time)
-    else:
-        logging.error("ERROR: Nothing was returned....")
-    
+
 
 
 
@@ -731,52 +673,12 @@ def find_layering_files(primary_files,downscaled_secondary_dir):
                 continue
         else:
             logging.error('ERROR: filename structure is not what was expected')
+            sys.exit(1)
 
 
 
     return list_paired_files
 
-
-def create_benchmark_summary(product, activity, elapsed_times):
-    
-    """ Create a summary of the min, max, and mean
-        time to perform a processing activity for 
-        each data file. The information is placed 
-        in the log file.
-
-        Args:
-           product (string):  The name of the product under
-                              consideration.
-           activity (string): The processing activity: 
-                              regridding, downscaling, etc.
-           elapsed_times (ndarray): Numpy ndarray of elapsed 
-                                   times (wall clock time 
-                                   for now) for each of the
-                                   files that were processed.
-       
-       Output:
-           None:  Generates an entry in the log file, as
-                  an "info" entry, which states the min,
-                  max, and average time in seconds.
-     
-    """
-    if len(elapsed_times) > 0:
-        elapsed_array = np.array(elapsed_times)
-        min_time = np.min(elapsed_array)
-        max_time = np.max(elapsed_array)
-        avg_time = np.mean(elapsed_array)
-        med_time = np.median(elapsed_array) 
-
-        logging.info("=========================================")
-        logging.info("SUMMARY for %s %s ", activity,product) 
-        logging.info("=========================================")
-        logging.info("Average elapsed time (sec): %s", avg_time)
-        logging.info("Median elapsed time (sec): %s", med_time)
-        logging.info("Min elapsed time (sec): %s ", min_time)
-        logging.info("Max elapsedtime (sec): %s ", max_time)
-    else:
-        logging.error("ERROR: Nothing was returned....")
-    
 
 def read_input():
     """   Reads in the command line arguments.
@@ -935,7 +837,7 @@ def is_in_fcst_range(product_name,fcsthr, parser):
 
 
 
-def substitute_fcst0hr(parser, product):
+def replace_fcst0hr(parser, file_to_replace, product):
     """   For the 0hr forecasts of GFS or RAP data,
           substitute with the downscaled data from the previous
           model run with the same valid time, where valid time
@@ -948,6 +850,11 @@ def substitute_fcst0hr(parser, product):
              parser (SafeConfigParser): parser object used to
                                         read values set in the
                                         param/config file.
+             file_to_replace (string);  The fcst 0hr file that 
+                                        needs to be substituted
+                                        with a downscaled file
+                                        from a previous model
+                                        run and same valid time.
              product (string):  The name of the model product
                                 (e.g. RAP, GFS, etc.)
 
@@ -960,16 +867,133 @@ def substitute_fcst0hr(parser, product):
 
     """
 
-    # Initialize any variables here.
+    # Currently allowed model run times for RAP (0-18 hours, set in 
+    # param/config file) and GFS (0, 6, 12, and 18 hours, set in param/
+    # config file).
     rap_model_times = range(0,24)
     gfs_model_times = [0,6,12,18]
+    RAP_max_fcsthr = parser.get('fcsthr_max','RAP_fcsthr_max']
+    GFS_max_fcsthr = parser.get('fcsthr_max','GFS_fcsthr_max']
+
+    # Retrieve the filename portion from the full filename 
+    # (ie remove the filepath portion).
+    match = re.match(r'(.*)/([0-9]{8})/([0-9]{8}_i[0-9]{2}_f[0-9]{3,4}_.*.grb2)',file_to_replace)
+
+    if match:
+        base_dir = match.group(1)
+        date_subdir = match.group(2)
+        file_only = match.group(3) 
+        print("file only from replace_fcst0hr: %s", file_only)
+    else:
+        logging.error("ERROR: filename is unexpected, exiting.")
+        sys.exit(1)
+
+    # Retrieve the date, modelrun time, and fcst time  from the file name.
+    (date, modelrun, fcsthr) = extract_file_info(file_only)
+    valid_time = modelrun + fcsthr
+
+    # Get the downscaling directory from the parameter/config file, this is where 
+    # we will need to search for the replacement file.
+    if product == 'RAP':
+        downscale_dir = parser.get('downscaling', RAP_downscale_output_dir')
+    elif product == 'GFS':
+        downscale_dir = parser.get('downscaling', GFS_downscale_output_dir')
+
+    # Get the previous day's directory in the event that we
+    # the previous model run is in the previous day's data.
+    prev_date_subdir = get_previous_date(date)
+    
+    # Get the three most recent files that can be used to replace
+    # the fcst 0hr file.  The most recent file will have the most
+    # recent model run time and the smallest fcst hr value, yet 
+    # have the same valid time as the fcst 0hr file.
+
+    # Do some arithmetic to determine what forecast hour is needed
+    # for this fcst 0hr file.
 
     if product == 'RAP':
-        print "substitute RAP "
-        
+       # Generate a list of three possible forecast
+       # hours for this valid time.
+       prev_modelrun = modelrun - 1
+       fcst_needed = valid_time - prev_modelrun
+       end = prev_modelrun - 3
+       poss_fcsts = range(prev_modelrun, end, -1)
+
+       # If negative values in poss_fcsts, use
+       # 24%poss_fcst[i] + 1 to obtain the 
+       # adjusted forecast to be used with the 
+       # previous day's date
+       
+       # Any possible forecasts with negative values
+       # indicate that we need to use the previous
+       # day's model run.
+       
+
+       # create the search dir for each possible forecast
+       # using something like: 
+       # search_dir = base_dir + "/" + date_subdir  
+
+
+
+       
+       # pad forecast with leading zeroes
+       # so we can create forecast hours with format:
+       # f000, f001, f002, etc.
+       num_chars = 4
+       new_fcst_hr.rjust(num_chars, '0')
+       poss_fcst_str = [  str(i).rjust(num_chars,'0') for i in poss_fcsts ]
+       
+       # Create the full file names of possible replacement files.
+       for fcst in poss_fcsts:
+           if fcst == 0:
+               # Use the previous day's model run
+
+             
     
+        
+          
     elif product == 'GFS':
-        print "Substitue GFS"
+       
+    # pad forecasts so we can create forecast names with format
+    # f0000, f0001, f0002, etc.
+    num_chars = 5
+     
+
+
+
+
+
+
+
+
+       
+def get_previous_date(curr_date, num_days = 1):
+    """   Determines the date in YMD format
+          for the day before the specified date.
+         
+          Args:
+             curr_date (string): The current date. We want to 
+                                 determine the nth-previous day's 
+                                 date in YMD format.
+             num_days (int)    : By default, set to 1 to determine
+                                 the previous day's date.
+          Returns:
+             prev_date (string): The nth previous day's date in 
+                                 YMD format.
+
+    """        
+
+    curr_dt = datetime.datetime.strptime(curr_date, "%Y%m%d')
+    # assign negative value to num_days so we go back by n days.
+    ndays = -1  * num_days
+    prev_dt = curr_dt + datetime.timedelta(days=ndays)
+    prev_list = [str(prev_dt.year), str(prev_dt.month), str(prev_dt.day)]
+    prev_date = ''.join(prev_list)
+    return prev_date
+    
+    
+    
+    
     
 
 #--------------------Defin the Workflow -------------------------
