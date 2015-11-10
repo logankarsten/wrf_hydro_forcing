@@ -279,7 +279,7 @@ def create_output_name_and_subdir(product, filename, input_data_file):
 
     if product == 'HRRR' or product == 'GFS' \
        or product == "NAM" or product == 'RAP':
-        match = re.match(r'.*([0-9]{8})_(i[0-9]{2})_(f[0-9]{2,4})',filename)
+        match = re.match(r'.*/i[0-9]{2}/([0-9]{8})_(i[0-9]{2})_(f[0-9]{2,4})',filename)
         if match:
             year_month_day = match.group(1)
             init_hr = match.group(2)
@@ -779,7 +779,7 @@ def extract_file_info(input_file):
     """
 
     # Regexp check for model data
-    match = re.match(r'([0-9]{8})_i([0-9]{2})_f([0-9]{3,4}).*.grb', input_file)
+    match = re.match(r'([0-9]{8})_i([0-9]{2})_f([0-9]{3,4}).*.[grb|nc]', input_file)
 
     # Regexp check for MRMS data
     match2 = re.match(r'(GaugeCorr_QPE_00.00)_([0-9]{8})_([0-9]{6})',input_file)
@@ -837,6 +837,8 @@ def is_in_fcst_range(product_name,fcsthr, parser):
 
 
 
+
+
 def replace_fcst0hr(parser, file_to_replace, product):
     """   For the 0hr forecasts of GFS or RAP data,
           substitute with the downscaled data from the previous
@@ -866,102 +868,115 @@ def replace_fcst0hr(parser, file_to_replace, product):
                          f000 file.
 
     """
+    # Set the number of potential replacements we should identify
+    RAP_num_tries = 6
 
     # Currently allowed model run times for RAP (0-18 hours, set in 
     # param/config file) and GFS (0, 6, 12, and 18 hours, set in param/
     # config file).
     rap_model_times = range(0,24)
     gfs_model_times = [0,6,12,18]
-    RAP_max_fcsthr = parser.get('fcsthr_max','RAP_fcsthr_max']
-    GFS_max_fcsthr = parser.get('fcsthr_max','GFS_fcsthr_max']
+    RAP_max_fcsthr = parser.get('fcsthr_max','RAP_fcsthr_max')
+    GFS_max_fcsthr = parser.get('fcsthr_max','GFS_fcsthr_max')
 
     # Retrieve the filename portion from the full filename 
     # (ie remove the filepath portion).
-    match = re.match(r'(.*)/([0-9]{8})/([0-9]{8}_i[0-9]{2}_f[0-9]{3,4}_.*.grb2)',file_to_replace)
+    match = re.match(r'(.*)/([0-9]{8})/i[0-9]{2}/([0-9]{8}_i[0-9]{2}_f[0-9]{3,4}_.*.nc)',file_to_replace)
 
     if match:
         base_dir = match.group(1)
         date_subdir = match.group(2)
         file_only = match.group(3) 
-        print("file only from replace_fcst0hr: %s", file_only)
+        print("file only from replace_fcst0hr: %s")% (file_only)
     else:
-        logging.error("ERROR: filename is unexpected, exiting.")
+        logging.error("ERROR: filename %s  is unexpected, exiting.", file_to_replace)
         sys.exit(1)
 
     # Retrieve the date, modelrun time, and fcst time  from the file name.
     (date, modelrun, fcsthr) = extract_file_info(file_only)
-    valid_time = modelrun + fcsthr
+    
+    # Typically, the valid_time = modelrun + fcsthr
+    # but since we are only replacing the 0hr fcst, valid_time = modelrun
+    valid_time = modelrun
+    print "valid_time: %s"%valid_time
 
     # Get the downscaling directory from the parameter/config file, this is where 
     # we will need to search for the replacement file.
     if product == 'RAP':
-        downscale_dir = parser.get('downscaling', RAP_downscale_output_dir')
+        downscale_dir = parser.get('downscaling', 'RAP_downscale_output_dir')
     elif product == 'GFS':
-        downscale_dir = parser.get('downscaling', GFS_downscale_output_dir')
+        downscale_dir = parser.get('downscaling', 'GFS_downscale_output_dir')
 
-    # Get the previous day's directory in the event that we
-    # the previous model run is in the previous day's data.
+    # Get the previous day's directory in the event that 
+    # the previous model corresponds to the previous day's
+    # data..
     prev_date_subdir = get_previous_date(date)
     
-    # Get the three most recent files that can be used to replace
-    # the fcst 0hr file.  The most recent file will have the most
-    # recent model run time and the smallest fcst hr value, yet 
-    # have the same valid time as the fcst 0hr file.
-
     # Do some arithmetic to determine what forecast hour is needed
     # for this fcst 0hr file.
 
     if product == 'RAP':
-       # Generate a list of three possible forecast
+       # Generate a list of possible forecast
        # hours for this valid time.
-       prev_modelrun = modelrun - 1
-       fcst_needed = valid_time - prev_modelrun
-       end = prev_modelrun - 3
-       poss_fcsts = range(prev_modelrun, end, -1)
+       prev = modelrun - 1
+       fcst_needed = valid_time - prev
+       end = prev - RAP_num_tries 
+       prev_modelruns = range(prev, end, -1)
 
-       # If negative values in poss_fcsts, use
-       # 24%poss_fcst[i] + 1 to obtain the 
-       # adjusted forecast to be used with the 
-       # previous day's date
-       
-       # Any possible forecasts with negative values
-       # indicate that we need to use the previous
+       # Construct the full file path of candidate
+       # replacement data files.
+       # A possible forecast with a negative value
+       # indicates that we need to use the previous
        # day's model run.
+       base_dir = parser.get('downscaling','RAP_downscale_output_dir')
+       
+       for prev_model in prev_modelruns:
+         
+           # Calculate the possible forecast for the previous
+           # model run
+           if prev_model < 0:
+               # Do some math to get the model run hour.
+               corrected_prev = prev_model % 24
+               poss_fcst = (24 + valid_time) % corrected_prev
+               print "previous date subdir: %s"%prev_date_subdir
+               print "new model run: %s, new fcst: %s"%(corrected_prev, poss_fcst)
+               # Create the full file path and name for the replacement, and 
+               # if it exists, then replace the fcst 0hr file with a copy.  
+               prev = (str(corrected_prev)).rjust(2,'0')
+               path = base_dir + '/' + prev_date_subdir + '/i' +  prev  + '/' 
+               fcst = (str(poss_fcst)).rjust(3,'0')
+               file =  prev_date_subdir + '_i'+ prev + '_f' + fcst + '_RAP.nc'
+               full_path = path + file
+               logging.info("Checking for existence of file %s",full_path)
+
+               if os.path.isfile(full_path):
+                   # Make a copy
+                   copy_cmd = "cp " + full_path + " " + file_to_replace
+                   print "copy_cmd: %s"%copy_cmd
+                   logging.info("copying the previous model run's file: %s",full_path)      
+                   os.system(copy_cmd)
+                   return
+
+               
+               #else:
+                   #logging.error("ERROR: The proposed file does not exist") 
+           else:
+                
+               poss_fcst = valid_time - prev_model 
+  
+               print "date subdir: %s"%date
+               print "new model run: %s, new fcst: %s"%(prev_model, poss_fcst)
+               return
+
+       
        
 
-       # create the search dir for each possible forecast
-       # using something like: 
-       # search_dir = base_dir + "/" + date_subdir  
-
-
-
-       
-       # pad forecast with leading zeroes
-       # so we can create forecast hours with format:
-       # f000, f001, f002, etc.
-       num_chars = 4
-       new_fcst_hr.rjust(num_chars, '0')
-       poss_fcst_str = [  str(i).rjust(num_chars,'0') for i in poss_fcsts ]
-       
-       # Create the full file names of possible replacement files.
-       for fcst in poss_fcsts:
-           if fcst == 0:
-               # Use the previous day's model run
-
-             
-    
+       # If we are here, we didn't find any file from a previous model run...
         
           
     elif product == 'GFS':
-       
-    # pad forecasts so we can create forecast names with format
-    # f0000, f0001, f0002, etc.
-    num_chars = 5
+       base_dir = parser.get('downscaling','GFS_downscale_output_dir')
      
-
-
-
-
 
 
 
@@ -979,15 +994,20 @@ def get_previous_date(curr_date, num_days = 1):
                                  the previous day's date.
           Returns:
              prev_date (string): The nth previous day's date in 
-                                 YMD format.
+                                 YMD format (YYYYMMDD).
 
     """        
 
-    curr_dt = datetime.datetime.strptime(curr_date, "%Y%m%d')
+    curr_dt = datetime.datetime.strptime(curr_date, "%Y%m%d")
     # assign negative value to num_days so we go back by n days.
     ndays = -1  * num_days
     prev_dt = curr_dt + datetime.timedelta(days=ndays)
-    prev_list = [str(prev_dt.year), str(prev_dt.month), str(prev_dt.day)]
+    year = str(prev_dt.year)
+    month = str(prev_dt.month)
+    day = str(prev_dt.day)
+    month.rjust(2,'0')
+    day.rjust(2, '0')
+    prev_list = [year, month, day]
     prev_date = ''.join(prev_list)
     return prev_date
     
