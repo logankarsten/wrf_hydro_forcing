@@ -6,6 +6,7 @@ import time
 import numpy as np
 import argparse
 import datetime
+import sys
 from ConfigParser import SafeConfigParser
 
 
@@ -137,7 +138,7 @@ def regrid_data( product_name, file_to_regrid, parser, substitute_fcst = False )
         #     "d4/hydro-dm/IOC/weighting/HRRR1km/HRRR2HYDRO_d01_weight_bilinear.nc"'
         #  'dstGridName="/d4/hydro-dm/IOC/data/geo_dst.nc"' 
         #  'outdir="/d4/hydro-dm/IOC/regridded/HRRR/20150723/i09"'
-        #  'outFile="20150724_i09_f010_HRRR.nc"' 
+        #  'outFile="201507241900.LDASIN_DOMAIN1.nc"' 
        
         (date,model,fcsthr) = extract_file_info(file_to_regrid)  
         data_file_to_regrid= data_dir + "/" + date + "/" + file_to_regrid 
@@ -196,7 +197,7 @@ def regrid_data( product_name, file_to_regrid, parser, substitute_fcst = False )
                           return value of %s', product,return_value)
             #TO DO: Determine the proper action to take when the NCL file h
             #fails. For now, exit.
-            sys.exit(1)
+            sys.exit()
     
 
     return regridded_file
@@ -234,14 +235,19 @@ def get_filepaths(dir):
 
 
 
+    
 def create_output_name_and_subdir(product, filename, input_data_file):
-    """ Creates the full filename for the regridded data which follows 
-    the RAL standard:  
-       basedir/YYYYMMDD/i_hh/YYMMDD_ihh_fnnnn_<product>.nc
-    Where the i_hh is the model run time/init time in hours
-    fnnn is the forecast time in hours and <product> is the
-    name of the model/data product:
-       e.g. HRRR, NAM, MRMS, GFS, etc.
+    """ Creates the full filename for the regridded data which ties-in
+       to the WRF-Hydro Model expected input: 
+       (RAL) basedir/YYYYMMDD/i_hh/YYMMDD_ihh_fnnnn_<product>.nc
+       (WRF-Hydro Model) basedir/<product>/YYYYMMDDHH/YYMMDDhh00_LDASIN_DOMAIN1.nc
+    Where the HH is the model run time/init time in hours
+    hh00 is the valid time in hours and 00 minutes and <product> is the
+    name of the model/data product:  e.g. HRRR, NAM, MRMS, GFS, etc.
+    The valid time is the sum of the model run time (aka init time) and the
+    forecast time (fnnnn) in hours.  If the valid time exceeds 24 hours, the
+    YYYYMMDD is incremented appropriately to reflect how many days into the
+    future the valid time represents.
 
     Args:
         product (string):  The product name: HRRR, MRMS, or NAM.
@@ -266,48 +272,66 @@ def create_output_name_and_subdir(product, filename, input_data_file):
         
         year_month_day_subdir (string): The subdirectory under which the 
                                         processed files will be stored:
-                                        YYYYMMDD/i_hh
+                                        YYYYMMDDHH/
+                                        HH= model run hour
 
         hydro_filename (string):  The name of the processed output
-                                  file.      
+                                  file:YYYYMMDDhh00.LDASIN_DOMAIN1      
+                                  where hh is the valid time adjusted
+                                  for 24-hour time.  Valid time is the
+                                  sum of the fcst hour and the model 
+                                  run (init time).
  
     """
 
-    # Convert product to uppercase for an easy, consistent 
+    # Convert product to uppercase for easy, consistent 
     # comparison.
     product_name = product.upper() 
 
     if product == 'HRRR' or product == 'GFS' \
        or product == "NAM" or product == 'RAP':
-        match = re.match(r'.*/i[0-9]{2}/([0-9]{8})_(i[0-9]{2})_(f[0-9]{2,4})',filename)
+        match =  re.match(r'.*/([0-9]{8})([0-9]{2})/[0-9]{8}([0-9]{2})00.LDASIN_DOMAIN1.*',filename)
         if match:
             year_month_day = match.group(1)
             init_hr = match.group(2)
-            fcst_hr = match.group(3)
-            year_month_day_subdir = year_month_day + "/" + init_hr 
+            valid_time = match.group(3)
+            year_month_day_subdir = year_month_day + init_hr 
         else:
             logging.error("ERROR: %s data filename %s has an unexpected name.", \
                            product_name,filename) 
-            sys.exit(1)
+            sys.exit()
 
     elif product == 'MRMS':
         match = re.match(r'.*([0-9]{8})_([0-9]{2}).*',filename) 
         if match:
            year_month_day = match.group(1)
-           init_hr = "i" + match.group(2)
+           init_hr =  match.group(2)
+
            # Radar data- not a model, therefore no forecast
-           fcst_hr = "f000"
-           year_month_day_subdir = year_month_day + "/" + init_hr 
+           # therefore valid time is the init time
+           valid_time = init_hr
+           year_month_day_subdir = year_month_day + init_hr 
         else:
            logging.error("ERROR: MRMS data filename %s \
                           has an unexpected file name.",\
                           filename) 
-           sys.exit(1)
+           sys.exit()
 
-    # Assemble the filename and the full output directory path
-    hydro_filename = year_month_day + "_" + init_hr + \
-                      "_" + fcst_hr + "_" + product_name + ".nc"
-    #logging.debug("Generated the output filename for %s: %s",product, hydro_filename)
+   
+    if valid_time >= 24:
+        num_days_ahead =  valid_time / 24
+        # valid time in 24 hour time
+        valid_time_str =  str(valid_time % 24)
+        valid_time_corr = valid_time_str.rjust(2,'0')
+        updated_date = get_past_or_future_date(year_month_day, num_days_ahead)
+        # Assemble the filename and the full output directory path
+        hydro_filename = year_month_day + init_hr + "/" + updated_date + valid_time_corr +\
+                         "00.LDASIN_DOMAIN1" 
+    else:
+        # Assemble the filename and the full output directory path
+        hydro_filename = year_month_day +  init_hr + "/" + \
+                         year_month_day + valid_time + "00.LDASIN_DOMAIN1" 
+        #logging.debug("Generated the output filename for %s: %s",product, hydro_filename)
 
     return (year_month_day_subdir, hydro_filename)
 
@@ -430,23 +454,24 @@ def downscale_data(product_name, file_to_downscale, parser, downscale_shortwave=
         # run with the same valid time (model run + fcst hour = valid time) and
         # copy to this f000 file.
         logging.info("Searching for f000 substitute...")
-        replace_fcst0hr(product, file_to_downscale)
+        replace_fcst0hr(parser, file_to_downscale,product)
 
     else:
         # Downscale as usual
 
-        match = re.match(r'(.*)/(([0-9]{8})_(i[0-9]{2})_f.*)',file_to_downscale)
+        #match = re.match(r'(.*)/(([0-9]{8})_(i[0-9]{2})_f.*)',file_to_downscale)
+        match = re.match(r'(.*)/(([0-9]{8})([0-9]{2})00.LDASIN_DOMAIN1)',file_to_downscale)
         if match:
             yr_month_day = match.group(3)
             downscaled_file = match.group(2)
-            init_hr = match.group(4)
+            valid_hr = match.group(4)
         else:
             logging.error("ERROR: regridded file's name: %s is an unexpected format",\
                                data)
-            sys.exit(1) 
+            sys.exit() 
    
         full_downscaled_dir = downscale_output_dir + "/" + yr_month_day + "/"\
-                                + init_hr  
+                                + valid_hr  
         full_downscaled_file = full_downscaled_dir + "/" +  downscaled_file
         # Create the full output directory for the downscaled data if it doesn't 
         # already exist. 
@@ -498,7 +523,7 @@ def downscale_data(product_name, file_to_downscale, parser, downscale_shortwave=
             if return_value != 0 or swdown_return_value != 0:
                 logging.info('ERROR: The downscaling of %s was unsuccessful, \
                              return value of %s', product,return_value)
-                sys.exit(1)
+                sys.exit()
     
         else:
             # No additional downscaling of
@@ -519,7 +544,7 @@ def downscale_data(product_name, file_to_downscale, parser, downscale_shortwave=
                              return value of %s', product,return_value)
                 #TO DO: Determine the proper action to take when the NCL file 
                 #fails. For now, exit.
-                sys.exit(1)
+                sys.exit()
     
     
 
@@ -577,8 +602,8 @@ def layer_data(parser, primary_data, secondary_data):
     # Loop through any available files in
     # the directory that defines the first choice/priority data.
     # Assemble the name of the corresponding secondary filename
-    # by deriving the date (YYYYMMDD), modelrun (ihh), and 
-    # forecast time (_fhhh) from the primary filename and path.
+    # by deriving the date and model run (YYYYMMDDHH)
+    # from the primary filename and path.
     # Then check if this file exists, if so, then pass this pair into
     # a list of tuples comprised of (primary file, secondary file).
     # After a list of paired files has been completed, these files
@@ -642,20 +667,20 @@ def find_layering_files(primary_files,downscaled_secondary_dir):
     paired_files = ()
 
     for primary_file in primary_files:
-        match = re.match(r'.*/downscaled/([A-Za-z]{3,4})/([0-9]{8})/i([0-9]{2})/[0-9]{8}_i[0-9]{2}_f([0-9]{3})_[A-Za-z]{3,4}.nc',primary_file)
+        #match = re.match(r'.*/downscaled/([A-Za-z]{3,4})/([0-9]{8})/i([0-9]{2})/[0-9]{8}_i[0-9]{2}_f([0-9]{3})_[A-Za-z]{3,4}.nc',primary_file)
+        match = re.match(r'.*/downscaled/([A-Za-z]{3,4})/([0-9]{8})([0-9]{2})/[0-9]{8}([0-9]{2})00.LDASIN_DOMAIN1.*',primary_file)
         if match:
             product = match.group(1)
             date = match.group(2)
             modelrun_str = match.group(3)
-            fcst_hr_str = match.group(4)
+            valid_hr_str = match.group(4)
             # Assemble the corresponding secondary file based on the date, modelrun, 
             # and forecast hour. 
             secondary_file = downscaled_secondary_dir +  \
-                             "/" + date + "/i" + modelrun_str + "/" + date +\
-                             "_i"+ modelrun_str + "_f" + fcst_hr_str + "_" +\
-                             second_product + ".nc"  
-            layered_filename = date + "_i" + modelrun_str + "_f" + \
-                               fcst_hr_str + "_Analysis-Assimilation.nc"
+                             "/" + date +  modelrun_str + "/" + date +\
+                             valid_hr_str + "00.LDASIN_DOMAIN1" +\
+                             second_product 
+            layered_filename = date + valid_hr_str + "00.LDASIN_DOMAIN1" 
                
         
             # Determine if this "manufactured" secondary file exists, if so, then 
@@ -673,7 +698,7 @@ def find_layering_files(primary_files,downscaled_secondary_dir):
                 continue
         else:
             logging.error('ERROR: filename structure is not what was expected')
-            sys.exit(1)
+            sys.exit()
 
 
 
@@ -779,10 +804,10 @@ def extract_file_info(input_file):
     """
 
     # Regexp check for model data
-    match = re.match(r'([0-9]{8})_i([0-9]{2})_f([0-9]{3,4}).*.[grb|nc]', input_file)
+    match = re.match(r'.*([0-9]{8})_i([0-9]{2})_f([0-9]{3,4}).*.[grb|nc|]', input_file)
 
     # Regexp check for MRMS data
-    match2 = re.match(r'(GaugeCorr_QPE_00.00)_([0-9]{8})_([0-9]{6})',input_file)
+    match2 = re.match(r'.*(GaugeCorr_QPE_00.00)_([0-9]{8})_([0-9]{6})',input_file)
     if match:
        date = match.group(1)
        model_run = int(match.group(2))
@@ -825,6 +850,8 @@ def is_in_fcst_range(product_name,fcsthr, parser):
     elif product_name == 'CFS':
         fcst_max = int(parser.get('fcsthr_max','CFS_fcsthr_max'))
     elif product_name == 'MRMS':
+        # MRMS is from observational data, no forecasted data, just
+        # return True...
         return True
         
       
@@ -877,7 +904,8 @@ def replace_fcst0hr(parser, file_to_replace, product):
 
     # Retrieve the filename portion from the full filename 
     # (ie remove the filepath portion).
-    match = re.match(r'(.*)/([0-9]{8})/i[0-9]{2}/([0-9]{8}_i[0-9]{2}_f[0-9]{3,4}_.*.nc)',file_to_replace)
+    #match = re.match(r'(.*)/([0-9]{8})/i[0-9]{2}/([0-9]{8}_i[0-9]{2}_f[0-9]{3,4}_.*.nc)',file_to_replace)
+    match = re.match(r'(.*)/([0-9]{8})[0-9]{2}/([0-9]{8}[0-9]{2}00.LDASIN_DOMAIN1.*)',file_to_replace)
 
     if match:
         base_dir = match.group(1)
@@ -886,7 +914,7 @@ def replace_fcst0hr(parser, file_to_replace, product):
         print("file only from replace_fcst0hr: %s")% (file_only)
     else:
         logging.error("ERROR: filename %s  is unexpected, exiting.", file_to_replace)
-        sys.exit(1)
+        sys.exit()
 
     # Retrieve the date, modelrun time, and fcst time  from the file name.
     (date, modelrun, fcsthr) = extract_file_info(file_only)
@@ -906,7 +934,7 @@ def replace_fcst0hr(parser, file_to_replace, product):
     # Get the previous day's directory in the event that 
     # the previous model corresponds to the previous day's
     # data..
-    prev_date_subdir = get_previous_date(date)
+    prev_date_subdir = get_past_or_future_date(date)
     
     # Do some arithmetic to determine what forecast hour is needed
     # for this fcst 0hr file.
@@ -960,7 +988,7 @@ def replace_fcst0hr(parser, file_to_replace, product):
 
        # If we are here, we didn't find any file from a previous RAP model run...
        logging.error("ERROR: No previous model runs found, exiting...")
-       sys.exit(1)
+       sys.exit()
           
     elif product == 'GFS':
        base_dir = parser.get('downscaling','GFS_downscale_output_dir')
@@ -978,16 +1006,20 @@ def replace_fcst0hr(parser, file_to_replace, product):
 
 
        
-def get_previous_date(curr_date, num_days = 1):
+def get_past_or_future_date(curr_date, num_days = -1):
     """   Determines the date in YMD format
-          for the day before the specified date.
+          (i.e. YYYYMMDD) for the day before the specified date.
          
           Args:
              curr_date (string): The current date. We want to 
                                  determine the nth-previous day's 
                                  date in YMD format.
-             num_days (int)    : By default, set to 1 to determine
-                                 the previous day's date.
+             num_days (int)    : By default, set to -1 to determine
+                                 the previous day's date. Set to
+                                 positive integer value for n days
+                                 following the curr_date, and -n
+                                 days for n days preceeding the
+                                 curr_date.
           Returns:
              prev_date (string): The nth previous day's date in 
                                  YMD format (YYYYMMDD).
@@ -996,8 +1028,7 @@ def get_previous_date(curr_date, num_days = 1):
 
     curr_dt = datetime.datetime.strptime(curr_date, "%Y%m%d")
     # assign negative value to num_days so we go back by n days.
-    ndays = -1  * num_days
-    prev_dt = curr_dt + datetime.timedelta(days=ndays)
+    prev_dt = curr_dt + datetime.timedelta(days=num_days)
     year = str(prev_dt.year)
     month = str(prev_dt.month)
     day = str(prev_dt.day)
