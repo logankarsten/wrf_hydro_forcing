@@ -871,11 +871,7 @@ def replace_fcst0hr(parser, file_to_replace, product):
     # Set the number of potential replacements we should identify
     RAP_num_tries = 6
 
-    # Currently allowed model run times for RAP (0-18 hours, set in 
-    # param/config file) and GFS (0, 6, 12, and 18 hours, set in param/
-    # config file).
-    rap_model_times = range(0,24)
-    gfs_model_times = [0,6,12,18]
+    # Max fcst hour is set in the param config file.
     RAP_max_fcsthr = parser.get('fcsthr_max','RAP_fcsthr_max')
     GFS_max_fcsthr = parser.get('fcsthr_max','GFS_fcsthr_max')
 
@@ -919,7 +915,6 @@ def replace_fcst0hr(parser, file_to_replace, product):
        # Generate a list of possible forecast
        # hours for this valid time.
        prev = modelrun - 1
-       fcst_needed = valid_time - prev
        end = prev - RAP_num_tries 
        prev_modelruns = range(prev, end, -1)
 
@@ -938,8 +933,6 @@ def replace_fcst0hr(parser, file_to_replace, product):
                # Do some math to get the model run hour.
                corrected_prev = prev_model % 24
                poss_fcst = (24 + valid_time) % corrected_prev
-               print "previous date subdir: %s"%prev_date_subdir
-               print "new model run: %s, new fcst: %s"%(corrected_prev, poss_fcst)
                # Create the full file path and name for the replacement, and 
                # if it exists, then replace the fcst 0hr file with a copy.  
                prev = (str(corrected_prev)).rjust(2,'0')
@@ -947,19 +940,16 @@ def replace_fcst0hr(parser, file_to_replace, product):
                fcst = (str(poss_fcst)).rjust(3,'0')
                file =  prev_date_subdir + '_i'+ prev + '_f' + fcst + '_RAP.nc'
                full_path = path + file
-               logging.info("Checking for existence of file %s",full_path)
 
                if os.path.isfile(full_path):
                    # Make a copy
                    copy_cmd = "cp " + full_path + " " + file_to_replace
-                   print "copy_cmd: %s"%copy_cmd
-                   logging.info("copying the previous model run's file: %s",full_path)      
+                   logging.info("copying the previous model run's file: %s",copy_cmd)      
                    os.system(copy_cmd)
                    return
-
                
-               #else:
-                   #logging.error("ERROR: The proposed file does not exist") 
+               else:
+                   logging.warning("Warning: The proposed file %s does not exist", full_path) 
            else:
                 
                poss_fcst = valid_time - prev_model 
@@ -968,14 +958,20 @@ def replace_fcst0hr(parser, file_to_replace, product):
                print "new model run: %s, new fcst: %s"%(prev_model, poss_fcst)
                return
 
-       
-       
-
-       # If we are here, we didn't find any file from a previous model run...
-        
+       # If we are here, we didn't find any file from a previous RAP model run...
+       logging.error("ERROR: No previous model runs found, exiting...")
+       sys.exit(1)
           
     elif product == 'GFS':
        base_dir = parser.get('downscaling','GFS_downscale_output_dir')
+
+       # Generate a list of possible forecast
+       # hours for this valid time. GFS has only
+       # 0, 6, 12, and 18 Z model run times.
+       prev = modelrun - 6
+       # Use list comprehensions to generate a new list of previous
+       # model runs
+       prev_modelruns = range(prev, end, -1)
      
 
 
