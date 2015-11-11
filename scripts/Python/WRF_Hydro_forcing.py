@@ -252,8 +252,8 @@ def create_output_name_and_subdir(product, filename, input_data_file):
     Args:
         product (string):  The product name: HRRR, MRMS, or NAM.
 
-        filename (string): The name of the data file:
-                           YYYYMMDD_ihh_fnnn_product.nc
+        filename (string): The name of the input data file:
+                           YYYYMMDD_ihh_fnnn_product.grb
 
         input_data_file (string):  The full path and name
                                   of the (input) data 
@@ -290,14 +290,14 @@ def create_output_name_and_subdir(product, filename, input_data_file):
 
     if product == 'HRRR' or product == 'GFS' \
        or product == "NAM" or product == 'RAP':
-        match =  re.match(r'.*/([0-9]{8})([0-9]{2})/[0-9]{8}([0-9]{2})00.LDASIN_DOMAIN1.*',filename)
+        match = re.match(r'.*([0-9]{8})_(i[0-9]{2})_(f[0-9]{2,4})',filename)
         if match:
             year_month_day = match.group(1)
             init_hr = match.group(2)
-            valid_time = match.group(3)
+            fcst_hr = match.group(3)
             year_month_day_subdir = year_month_day + init_hr 
         else:
-            logging.error("ERROR: %s data filename %s has an unexpected name.", \
+            logging.error("ERROR [create_output_name_and_subdir]: %s data filename %s has an unexpected name.", \
                            product_name,filename) 
             sys.exit()
 
@@ -308,7 +308,7 @@ def create_output_name_and_subdir(product, filename, input_data_file):
            init_hr =  match.group(2)
 
            # Radar data- not a model, therefore no forecast
-           # therefore valid time is the init time
+           # and valid time is the init time
            valid_time = init_hr
            year_month_day_subdir = year_month_day + init_hr 
         else:
@@ -640,22 +640,22 @@ def layer_data(parser, primary_data, secondary_data):
         return_value = os.system(layering_cmd) 
     
     
-def find_layering_files(primary_files,downscaled_secondary_dir):
-    """Given a list of the primary files (full path + filename),
+def find_layering_files(primary_file,downscaled_secondary_dir):
+    """Given a primary file (full path + filename),
     retrieve the corresponding secondary file if it exists.  
-    Create and return a list of tuples: (primary file, secondary file, 
+    Create and return a tuple: (primary file, secondary file, 
     layered file). 
 
     Args:
-        primary_files(list):  A list of the primary files
+        primary_files(string):  The primary file for
                               which we are trying to find
-                              a corresponding "match" in
+                              it's layering complement in
                               the secondary file directory
-        downscaled_secondary_dir(string): The name of the
-                                          directory for the
+        downscaled_secondary_dir(string): The directory 
+                                          that contains the
                                           secondary data.
     Output:
-        list_paired_files (list): A list of tuples, where 
+        list_paired_files (tuple of strings): A list of tuples, where 
                                   the tuple consists of 
                                   (primary file, secondary
                                    file, and layered file name)
@@ -697,7 +697,7 @@ def find_layering_files(primary_files,downscaled_secondary_dir):
                              #secondary file")
                 continue
         else:
-            logging.error('ERROR: filename structure is not what was expected')
+            logging.error('ERROR [find_layering_files]: filename structure is not what was expected')
             sys.exit()
 
 
@@ -819,7 +819,7 @@ def extract_file_info(input_file):
        fcst_hr = 0
        return (date, model_run, fcst_hr)
     else:
-        logging.error("ERROR: File name doesn't follow expected format")
+        logging.error("ERROR [extract_file_info]: File name doesn't follow expected format")
 
 
 def is_in_fcst_range(product_name,fcsthr, parser):
@@ -913,7 +913,7 @@ def replace_fcst0hr(parser, file_to_replace, product):
         file_only = match.group(3) 
         print("file only from replace_fcst0hr: %s")% (file_only)
     else:
-        logging.error("ERROR: filename %s  is unexpected, exiting.", file_to_replace)
+        logging.error("ERROR [replace_fcst0hr]: filename %s  is unexpected, exiting.", file_to_replace)
         sys.exit()
 
     # Retrieve the date, modelrun time, and fcst time  from the file name.
@@ -977,7 +977,7 @@ def replace_fcst0hr(parser, file_to_replace, product):
                    return
                
                else:
-                   logging.warning("Warning: The proposed file %s does not exist", full_path) 
+                   logging.warning("Warning [replace_fcst0hr]: The proposed file %s does not exist", full_path) 
            else:
                 
                poss_fcst = valid_time - prev_model 
@@ -987,7 +987,7 @@ def replace_fcst0hr(parser, file_to_replace, product):
                return
 
        # If we are here, we didn't find any file from a previous RAP model run...
-       logging.error("ERROR: No previous model runs found, exiting...")
+       logging.error("ERROR [replace_fcst0hr]: No previous model runs found, exiting...")
        sys.exit()
           
     elif product == 'GFS':
@@ -999,7 +999,10 @@ def replace_fcst0hr(parser, file_to_replace, product):
        prev = modelrun - 6
        # Use list comprehensions to generate a new list of previous
        # model runs
-       prev_modelruns = range(prev, end, -1)
+       prev_modelruns = range(prev, end, -6)
+
+       if prev_modelruns < 0:
+            # Use the previous day's date, but with the same valid time
      
 
 
