@@ -42,6 +42,7 @@ def main():
     # the max fcst hr defined in the param/config file.
     (date,modelrun,fcsthr) = whf.extract_file_info(curr_data_file)
     
+    
     # Determine whether this current file lies within the forecast range
     # for the data product (e.g. if processing RAP, use only the 0hr-18hr forecasts).
     # Skip if this file has a forecast hour greater than the max indicated in the 
@@ -56,7 +57,6 @@ def main():
         # in the 0hr forecasts (e.g. precip rate for RAP and radiation
         # in GFS).
 
-        print "within fcst range"
         if args.regrid_downscale:
             logging.info("Regridding and Downscaling for %s", args.InputFileName)
             # Determine if this is a 0hr forecast for RAP data (GFS is also missing
@@ -69,10 +69,10 @@ def main():
             if fcsthr == 0 and product_data_name == 'RAP':
                 logging.info("Regridding, ignoring f0 RAP files " )
                 regridded_file = whf.regrid_data(product_data_name, curr_data_file, parser, True)
-                whf.downscale_data(product_data_name,regridded_file, parser,True,True)                
+                whf.downscale_data(product_data_name,regridded_file, parser, True, True)                
             else:
-                regridded_file = whf.regrid_data(product_data_name, curr_data_file, parser)
-                whf.downscale_data(product_data_name,regridded_file, parser,True)                
+                regridded_file = whf.regrid_data(product_data_name, curr_data_file, parser, False)
+                whf.downscale_data(product_data_name,regridded_file, parser,True, False)                
             
         elif args.layer:
             logging.info("Layering requested for %s", args.InputFileName)
@@ -82,7 +82,8 @@ def main():
 
     else:
         # Skip processing this file, exiting...
-        sys.exit(1)
+        logging.error("ERROR [Short_Range_Forcing]- Skip processing, requested file is outside max fcst")
+        sys.exit()
 
  
     

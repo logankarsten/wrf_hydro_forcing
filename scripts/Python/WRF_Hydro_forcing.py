@@ -72,7 +72,6 @@ def regrid_data( product_name, file_to_regrid, parser, substitute_fcst = False )
 
 
     if product == 'HRRR':
-       logging.info("Regridding HRRR")
        wgt_file = parser.get('regridding', 'HRRR_wgt_bilinear')
        data_dir =  parser.get('data_dir', 'HRRR_data')
        regridding_exec = parser.get('exe', 'HRRR_regridding_exe')
@@ -80,7 +79,6 @@ def regrid_data( product_name, file_to_regrid, parser, substitute_fcst = False )
        output_dir_root = parser.get('regridding','HRRR_output_dir')
        dst_grid_name = parser.get('regridding','HRRR_dst_grid_name')
     elif product == 'MRMS':
-       logging.info("Regridding MRMS")
        wgt_file = parser.get('regridding', 'MRMS_wgt_bilinear')
        data_dir =  parser.get('data_dir', 'MRMS_data')
        regridding_exec = parser.get('exe', 'MRMS_regridding_exe')
@@ -89,7 +87,6 @@ def regrid_data( product_name, file_to_regrid, parser, substitute_fcst = False )
        output_dir_root = parser.get('regridding','MRMS_output_dir')
        dst_grid_name = parser.get('regridding','MRMS_dst_grid_name')
     elif product == 'NAM':
-       logging.info("Regridding NAM")
        wgt_file = parser.get('regridding', 'NAM_wgt_bilinear')
        data_dir =  parser.get('data_dir', 'NAM_data')
        regridding_exec = parser.get('exe', 'NAM_regridding_exe')
@@ -97,7 +94,6 @@ def regrid_data( product_name, file_to_regrid, parser, substitute_fcst = False )
        output_dir_root = parser.get('regridding','NAM_output_dir')
        dst_grid_name = parser.get('regridding','NAM_dst_grid_name')
     elif product == 'GFS':
-       logging.info("Regridding GFS")
        wgt_file = parser.get('regridding', 'GFS_wgt_bilinear')
        data_dir =  parser.get('data_dir', 'GFS_data')
        regridding_exec = parser.get('exe', 'GFS_regridding_exe')
@@ -105,7 +101,6 @@ def regrid_data( product_name, file_to_regrid, parser, substitute_fcst = False )
        output_dir_root = parser.get('regridding','GFS_output_dir')
        dst_grid_name = parser.get('regridding','GFS_dst_grid_name')
     elif product == 'RAP':
-       logging.info("Regridding RAP")
        wgt_file = parser.get('regridding', 'RAP_wgt_bilinear')
        data_dir =  parser.get('data_dir', 'RAP_data')
        regridding_exec = parser.get('exe', 'RAP_regridding_exe')
@@ -120,7 +115,6 @@ def regrid_data( product_name, file_to_regrid, parser, substitute_fcst = False )
     if substitute_fcst:
         (date,model,fcsthr) = extract_file_info(file_to_regrid)  
         data_file_to_regrid= data_dir + "/" + date + "/" + file_to_regrid 
-        logging.info("Inside regrid_data(). Skip regridding f0 RAP...")
         (date,model,fcsthr) = extract_file_info(file_to_regrid)  
         (subdir_file_path,hydro_filename) = \
             create_output_name_and_subdir(product,data_file_to_regrid,data_dir)
@@ -149,7 +143,6 @@ def regrid_data( product_name, file_to_regrid, parser, substitute_fcst = False )
         data_file_to_regrid= data_dir + "/" + date + "/" + file_to_regrid 
         srcfilename_param =  "'srcfilename=" + '"' + data_file_to_regrid +  \
                                  '"' + "' "
-        # logging.info("input data file: %s", file_to_regrid)
         wgtFileName_in_param =  "'wgtFileName_in = " + '"' + wgt_file + \
                                     '"' + "' "
         dstGridName_param =  "'dstGridName=" + '"' + dst_grid_name + '"' + "' "
@@ -159,7 +152,6 @@ def regrid_data( product_name, file_to_regrid, parser, substitute_fcst = False )
         (subdir_file_path,hydro_filename) = \
             create_output_name_and_subdir(product,data_file_to_regrid,data_dir)
        
-        #logging.info("hydro filename: %s", hydro_filename)
         # Create the full path to the output directory
         # and assign it to the output directory parameter
         output_file_dir = output_dir_root + "/" + subdir_file_path
@@ -256,8 +248,8 @@ def create_output_name_and_subdir(product, filename, input_data_file):
     Args:
         product (string):  The product name: HRRR, MRMS, or NAM.
 
-        filename (string): The name of the data file:
-                           YYYYMMDD_ihh_fnnn_product.nc
+        filename (string): The name of the input data file:
+                           YYYYMMDD_ihh_fnnn_product.grb
 
         input_data_file (string):  The full path and name
                                   of the (input) data 
@@ -303,7 +295,7 @@ def create_output_name_and_subdir(product, filename, input_data_file):
             init_hr_str = (str(init_hr)).rjust(2,'0')
             year_month_day_subdir = year_month_day + init_hr_str
         else:
-            logging.error("ERROR: create_output_name_and_subdir for product: %s,  %s has an unexpected name.",  product_name,filename)
+            logging.error("ERROR [create_output_name_and_subdir]: %s has an unexpected name." ,filename) 
             sys.exit()
 
     elif product == 'MRMS':
@@ -331,12 +323,10 @@ def create_output_name_and_subdir(product, filename, input_data_file):
         updated_date = get_past_or_future_date(year_month_day, num_days_ahead)
         # Assemble the filename and the full output directory path
         hydro_filename = updated_date + valid_time_corr + "00.LDASIN_DOMAIN1.nc" 
-        logging.debug("Generated the output filename for %s: %s",product, hydro_filename)
     else:
         # Assemble the filename and the full output directory path
         valid_time_str = (str(valid_time)).rjust(2,'0')
         hydro_filename = year_month_day + valid_time_str + "00.LDASIN_DOMAIN1.nc" 
-        logging.debug("Generated the output filename for %s: %s",product, hydro_filename)
 
     return (year_month_day_subdir, hydro_filename)
 
@@ -415,32 +405,26 @@ def downscale_data(product_name, file_to_downscale, parser, downscale_shortwave=
     lapse_rate_file = parser.get('downscaling','lapse_rate_file')
     ncl_exec = parser.get('exe', 'ncl_exe')
     
-    logging.info("***downscaling: %s", file_to_downscale)
 
     if product  == 'HRRR':
-        logging.info("Downscaling HRRR")
         data_to_downscale_dir = parser.get('downscaling','HRRR_data_to_downscale')
         hgt_data_file = parser.get('downscaling','HRRR_hgt_data')
         geo_data_file = parser.get('downscaling','HRRR_geo_data')
         downscale_output_dir = parser.get('downscaling', 'HRRR_downscale_output_dir')
         downscale_exe = parser.get('exe', 'HRRR_downscaling_exe')
     elif product == 'NAM':
-        logging.info("Downscaling NAM")
         data_to_downscale_dir = parser.get('downscaling','NAM_data_to_downscale')
         hgt_data_file = parser.get('downscaling','NAM_hgt_data')
         geo_data_file = parser.get('downscaling','NAM_geo_data')
         downscale_output_dir = parser.get('downscaling', 'NAM_downscale_output_dir')
         downscale_exe = parser.get('exe', 'NAM_downscaling_exe')
     elif product == 'GFS':
-        logging.info("Downscaling GFS")
         data_to_downscale_dir = parser.get('downscaling','GFS_data_to_downscale')
         hgt_data_file = parser.get('downscaling','GFS_hgt_data')
         geo_data_file = parser.get('downscaling','GFS_geo_data')
         downscale_output_dir = parser.get('downscaling', 'GFS_downscale_output_dir')
-        logging.info("GFS data to downscale: %s ", downscale_output_dir)
         downscale_exe = parser.get('exe', 'GFS_downscaling_exe')
     elif product == 'RAP':
-        logging.info("Downscaling RAP")
         data_to_downscale_dir = parser.get('downscaling','RAP_data_to_downscale')
         hgt_data_file = parser.get('downscaling','RAP_hgt_data')
         geo_data_file = parser.get('downscaling','RAP_geo_data')
@@ -459,7 +443,6 @@ def downscale_data(product_name, file_to_downscale, parser, downscale_shortwave=
         # Find another downscaled file from the previous model/
         # init time with the same valid time as this file, then 
         # copy to this fcst 0hr file.
-        logging.info("Searching for fcst 0hr substitute...")
         replace_fcst0hr(parser, file_to_downscale,product)
 
     else:
@@ -475,16 +458,12 @@ def downscale_data(product_name, file_to_downscale, parser, downscale_shortwave=
             sys.exit() 
    
         full_downscaled_dir = downscale_output_dir + "/" + yr_month_day_init  
-        logging.info("DOWNSCALING: full_downscaled_dir: %s",full_downscaled_dir)
         full_downscaled_file = full_downscaled_dir + "/" +  regridded_file
-        logging.info("DOWNSCALING: full_downscaled_file: %s",full_downscaled_file)
 
         # Create the full output directory for the downscaled data if it doesn't 
         # already exist. 
         mkdir_p(full_downscaled_dir) 
     
-        logging.info("full_downscaled_file: %s", full_downscaled_file)
-        logging.debug("Full output filename for second downscaling: %s" , full_downscaled_file)
     
         # Create the key-value pairs that make up the
         # input for the NCL script responsible for
@@ -497,7 +476,6 @@ def downscale_data(product_name, file_to_downscale, parser, downscale_shortwave=
         downscale_params =  input_file1_param + input_file2_param + \
                   input_file3_param + lapse_file_param +  output_file_param 
         downscale_cmd = ncl_exec + " " + downscale_params + " " + downscale_exe
-        logging.debug("Downscale command : %s", downscale_cmd)
     
         # Downscale the shortwave radiation, if requested...
         # Key-value pairs for downscaling SWDOWN, shortwave radiation.
@@ -646,22 +624,22 @@ def layer_data(parser, primary_data, secondary_data):
         return_value = os.system(layering_cmd) 
     
     
-def find_layering_files(primary_files,downscaled_secondary_dir):
-    """Given a list of the primary files (full path + filename),
+def find_layering_files(primary_file,downscaled_secondary_dir):
+    """Given a primary file (full path + filename),
     retrieve the corresponding secondary file if it exists.  
-    Create and return a list of tuples: (primary file, secondary file, 
+    Create and return a tuple: (primary file, secondary file, 
     layered file). 
 
     Args:
-        primary_files(list):  A list of the primary files
+        primary_files(string):  The primary file for
                               which we are trying to find
-                              a corresponding "match" in
+                              it's layering complement in
                               the secondary file directory
-        downscaled_secondary_dir(string): The name of the
-                                          directory for the
+        downscaled_secondary_dir(string): The directory 
+                                          that contains the
                                           secondary data.
     Output:
-        list_paired_files (list): A list of tuples, where 
+        list_paired_files (tuple of strings): A list of tuples, where 
                                   the tuple consists of 
                                   (primary file, secondary
                                    file, and layered file name)
@@ -700,10 +678,10 @@ def find_layering_files(primary_files,downscaled_secondary_dir):
                 num = len(list_paired_files)
             else:
                 logging.info("No matching date, or model run or forecast time for\
-                             #secondary file")
+                             secondary file")
                 continue
         else:
-            logging.error('ERROR: filename structure is not what was expected')
+            logging.error('ERROR [find_layering_files]: filename structure is not what was expected')
             sys.exit()
 
 
@@ -812,7 +790,7 @@ def extract_file_info(input_file):
     """
 
     # Regexp check for model data
-    match = re.match(r'.*([0-9]{8})_i([0-9]{2})_f([0-9]{3,4}).*.[grb|nc|]', input_file)
+    match = re.match(r'.*([0-9]{8})_i([0-9]{2})_f([0-9]{3,4}).*', input_file)
 
     # Regexp check for MRMS data
     match2 = re.match(r'.*(GaugeCorr_QPE_00.00)_([0-9]{8})_([0-9]{6})',input_file)
@@ -824,10 +802,10 @@ def extract_file_info(input_file):
     elif match2:
        date = match2.group(2)
        model_run = match2.group(3)
-       fcst_hr = 0
+       fcst_hr = int(0)
        return (date, model_run, fcst_hr)
     else:
-        logging.error("ERROR: File name doesn't follow expected format")
+        logging.error("ERROR [extract_file_info]: File name doesn't follow expected format")
 
 
 def is_in_fcst_range(product_name,fcsthr, parser):
@@ -863,7 +841,7 @@ def is_in_fcst_range(product_name,fcsthr, parser):
         return True
         
       
-    if fcsthr >= fcst_max:
+    if int(fcsthr) >= fcst_max:
         logging.info("Skip file, fcst hour %d is outside of fcst max %d",fcsthr,fcst_max)
         return False
     else:

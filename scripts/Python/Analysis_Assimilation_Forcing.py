@@ -19,88 +19,75 @@ from where this script is executed.
 """
 
 
-def usage():
-    print (' -h --help:  Usage/help\n -r --regrid: Regrid data\n -d --downscale: Downscale\n -l --layer: Layer data\n -b --bias:  Bias correction' )
+def main():
 
-
-def main(argv):
     # Read the parameters from the config/param file.
     parser = SafeConfigParser()
     parser.read('wrf_hydro_forcing.parm')
-    ncl_exec = parser.get('exe', 'ncl_exe')
-    ncarg_root = parser.get('default_env_vars', 'ncarg_root')
-    logging_level = parser.get('log_level', 'forcing_engine_log_level')
-    forcing_config_label = "Analysis_Assimilation"
 
-    # Check for the NCARG_ROOT environment variable. If it is not set,
-    # use an appropriate default, defined in the configuration file.
-    ncarg_root_found = os.getenv("NCARG_ROOT")
-    if ncarg_root_found is None:
-        ncarg_root = os.environ["NCARG_ROOT"] = ncarg_root
+    # Set up logging, environments, etc.
+    forcing_config_label = "Anal_Assim"
+    logging = whf.initial_setup(parser,forcing_config_label)
+
+    # Retrieve the information from the input args
+    args = whf.read_input()
+    curr_data_file = args.InputFileName
+    product_data_name = args.DataProductName
    
-    # Set the NCL_DEF_LIB_DIR to indicate where ALL shared objects
-    # reside.
-    ncl_def_lib_dir = parser.get('default_env_vars','ncl_def_lib_dir')
-    ncl_def_lib_dir = os.environ["NCL_DEF_LIB_DIR"] = ncl_def_lib_dir
+    # Extract the date, model run time, and forecast hour from the file name
+    # Use the fcsthr to process only the files that have a fcst hour less than
+    # the max fcst hr defined in the param/config file.
+    print('curr_data_file: %s')%(curr_data_file)
+    (date,modelrun,fcsthr) = whf.extract_file_info(curr_data_file)
     
-    # Set the logging level based on what was defined in the parm/config file
-    if logging_level == 'DEBUG':
-        set_level = logging.DEBUG
-    elif logging_level == 'INFO':
-        set_level = logging.INFO
-    elif logging_level == 'WARNING':
-        set_level = logging.WARNING
-    elif logging_level == 'ERROR':
-        set_level = logging.ERROR
+    # Determine whether this current file lies within the forecast range
+    # for the data product (e.g. if processing RAP, use only the 0hr-18hr forecasts).
+    # Skip if this file has a forecast hour greater than the max indicated in the 
+    # parm/config file.
+    in_fcst_range = whf.is_in_fcst_range(product_data_name, fcsthr, parser)
+
+    if in_fcst_range:
+        # Check for RAP or GFS data products.  If this file is
+        # a 0 hr fcst and is RAP or GFS, substitute each 0hr forecast
+        # with the file from the previous model run and the same valid
+        # time.  This is necessary because there are missing variables
+        # in the 0hr forecasts (e.g. precip rate for RAP and radiation
+        # in GFS).
+
+        if args.regrid_downscale:
+            logging.info("Regridding and Downscaling for %s", args.InputFileName)
+            # Determine if this is a 0hr forecast for RAP data (GFS is also missing
+            # some variables for 0hr forecast, but GFS is not used for Short Range
+            # forcing). We will need to substitute this file for the downscaled
+            # file from a previous model run with the same valid time.  
+            # We only need to do this for downscaled files, as the Short Range 
+            # forcing files that are regridded always get downscaled and we don't want
+            # to do this for both the regridding and downscaling.
+            if fcsthr == 0 and product_data_name == 'RAP':
+                logging.info("Regridding, ignoring f0 RAP files " )
+                regridded_file = whf.regrid_data(product_data_name, curr_data_file, parser, True)
+                #whf.downscale_data(product_data_name,regridded_file, parser, True, True)                
+            elif product_data_name == 'MRMS':
+                # Only regrid, no downscaling necessary
+                regridded_file = whf.regrid_data(product_data_name, curr_data_file, parser)
+            else:
+                regridded_file = whf.regrid_data(product_data_name, curr_data_file, parser)
+                #whf.downscale_data(product_data_name,regridded_file, parser,True)                
+            
+        elif args.layer:
+            logging.info("Layering requested for %s", args.InputFileName)
+     
+        elif args.bias:
+            logging.info("Bias correction requested for %s", args.InputFileName)
+
     else:
-        set_level = logging.CRITICAL
+        # Skip processing this file, exiting...
+        sys.exit(1)
 
-    logging_filename =  forcing_config_label + ".log" 
-    logging.basicConfig(format='%(asctime)s %(message)s',
-                         filename=logging_filename, level=set_level)
-
-    try:
-        (opts, args) = getopt.getopt(argv,"hrdlb",['help','regrid','downscale','layer','bias'])
-    except getopt.GetoptError:
-        usage()
-        sys.exit(2)
-    for opt, arg in opts:
-        if opt in ('-h','--help'):
-            usage()
-            sys.exit()
-        elif opt == '-r' or opt == '--regrid':
-            print 'regridding data...'
-            #MRMS_regrids = whf.regrid_data("MRMS",parser)     
-            #whf.create_benchmark("MRMS","Regridding", MRMS_regrids)
-            RAP_regrids = whf.regrid_data("RAP", parser)
-            whf.create_benchmark("RAP","Regridding", RAP_regrids)
-            HRRR_regrids = whf.regrid_data("HRRR", parser)
-            whf.create_benchmark("HRRR","Regridding", HRRR_regrids)
-        elif opt == '-d' or opt == '--downscale':
-            print 'downscaling data...'
-            RAP_downscalings = whf.downscale_data("RAP",parser, True)
-            whf.create_benchmark("RAP","Downscaling", RAP_downscalings)
-#            HRRR_downscalings = whf.downscale_data("HRRR", parser, True)
-#            whf.create_benchmark("HRRR","Downscaling", HRRR_downscalings)
-        elif opt == '-l' or opt == '--layer':
-            print 'layering data...'
-            HRRR_RAP_layer_data = layer_data(parser, "HRRR", "RAP")
-            whf.create_benchmark("HRRR_RAP","Analysis_Assimilation", HRRR_RAP_layering)
-            analysis_assim_layer = whf.layer_data(parser,"HRRR","RAP")
-            whf.create_benchmark_summary("HRRR_RAP","Layering", HRRR_RAP_layering)
-        elif opt == '-b' or opt == '--bias':
-            print 'bias correcting...'
-            # TO BE IMPLEMENTED in WRF_Hydro_forcing.py
-            # Perform bias correction on any necessary input data.
-            # 
-            # bias_correction("HRRR")
-            # bias_correction("RAP")
-    
-
-
+ 
    
 
 #----------------------------------------------
 
 if __name__ == "__main__":
-    main(sys.argv[1:])
+    main()
