@@ -200,11 +200,11 @@ def regrid_data( product_name, file_to_regrid, parser, substitute_fcst = False )
     return regridded_file
 
 def get_filepaths(dir):
-    """ Generates the file names in a directory tree
-    by walking the tree either top-down or bottom-up.
-    For each directory in the tree rooted at 
-    the directory top (including top itself), it
-    produces a 3-tuple: (dirpath, dirnames, filenames).
+    """Generates the file names in a directory tree
+       by walking the tree either top-down or bottom-up.
+       For each directory in the tree rooted at 
+       the directory top (including top itself), it
+       produces a 3-tuple: (dirpath, dirnames, filenames).
     
     Args:
         dir (string): The base directory from which we 
@@ -234,16 +234,16 @@ def get_filepaths(dir):
 
     
 def create_output_name_and_subdir(product, filename, input_data_file):
-    """ Creates the full filename for the regridded data which ties-in
+    """Creates the full filename for the regridded data which ties-in
        to the WRF-Hydro Model expected input: 
        (WRF-Hydro Model) basedir/<product>/YYYYMMDDHH/YYMMDDhh00_LDASIN_DOMAIN1.nc
-    Where the HH is the model run time/init time in hours
-    hh00 is the valid time in hours and 00 minutes and <product> is the
-    name of the model/data product:  e.g. HRRR, NAM, MRMS, GFS, etc.
-    The valid time is the sum of the model run time (aka init time) and the
-    forecast time (fnnnn) in hours.  If the valid time exceeds 24 hours, the
-    YYYYMMDD is incremented appropriately to reflect how many days into the
-    future the valid time represents.
+       Where the HH is the model run time/init time in hours
+       hh00 is the valid time in hours and 00 minutes and <product> is the
+       name of the model/data product:  e.g. HRRR, NAM, MRMS, GFS, etc.
+       The valid time is the sum of the model run time (aka init time) and the
+       forecast time (fnnnn) in hours.  If the valid time exceeds 24 hours, the
+       YYYYMMDD is incremented appropriately to reflect how many days into the
+       future the valid time represents.
 
     Args:
         product (string):  The product name: HRRR, MRMS, or NAM.
@@ -354,8 +354,7 @@ def mkdir_p(dir):
 
 def downscale_data(product_name, file_to_downscale, parser, downscale_shortwave=False,
                    substitute_fcst=False):
-    """
-    Performs downscaling of data by calling the necessary
+    """Performs downscaling of data by calling the necessary
     NCL code (specific to the model/product).  There is an
     additional option to downscale the short wave radiation, SWDOWN.  
     If downscaling SWDOWN (shortwave radiation) is requested  
@@ -547,22 +546,26 @@ def bias_correction(parser):
 
 
 
-def layer_data(parser, primary_data, secondary_data):
-    """ Invokes the NCL script, combine.ncl
-        to layer/combine two files:  a primary and secondary
-        file (with identical date/time, model run time, and
-        forecast time) are found by iterating through a list
-        of primary files and determining if the corresponding
-        secondary file exists.
+def layer_data(parser, first_data, second_data, first_data_product, second_data_product):
+    """Invokes the NCL script, combine.ncl
+       to layer/combine two files:  a primary and secondary
+       file (with identical date/time, model run time, and
+       forecast time) are found by iterating through a list
+       of primary files and determining if the corresponding
+       secondary file exists.
 
 
         Args:
               parser (ConfigParser):  The parser to the config/parm
                                       file containing all the defined
                                       values.
-              primary_data (string):  The name of the primary product
+              first_data (string):  The name of the first data file
  
-              secondary_data (string): The name of the secondary product
+              second_data (string): The name of the second data file
+                                    (e.g. HRRR or RAP)
+            
+              first_data_product (string): The product type of the 
+                                           first 
 
         Output:
               None:  For each primary and secondary file that is
@@ -973,7 +976,6 @@ def get_past_or_future_date(curr_date, num_days = -1):
     """        
 
     curr_dt = datetime.datetime.strptime(curr_date, "%Y%m%d")
-    # assign negative value to num_days so we go back by n days.
     prev_dt = curr_dt + datetime.timedelta(days=num_days)
     year = str(prev_dt.year)
     month = str(prev_dt.month)
