@@ -4,7 +4,10 @@ import logging
 import re
 import time
 import numpy as np
+# argparse not available in python 2.6
+# use optparse instead
 import argparse
+import optparse
 import datetime
 import sys
 from ConfigParser import SafeConfigParser
@@ -546,7 +549,7 @@ def bias_correction(parser):
 
 
 
-def layer_data(parser, first_data, second_data, first_data_product, second_data_product):
+def layer_data(parser, first_prod, first_data, second_prod,second_data):
     """Invokes the NCL script, combine.ncl
        to layer/combine two files:  a primary and secondary
        file (with identical date/time, model run time, and
@@ -559,16 +562,19 @@ def layer_data(parser, first_data, second_data, first_data_product, second_data_
               parser (ConfigParser):  The parser to the config/parm
                                       file containing all the defined
                                       values.
+              first_prod (string): The product name of the 
+                                   first data product. 
               first_data (string):  The name of the first data file
+                                    (e.g. RAP or HRRR)
+              second_prod (string): The product name of the 
+                                    second data product.  
  
               second_data (string): The name of the second data file
                                     (e.g. HRRR or RAP)
             
-              first_data_product (string): The product type of the 
-                                           first 
 
         Output:
-              None:  For each primary and secondary file that is
+              None:  For each first and second file that is
                      combined/layered, create a file
                      (name and location defined in the config/parm 
                      file).
@@ -576,55 +582,37 @@ def layer_data(parser, first_data, second_data, first_data_product, second_data_
 
     # Retrieve any necessary parameters from the wrf_hydro_forcing config/parm
     # file...
-    # 1) directory where HRRR and RAP downscaled data reside
+    # 1) directory where first and second downscaled data reside
     # 2) output directory where layered files will be saved
     # 3) location of any executables/scripts
     ncl_exe = parser.get('exe', 'ncl_exe')
     layering_exe = parser.get('exe','Analysis_Assimilation_layering')
-    downscaled_primary_dir = parser.get('layering','analysis_assimilation_primary')
+    downscaled_first_dir = parser.get('layering','analysis_assimilation_primary')
     downscaled_secondary_dir = parser.get('layering','analysis_assimilation_secondary')
     layered_output_dir = parser.get('layering','output_dir')
 
-
-    # Loop through any available files in
-    # the directory that defines the first choice/priority data.
-    # Assemble the name of the corresponding secondary filename
-    # by deriving the date and model run (YYYYMMDDHH)
-    # from the primary filename and path.
-    # Then check if this file exists, if so, then pass this pair into
-    # a list of tuples comprised of (primary file, secondary file).
-    # After a list of paired files has been completed, these files
-    # will be layered/combined by invoking the NCL script, combine.ncl.
-    primary_files = get_filepaths(downscaled_primary_dir)
-    
-    # Determine which primary and secondary files we can layer, based on
-    # matching dates, model runs, and forecast times.
-    list_paired_files = find_layering_files(primary_files, downscaled_secondary_dir)
-    
-    # Now we have all the paired files to layer, create the key-value pair of
+    # Create the key-value pair of
     # input needed to run the NCL layering script.
-    num_matched_pairs = len(list_paired_files)
-    for pair in list_paired_files:
-        hrrrFile_param = "'hrrrFile=" + '"' + pair[0] + '"' + "' "
-        rapFile_param =  "'rapFile="  + '"' + pair[1] + '"' + "' "
-        full_layered_outfile = layered_output_dir + "/" + pair[2]
-        outFile_param = "'outFile=" + '"' + full_layered_outfile + '"' + "' "
-        mkdir_p(full_layered_outfile)
-        init_indexFlag = "false"
-        indexFlag = "true"
-        init_indexFlag_param = "'indexFlag=" + '"' +  init_indexFlag + '"' + "' "
-        indexFlag_param = "'indexFlag=" + '"' + indexFlag + '"' + "' "
-        init_layering_params = hrrrFile_param + rapFile_param + init_indexFlag_param\
-                               + outFile_param 
-        layering_params = hrrrFile_param + rapFile_param + indexFlag_param\
-                          + outFile_param
-        init_layering_cmd = ncl_exe + " " + init_layering_params + " " + \
-                            layering_exe
-        layering_cmd = ncl_exe + " " + layering_params + " " + \
-                            layering_exe
-         
-        init_return_value = os.system(init_layering_cmd)
-        return_value = os.system(layering_cmd) 
+    hrrrFile_param = "'hrrrFile=" + '"' + first_data + '"' + "' "
+    rapFile_param =  "'rapFile="  + '"' + second_data + '"' + "' "
+    full_layered_outfile = layered_output_dir + "/" + pair[2]
+    outFile_param = "'outFile=" + '"' + full_layered_outfile + '"' + "' "
+    mkdir_p(full_layered_outfile)
+    init_indexFlag = "false"
+    indexFlag = "true"
+    init_indexFlag_param = "'indexFlag=" + '"' +  init_indexFlag + '"' + "' "
+    indexFlag_param = "'indexFlag=" + '"' + indexFlag + '"' + "' "
+    init_layering_params = hrrrFile_param + rapFile_param + init_indexFlag_param\
+                           + outFile_param 
+    layering_params = hrrrFile_param + rapFile_param + indexFlag_param\
+                      + outFile_param
+    init_layering_cmd = ncl_exe + " " + init_layering_params + " " + \
+                        layering_exe
+    layering_cmd = ncl_exe + " " + layering_params + " " + \
+                        layering_exe
+    
+    init_return_value = os.system(init_layering_cmd)
+    return_value = os.system(layering_cmd) 
     
     
 def find_layering_files(primary_file,downscaled_secondary_dir):
@@ -691,36 +679,61 @@ def find_layering_files(primary_file,downscaled_secondary_dir):
 
     return list_paired_files
 
-
 def read_input():
-    """   Reads in the command line arguments.
-
-
-          Args:
-            None
-  
-          Returns:
-            args (args structure from argparse):  The struct from argparse
+    """Read in the command line arguments
+       Uses optparse, which is available for Python 2.6
+       (currently used in WCOSS)
  
+       Args:
+           None
+
+       Returns:
+          Tuple:
+             opts (list): The list of options supplied by user
+             args (list): The list of positional arguments 
     """
-    parser = argparse.ArgumentParser(description='Forcing Configurations for WRF-Hydro')
-    # Actions
-    parser.add_argument('--regrid_downscale', action='store_true', help='regrid and downscale')
-    parser.add_argument('--bias', action='store_true', help='bias correction')
-    parser.add_argument('--layer', action='store_true', help='layer')
+    parser = optparse.OptionParser()
+    parser.add_option('--regrid', help='regrid and downscale',\
+                  dest='r_d_bool', default=False, action='store_true')
+    parser.add_option('--bias', help='bias correction', dest='bias_bool',\
+                  default=False, action='store_true')
+    parser.add_option('--layer', help='layer', dest='layer_bool',\
+                  default=False, action='store_true')
 
-    # Product name of input data
-    parser.add_argument('--DataProductName', required = True, choices=['MRMS','RAP','HRRR','GFS','CFS'],help='input data name: MRMS, RAP, HRRR, GFS, CFS')
+    # tell optparse to store option's arg in specified destination
+    # member of opts
+    parser.add_option('--prod', help='data product', dest='data_prod',\
+                       action='store')
+    parser.add_option('--prod2', help='second data product \
+                      (for layering and bias correction)', dest='data_prod2',\
+                       action='store')
+    parser.add_option('--File', help='file name',dest='file_name',\
+                      action='store', nargs=1)
+    parser.add_option('--File2', help='second file name \
+                       (for layering and bias correction)',dest='file_name2',\
+                        action='store', nargs=1)
+    (opts,args) = parser.parse_args()
 
+    # Making sure all necessary options appeared
+    if opts.layer_bool:
+        if (opts.data_prod and not opts.data_prod2):
+            print "Layering requires two data products"
+            parser.print_help()
+        elif (opts.file_name and not opts.file_name2) :
+            print "Layering requires two input files"
+            parser.print_help()
 
-    # Input file
-    parser.add_argument('InputFileName')
-    args = parser.parse_args()
-    if not (args.regrid_downscale or args.layer or args.bias) :
-        parser.error('No action was requested, request regridding/downscaling, bias-correction, or layering')
+    if opts.r_d_bool:
+        print "Regrid and downscale requested"
+        if(not opts.data_prod or not opts.file_name):
+            print "Regrid (& downscale) requires one data product \
+                   and one file name"
+            parser.print_help()
+        else:
+            print "data prod: %s"%opts.data_prod
+            print "filename: %s"%opts.file_name
 
-    return args
-
+    return (opts,args)
 
 
 def initial_setup(parser,forcing_config_label):
@@ -904,23 +917,23 @@ def replace_fcst0hr(parser, file_to_replace, product):
         sys.exit()
 
 
-    # Get the previous directory corresponding to the previous
-    # model run/init time.
-    if model_time == 0:
-        # Use the previous day's last model run
-        # and date.
-        prev_model_time = 23
-        date = get_past_or_future_date(curr_date,-1)
-        # Pad the model time with zeroes.
-        prev_model_time_str = (str(prev_model_time)).rjust(2,'0')
-
-    else:
-        prev_model_time = model_time - 1
-        prev_model_time_str = (str(prev_model_time)).rjust(2,'0')
-        date = curr_date
-
 
     if product == 'RAP':
+        # Get the previous directory corresponding to the previous
+        # model run/init time.
+        if model_time == 0:
+            # Use the previous day's last model run
+            # and date.
+            prev_model_time = 23
+            date = get_past_or_future_date(curr_date,-1)
+            # Pad the model time with zeroes.
+            prev_model_time_str = (str(prev_model_time)).rjust(2,'0')
+
+        else:
+            prev_model_time = model_time - 1
+            prev_model_time_str = (str(prev_model_time)).rjust(2,'0')
+            date = curr_date
+    
         # Create the full file path and name to create the directory of
         # the previous model run/init time (i.e. YYYYMMDDH'H', 
         # where H'H' is the previous model run/init).
@@ -948,9 +961,31 @@ def replace_fcst0hr(parser, file_to_replace, product):
             logging.info("INFO: [replace_fcst0hr] SHOULD NEVER SEE THIS") 
           
     elif product == 'GFS':
-       base_dir = parser.get('downscaling','GFS_downscale_output_dir')
-
-
+        base_dir = parser.get('downscaling','GFS_downscale_output_dir')
+        # Get the previous directory corresponding to the previous
+        # model/init run. GFS only has 0,6,12,and 18 Z model/init run times.
+        prev_model = model_time - 6
+        if model_time < 0:
+            prev_model_time_str = 18   
+        prev_model_time_str = (str(prev_model)).rjust(2,'0')
+        full_path = base_dir + '/' + date + prev_model_time_str + "/" +\
+                    file_only
+        if os.path.isfile(full_path):
+            # Make a copy
+            file_dir_fcst0hr = base_dir + "/" + date + (str(model_time)).rjust(2,'0') 
+            # Make the directory for the downscaled fcst 0hr 
+            mkdir_p(file_dir_fcst0hr)
+            file_path_to_replace = file_dir_fcst0hr + "/" + file_only
+            copy_cmd = "cp " + full_path + " " + file_path_to_replace
+            logging.info("copying the previous model run's file: %s",copy_cmd)      
+            os.system(copy_cmd)
+            return
+        else:
+            # If we are here, we didn't find any file from a previous RAP model run...
+            logging.error("ERROR: No previous model runs found, exiting...")
+            sys.exit()
+            logging.info("INFO: [replace_fcst0hr] SHOULD NEVER SEE THIS") 
+          
 
 
 
