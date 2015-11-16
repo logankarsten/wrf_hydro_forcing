@@ -3,7 +3,7 @@ import logging
 import os
 import sys
 from ConfigParser import SafeConfigParser
-#
+import optparse
 
 """Short_Range_Forcing
 Performs regridding,downscaling, bias
@@ -33,10 +33,52 @@ def main():
     logging = whf.initial_setup(parser,forcing_config_label)
 
     # Retrieve the information from the input args
-    args = whf.read_input()
-    curr_data_file = args.InputFileName
-    product_data_name = args.DataProductName
-   
+    opt_parser = optparse.OptionParser()
+    opt_parser.add_option('--regrid', help='regrid and downscale',\
+                  dest='r_d_bool', default=False, action='store_true')
+    opt_parser.add_option('--bias', help='bias correction', dest='bias_bool',\
+                  default=False, action='store_true')
+    opt_parser.add_option('--layer', help='layer', dest='layer_bool',\
+                  default=False, action='store_true')
+
+    # tell optparse to store option's arg in specified destination
+    # member of opts
+    opt_parser.add_option('--prod', help='data product', dest='data_prod',\
+                       action='store')
+    opt_parser.add_option('--prod2', help='second data product \
+                      (for layering and bias correction)', dest='data_prod2',\
+                       action='store')
+    opt_parser.add_option('--File', help='file name',dest='file_name',\
+                      action='store', nargs=1)
+    opt_parser.add_option('--File2', help='second file name \
+                       (for layering and bias correction)',dest='file_name2',\
+                        action='store', nargs=1)
+    (opts,args) = opt_parser.parse_args()
+
+    curr_data_file = opts.file_name
+    product_data_name = opts.data_prod
+
+    # Making sure all necessary options appeared
+    if opts.layer_bool:
+        if (opts.data_prod and not opts.data_prod2):
+            print "Layering requires two data products"
+            parser.print_help()
+        elif (opts.file_name and not opts.file_name2) :
+            print "Layering requires two input files"
+            parser.print_help()
+
+    if opts.r_d_bool:
+        print "Regrid and downscale requested"
+        if(not opts.data_prod or not opts.file_name):
+            print "Regrid (& downscale) requires one data product \
+                   and one file name"
+            parser.print_help()
+        else:
+            print "data prod: %s"%opts.data_prod
+            print "filename: %s"%opts.file_name
+
+
+
     # Extract the date, model run time, and forecast hour from the file name
     # Use the fcsthr to process only the files that have a fcst hour less than
     # the max fcst hr defined in the param/config file.
@@ -57,8 +99,8 @@ def main():
         # in the 0hr forecasts (e.g. precip rate for RAP and radiation
         # in GFS).
 
-        if args.regrid_downscale:
-            logging.info("Regridding and Downscaling for %s", args.InputFileName)
+        if opts.r_d_bool:
+            logging.info("Regridding and Downscaling for %s", opts.data_prod)
             # Determine if this is a 0hr forecast for RAP data (GFS is also missing
             # some variables for 0hr forecast, but GFS is not used for Short Range
             # forcing). We will need to substitute this file for the downscaled
@@ -74,16 +116,16 @@ def main():
                 regridded_file = whf.regrid_data(product_data_name, curr_data_file, parser, False)
                 whf.downscale_data(product_data_name,regridded_file, parser,True, False)                
             
-        elif args.layer:
+        elif args.layer_bool:
             logging.info("Layering requested for %s", args.InputFileName)
      
-        elif args.bias:
+        elif args.bias_bool:
             logging.info("Bias correction requested for %s", args.InputFileName)
 
     else:
         # Skip processing this file, exiting...
-        logging.error("ERROR [Short_Range_Forcing]- Skip processing, requested file is outside max fcst")
-        sys.exit()
+        logging.info("INFO [Short_Range_Forcing]- Skip processing, requested file is outside max fcst")
+        return
 
  
     
