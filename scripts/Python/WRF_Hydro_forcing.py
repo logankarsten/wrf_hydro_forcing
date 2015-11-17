@@ -946,7 +946,7 @@ def replace_fcst0hr(parser, file_to_replace, product):
         logging.info("INFO [replace_fcst0hr]: full path = %s", full_path)
         if os.path.isfile(full_path):
             # Make a copy
-            file_dir_fcst0hr = base_dir + "/" + date + (str(model_time)).rjust(2,'0') 
+            file_dir_fcst0hr = base_dir + "/" + curr_date + (str(model_time)).rjust(2,'0') 
             # Make the directory for the downscaled fcst 0hr 
             mkdir_p(file_dir_fcst0hr)
             file_path_to_replace = file_dir_fcst0hr + "/" + file_only
