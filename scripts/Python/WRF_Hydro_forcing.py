@@ -4,9 +4,6 @@ import logging
 import re
 import time
 import numpy as np
-# argparse not available in python 2.6
-# use optparse instead
-import argparse
 import optparse
 import datetime
 import sys
@@ -549,13 +546,11 @@ def bias_correction(parser):
 
 
 
-def layer_data(parser, first_prod, first_data, second_prod,second_data):
+def layer_data(parser, first_prod, first_data, second_prod,second_data,forcing_type):
     """Invokes the NCL script, combine.ncl
-       to layer/combine two files:  a primary and secondary
-       file (with identical date/time, model run time, and
-       forecast time) are found by iterating through a list
-       of primary files and determining if the corresponding
-       secondary file exists.
+       to layer/combine two files:  first_data and 
+       second_data, with product type of first_prod and
+       second_prod respectively.
 
 
         Args:
@@ -566,12 +561,20 @@ def layer_data(parser, first_prod, first_data, second_prod,second_data):
                                    first data product. 
               first_data (string):  The name of the first data file
                                     (e.g. RAP or HRRR)
+                                    with the YYYYMMDDHH directory 
+                                    so we can associate the model/init
+                                    time.
               second_prod (string): The product name of the 
                                     second data product.  
  
               second_data (string): The name of the second data file
                                     (e.g. HRRR or RAP)
-            
+                                    and its YYYYMMDDHH directory, so
+                                    we can identify its accompanying
+                                    model/init time.
+              forcing_type (string): The forcing configuration:
+                                     Anal_Assim, Short_Range,
+                                     Medium_Range, or Long_Range 
 
         Output:
               None:  For each first and second file that is
@@ -579,24 +582,49 @@ def layer_data(parser, first_prod, first_data, second_prod,second_data):
                      (name and location defined in the config/parm 
                      file).
     """
-
-    # Retrieve any necessary parameters from the wrf_hydro_forcing config/parm
-    # file...
-    # 1) directory where first and second downscaled data reside
-    # 2) output directory where layered files will be saved
-    # 3) location of any executables/scripts
+    # Retrieve any necessary data from the parameter/config file.
     ncl_exe = parser.get('exe', 'ncl_exe')
     layering_exe = parser.get('exe','Analysis_Assimilation_layering')
     downscaled_first_dir = parser.get('layering','analysis_assimilation_primary')
     downscaled_secondary_dir = parser.get('layering','analysis_assimilation_secondary')
-    layered_output_dir = parser.get('layering','output_dir')
+    forcing_config = forcing_type.lower()
+    logging.info("forcing_type: %s", forcing_type)
+    if forcing_config == 'anal_assim':
+        layered_output_dir = parser.get('layering', 'analysis_assimilation_output')
+    elif forcing_config == 'short_range':
+        layered_output_dir = parser.get('layering', 'short_range_output')
+    elif forcing_config == 'medium_range':
+        layered_output_dir = parser.get('layering', 'medium_range_output')
+    else :
+        #forcing_config == 'long_range'
+        layered_output_dir = parser.get('layering', 'long_range_output')
+
+    logging.info('Layered output dir: %s', layered_output_dir)
+
+    # Retrieve just the file name portion of the first data file (the file name
+    # portion of the first and second data file will be identical, they differ
+    # by their directory path names). Note: DO NOT include the .nc file extension
+    # to create the final output file.
+    logging.info("first_data=%s",first_data)
+    match = re.match(r'[0-9]{10}/([0-9]{12}.LDASIN_DOMAIN1).nc',first_data)
+    if match:
+        file_name_only = match.group(1)
+    else:
+        logging.error("ERROR[layer_data]: File name format is not what was expected")
+        exit(-1) 
 
     # Create the key-value pair of
     # input needed to run the NCL layering script.
-    hrrrFile_param = "'hrrrFile=" + '"' + first_data + '"' + "' "
-    rapFile_param =  "'rapFile="  + '"' + second_data + '"' + "' "
-    full_layered_outfile = layered_output_dir + "/" + pair[2]
+    full_first_data_dir = parser.get('layering', 'short_range_primary')
+    full_second_data_dir = parser.get('layering', 'short_range_secondary')
+    hrrrFile_param = "'hrrrFile=" + '"' + full_first_data_dir + \
+                     "/" + first_data + '"' + "' "
+    rapFile_param =  "'rapFile="  + '"' + full_second_data_dir + \
+                     "/" + second_data + '"' + "' "
+    # Create the output filename for the layered file
+    full_layered_outfile = layered_output_dir + "/" + file_name_only + ".nc"
     outFile_param = "'outFile=" + '"' + full_layered_outfile + '"' + "' "
+    logging.info("full_layered outfile= %s",full_layered_outfile)
     mkdir_p(full_layered_outfile)
     init_indexFlag = "false"
     indexFlag = "true"
@@ -615,70 +643,6 @@ def layer_data(parser, first_prod, first_data, second_prod,second_data):
     return_value = os.system(layering_cmd) 
     
     
-def find_layering_files(primary_file,downscaled_secondary_dir):
-    """Given a primary file (full path + filename),
-    retrieve the corresponding secondary file if it exists.  
-    Create and return a tuple: (primary file, secondary file, 
-    layered file). 
-
-    Args:
-        primary_files(string):  The primary file for
-                              which we are trying to find
-                              it's layering complement in
-                              the secondary file directory
-        downscaled_secondary_dir(string): The directory 
-                                          that contains the
-                                          secondary data.
-    Output:
-        list_paired_files (tuple of strings): A list of tuples, where 
-                                  the tuple consists of 
-                                  (primary file, secondary
-                                   file, and layered file name)
-        
- 
-    """
-    second_product = "RAP"
-    list_paired_files = []
-    paired_files = ()
-
-    for primary_file in primary_files:
-        #match = re.match(r'.*/downscaled/([A-Za-z]{3,4})/([0-9]{8})/i([0-9]{2})/[0-9]{8}_i[0-9]{2}_f([0-9]{3})_[A-Za-z]{3,4}.nc',primary_file)
-        match = re.match(r'.*/downscaled/([A-Za-z]{3,4})/([0-9]{8})([0-9]{2})/[0-9]{8}([0-9]{2})00.LDASIN_DOMAIN1.*',primary_file)
-        if match:
-            product = match.group(1)
-            date = match.group(2)
-            modelrun_str = match.group(3)
-            valid_hr_str = match.group(4)
-            # Assemble the corresponding secondary file based on the date, modelrun, 
-            # and forecast hour. 
-            secondary_file = downscaled_secondary_dir +  \
-                             "/" + date +  modelrun_str + "/" + date +\
-                             valid_hr_str + "00.LDASIN_DOMAIN1" +\
-                             second_product 
-            layered_filename = date + valid_hr_str + "00.LDASIN_DOMAIN1" 
-               
-        
-            # Determine if this "manufactured" secondary file exists, if so, then 
-            # create a tuple to represent this pair: (primary file, 
-            # secondary file, layered file) then add this tuple of 
-            # files to the list and continue. If not, then continue 
-            # with the next primary file in the primary_files list.
-            if os.path.isfile(secondary_file):
-                paired_files = (primary_file, secondary_file,layered_filename)
-                list_paired_files.append(paired_files)
-                num = len(list_paired_files)
-            else:
-                logging.info("No matching date, or model run or forecast time for\
-                             secondary file")
-                continue
-        else:
-            logging.error('ERROR [find_layering_files]: filename structure is not what was expected')
-            sys.exit()
-
-
-
-    return list_paired_files
-
 def read_input():
     """Read in the command line arguments
        Uses optparse, which is available for Python 2.6
