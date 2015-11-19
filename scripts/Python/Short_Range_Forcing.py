@@ -50,7 +50,6 @@ def forcing(action, prod, file, prod2=None, file2=None):
  
     """
 
-
     # Initialize anything that is specific to this
     # forcing configuration...
     forcing_config_label = 'Short_Range'
@@ -63,33 +62,37 @@ def forcing(action, prod, file, prod2=None, file2=None):
     forcing_config_label = "Short_Range"
     logging = whf.initial_setup(parser,forcing_config_label)
 
+    logging.info("Layering first file: %s", file)
+    logging.info("Layering second file: %s", file2)
+    logging.info("Layering first data: %s", prod)
+    logging.info("Layering second data: %s", prod2)
 
     # Extract the date, model run time, and forecast hour from the file name
     # Use the fcsthr to process only the files that have a fcst hour less than
     # the max fcst hr defined in the param/config file.
-    (date,modelrun,fcsthr) = whf.extract_file_info(file)
+    
     
     # Convert the action to lower case 
     # and the product name to upper case
     # for consistent checking
     action_requested = action.lower()
     product_data_name = prod.upper()
+    if action == 'regrid': 
+        (date,modelrun,fcsthr) = whf.extract_file_info(file)
+        # Determine whether this current file lies within the forecast range
+        # for the data product (e.g. if processing RAP, use only the 0hr-18hr forecasts).
+        # Skip if this file has a forecast hour greater than the max indicated in the 
+        # parm/config file.
+        in_fcst_range = whf.is_in_fcst_range(prod, fcsthr, parser)
 
-    # Determine whether this current file lies within the forecast range
-    # for the data product (e.g. if processing RAP, use only the 0hr-18hr forecasts).
-    # Skip if this file has a forecast hour greater than the max indicated in the 
-    # parm/config file.
-    in_fcst_range = whf.is_in_fcst_range(prod, fcsthr, parser)
-
-    if in_fcst_range:
-        # Check for RAP or GFS data products.  If this file is
-        # a 0 hr fcst and is RAP or GFS, substitute each 0hr forecast
-        # with the file from the previous model run and the same valid
-        # time.  This is necessary because there are missing variables
-        # in the 0hr forecasts (e.g. precip rate for RAP and radiation
-        # in GFS).
-
-        if action_requested == 'regrid':
+        if in_fcst_range:
+            # Check for RAP or GFS data products.  If this file is
+            # a 0 hr fcst and is RAP or GFS, substitute each 0hr forecast
+            # with the file from the previous model run and the same valid
+            # time.  This is necessary because there are missing variables
+            # in the 0hr forecasts (e.g. precip rate for RAP and radiation
+            # in GFS).
+    
             logging.info("Regridding and Downscaling for %s", product_data_name)
             # Determine if this is a 0hr forecast for RAP data (GFS is also missing
             # some variables for 0hr forecast, but GFS is not used for Short Range
@@ -105,26 +108,27 @@ def forcing(action, prod, file, prod2=None, file2=None):
             else:
                 regridded_file = whf.regrid_data(product_data_name, file, parser, False)
                 whf.downscale_data(product_data_name,regridded_file, parser,True, False)                
-            
-        elif action_requested == 'layer':
-            logging.info("Layering requested for %s and %s", prod, prod2)
-            if prod2 is None:
-               logger.error("ERROR [Short_Range_Forcing]: layering requires two products")
-            elif file2 is None:
-               logger.error("ERROR [Short_Range_Forcing]: layering requires two input files")
-             
-        elif action_requested == 'bias':
-            
-            logging.info("Bias correction requested for %s", file)
-            if prod2 is None:
-                logger.error("ERROR [Short_Range_Forcing]: bias correction requires two products")
-            elif file2 is None:
-                logger.error("ERROR [Short_Range_Forcing]: bias correction requires two input files")
-
-    else:
-        # Skip processing this file, exiting...
-        logging.info("INFO [Short_Range_Forcing]- Skip processing, requested file is outside max fcst")
+                
+        else:
+            # Skip processing this file, exiting...
+            logging.info("INFO [Short_Range_Forcing]- Skip processing, requested file is outside max fcst")
         return
+    elif action_requested == 'layer':
+        logging.info("Layering requested for %s and %s", prod, prod2)
+        # Do some checking to make sure that there are two data products 
+        # and two files indicated.
+        if prod2 is None:
+            logger.error("ERROR [Short_Range_Forcing]: layering requires two products")
+        elif file2 is None:
+            logger.error("ERROR [Short_Range_Forcing]: layering requires two input files")
+        else:
+            # We have everything we need, request layering
+            whf.layer_data(parser,prod,file, prod2,file2, 'SHORT_RANGE')
+             
+    elif action_requested == 'bias':
+        logging.info("Bias correction requested for %s", file)
+        logging.info("Bias correction not yet suppoted for Short Range Forcing")
+            
 
 
 
