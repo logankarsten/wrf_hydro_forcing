@@ -7,6 +7,7 @@ import numpy as np
 import optparse
 import datetime
 import sys
+import shutil
 from ConfigParser import SafeConfigParser
 
 
@@ -33,12 +34,9 @@ def regrid_data( product_name, file_to_regrid, parser, substitute_fcst = False )
     written in NCL.  For HRRR data regridding, the
     HRRR-2-WRF_Hydro_ESMF_forcing.ncl script is invoked.
     For MRMS data MRMS-2-WRF_Hydro_ESMF_forcing.ncl is invoked.
-    Finally, for NAM212 data, NAM-2-WRF_Hydro_ESMF_forcing.ncl 
-    is invoked.  All product files (HRRR, MRMS, NAM, RAP etc.) are
-    retrieved and stored in a list. The appropriate regridding
-    script is invoked for each file in the list.  The regridded
-    files are stored in an output directory defined in the
-    parm/config file.
+    The appropriate regridding script is invoked for the file 
+    to regrid.  The regridded file is stored in an output directory
+    defined in the parm/config file.
 
     Args:
         product_name (string):  The name of the product 
@@ -141,6 +139,8 @@ def regrid_data( product_name, file_to_regrid, parser, substitute_fcst = False )
        
         (date,model,fcsthr) = extract_file_info(file_to_regrid)  
         data_file_to_regrid= data_dir + "/" + date + "/" + file_to_regrid 
+        print ("INSIDE regrid_data data_file_to_regrid: %s, file_to_regrid: %s")%(data_file_to_regrid,file_to_regrid)
+        
         srcfilename_param =  "'srcfilename=" + '"' + data_file_to_regrid +  \
                                  '"' + "' "
         wgtFileName_in_param =  "'wgtFileName_in = " + '"' + wgt_file + \
@@ -587,6 +587,8 @@ def layer_data(parser, first_prod, first_data, second_prod,second_data,forcing_t
     layering_exe = parser.get('exe','Analysis_Assimilation_layering')
     downscaled_first_dir = parser.get('layering','analysis_assimilation_primary')
     downscaled_secondary_dir = parser.get('layering','analysis_assimilation_secondary')
+    RAP_base_dir = parser.get('regridding','RAP_output_dir')
+    HRRR_base_dir = parser.get('regridding','HRRR_output_dir')
     forcing_config = forcing_type.lower()
     logging.info("forcing_type: %s", forcing_type)
     if forcing_config == 'anal_assim':
@@ -599,12 +601,16 @@ def layer_data(parser, first_prod, first_data, second_prod,second_data,forcing_t
         #forcing_config == 'long_range'
         layered_output_dir = parser.get('layering', 'long_range_output')
 
+    # Create the destination directory in case it doesn't already exist.
+    mkdir_p(layered_output_dir)
     logging.info('Layered output dir: %s', layered_output_dir)
 
     # Retrieve just the file name portion of the first data file (the file name
     # portion of the first and second data file will be identical, they differ
     # by their directory path names). Note: DO NOT include the .nc file extension
-    # to create the final output file.
+    # for the final output file, the WRF-Hydro model is NOT looking for these.
+    # NCL requires a recognized file extension, therefore remove the .nc
+    # extension after the layering is complete.
     logging.info("first_data=%s",first_data)
     match = re.match(r'[0-9]{10}/([0-9]{12}.LDASIN_DOMAIN1).nc',first_data)
     if match:
@@ -615,16 +621,14 @@ def layer_data(parser, first_prod, first_data, second_prod,second_data,forcing_t
 
     # Create the key-value pair of
     # input needed to run the NCL layering script.
-    full_first_data_dir = parser.get('layering', 'short_range_primary')
-    full_second_data_dir = parser.get('layering', 'short_range_secondary')
-    hrrrFile_param = "'hrrrFile=" + '"' + full_first_data_dir + \
-                     "/" + first_data + '"' + "' "
-    rapFile_param =  "'rapFile="  + '"' + full_second_data_dir + \
-                     "/" + second_data + '"' + "' "
+    hrrrFile_param = "'hrrrFile=" + '"' + HRRR_base_dir + "/" + first_data + '"' + "' "
+    rapFile_param =  "'rapFile="  + '"' + RAP_base_dir + "/" + second_data + '"' + "' "
+
     # Create the output filename for the layered file
-    full_layered_outfile = layered_output_dir + "/" + file_name_only + ".nc"
+    full_layered_outfile_no_extension = layered_output_dir + "/" \
+                                        + file_name_only
+    full_layered_outfile = full_layered_outfile_no_extension + ".nc"
     outFile_param = "'outFile=" + '"' + full_layered_outfile + '"' + "' "
-    logging.info("full_layered outfile= %s",full_layered_outfile)
     mkdir_p(full_layered_outfile)
     init_indexFlag = "false"
     indexFlag = "true"
@@ -640,6 +644,11 @@ def layer_data(parser, first_prod, first_data, second_prod,second_data,forcing_t
                         layering_exe
     
     init_return_value = os.system(init_layering_cmd)
+    if init_return_value != 0:
+        logging.error("ERROR[layer_data]: layering was unsuccessful")
+    
+    # Rename the files (same name, no .nc extension)
+    shutil.move(full_layered_outfile, full_layered_outfile_no_extension) 
     return_value = os.system(layering_cmd) 
     
     
@@ -986,6 +995,7 @@ def get_past_or_future_date(curr_date, num_days = -1):
     return prev_date
     
     
+
     
     
     
