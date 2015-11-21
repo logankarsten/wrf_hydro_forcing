@@ -62,10 +62,6 @@ def forcing(action, prod, file, prod2=None, file2=None):
     forcing_config_label = "Short_Range"
     logging = whf.initial_setup(parser,forcing_config_label)
 
-    logging.info("Layering first file: %s", file)
-    logging.info("Layering second file: %s", file2)
-    logging.info("Layering first data: %s", prod)
-    logging.info("Layering second data: %s", prod2)
 
     # Extract the date, model run time, and forecast hour from the file name
     # Use the fcsthr to process only the files that have a fcst hour less than
@@ -256,12 +252,11 @@ def cli():
         return
 
  
-    
-    
+        
 #--------------------------    
     
    
 if __name__ == "__main__":
-    cli()
+    forcing()
     
 
