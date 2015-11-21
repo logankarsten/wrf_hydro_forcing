@@ -223,11 +223,15 @@ def get_filepaths(dir):
     # Walk the tree
     for root, directories, files in os.walk(dir):
         for filename in files:
-            # Join the two strings to form the full
-            # filepath.
-            filepath = os.path.join(root,filename)
-            # add it to the list
-            file_paths.append(filepath)
+            # add it to the list only if it is a grib file
+            match = re.match(r'.*(grib|grb|grib2|grb2)$',filename)
+            if match:
+                # Join the two strings to form the full
+                # filepath.
+                filepath = os.path.join(root,filename)
+                file_paths.append(filepath)
+            else:
+                continue
     return file_paths
 
 
@@ -296,8 +300,8 @@ def create_output_name_and_subdir(product, filename, input_data_file):
             year_month_day_subdir = year_month_day + init_hr_str
         else:
             logging.error("ERROR [create_output_name_and_subdir]: %s has an unexpected name." ,filename) 
-            sys.exit()
-
+            return
+ 
     elif product == 'MRMS':
         match = re.match(r'.*([0-9]{8})_([0-9]{2}).*',filename) 
         if match:
@@ -312,7 +316,7 @@ def create_output_name_and_subdir(product, filename, input_data_file):
            logging.error("ERROR: MRMS data filename %s \
                           has an unexpected file name.",\
                           filename) 
-           sys.exit()
+           return
 
    
     if valid_time >= 24:
@@ -454,8 +458,7 @@ def downscale_data(product_name, file_to_downscale, parser, downscale_shortwave=
         else:
             logging.error("ERROR: regridded file's name: %s is an unexpected format",\
                                file_to_downscale)
-            sys.exit() 
-   
+            return 
         full_downscaled_dir = downscale_output_dir + "/" + yr_month_day_init  
         full_downscaled_file = full_downscaled_dir + "/" +  regridded_file
 
@@ -587,8 +590,6 @@ def layer_data(parser, first_prod, first_data, second_prod,second_data,forcing_t
     layering_exe = parser.get('exe','Analysis_Assimilation_layering')
     downscaled_first_dir = parser.get('layering','analysis_assimilation_primary')
     downscaled_secondary_dir = parser.get('layering','analysis_assimilation_secondary')
-    RAP_base_dir = parser.get('regridding','RAP_output_dir')
-    HRRR_base_dir = parser.get('regridding','HRRR_output_dir')
     forcing_config = forcing_type.lower()
     logging.info("forcing_type: %s", forcing_type)
     if forcing_config == 'anal_assim':
@@ -621,13 +622,12 @@ def layer_data(parser, first_prod, first_data, second_prod,second_data,forcing_t
 
     # Create the key-value pair of
     # input needed to run the NCL layering script.
-    hrrrFile_param = "'hrrrFile=" + '"' + HRRR_base_dir + "/" + first_data + '"' + "' "
-    rapFile_param =  "'rapFile="  + '"' + RAP_base_dir + "/" + second_data + '"' + "' "
-
+    hrrrFile_param = "'hrrrFile=" + '"' + first_data + '"' + "' "
+    rapFile_param =  "'rapFile="  + '"' + second_data + '"' + "' "
     # Create the output filename for the layered file
     full_layered_outfile_no_extension = layered_output_dir + "/" \
                                         + file_name_only
-    full_layered_outfile = full_layered_outfile_no_extension + ".nc"
+    full_layered_outfile = full_layered_outfile_no_exension + ".nc"
     outFile_param = "'outFile=" + '"' + full_layered_outfile + '"' + "' "
     mkdir_p(full_layered_outfile)
     init_indexFlag = "false"
@@ -887,7 +887,7 @@ def replace_fcst0hr(parser, file_to_replace, product):
         logging.info("file only from replace_fcst0hr: %s",file_only)
     else:
         logging.error("ERROR[replace_fcst0hr]: filename %s  is unexpected, exiting.", file_to_replace)
-        sys.exit()
+        return
 
 
 
@@ -899,8 +899,10 @@ def replace_fcst0hr(parser, file_to_replace, product):
             # and date.
             prev_model_time = 23
             date = get_past_or_future_date(curr_date,-1)
-            # Pad the model time with zeroes.
+            # XXX REMOVE ME
+            logging.info("******replace_fcst0hr-date= %s")%(date)
             prev_model_time_str = (str(prev_model_time)).rjust(2,'0')
+            
 
         else:
             prev_model_time = model_time - 1
@@ -988,8 +990,8 @@ def get_past_or_future_date(curr_date, num_days = -1):
     year = str(prev_dt.year)
     month = str(prev_dt.month)
     day = str(prev_dt.day)
-    month.rjust(2,'0')
-    day.rjust(2, '0')
+    month  = month.rjust(2,'0')
+    day = day.rjust(2, '0')
     prev_list = [year, month, day]
     prev_date = ''.join(prev_list)
     return prev_date
