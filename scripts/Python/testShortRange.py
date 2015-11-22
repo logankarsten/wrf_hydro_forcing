@@ -20,7 +20,7 @@ def is_within_time_range(start_dt, end_dt, file, prod, is_yellowstone=False):
     # end_dt datetimes.
     print ("file: %s")%(file)
     if is_yellowstone:
-        match = re.match(r'.*/(RAP|HRRR)/([0-9]{8})/[0-9]{8}_i[0-9]{2,3}_f[0-9]{2,3}_WRF-RR.*',file)
+        match = re.match(r'.*/(RAP|HRRR)/([0-9]{8})/[0-9]{8}_i[0-9]{2,3}_f[0-9]{2,3}_(WRF-RR|HRRR).*',file)
         ymd_dir = match.group(2)
     else: 
         match = re.match(r'.*/([0-9]{8})/[0-9]{8}_i[0-9]{2}_f[0-9]{2,3}_(WRF-RR|HRRR).*',file)
@@ -53,8 +53,12 @@ def main():
     parser.read('wrf_hydro_forcing.parm')    
 
     # Start and end dates 
-    start_dt = datetime.datetime.strptime("20151120","%Y%m%d")
-    end_dt = datetime.datetime.strptime("20151120","%Y%m%d")
+    if is_yellowstone:
+         start_dt = datetime.datetime.strptime("20150930","%Y%m%d")
+         end_dt = datetime.datetime.strptime("20151001","%Y%m%d")
+    else:
+         start_dt = datetime.datetime.strptime("20151120","%Y%m%d")
+         end_dt = datetime.datetime.strptime("20151120","%Y%m%d")
 
     # Set the directory where the input data resides.
     # For running on yellowstone:
