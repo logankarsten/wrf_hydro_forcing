@@ -139,7 +139,7 @@ def regrid_data( product_name, file_to_regrid, parser, substitute_fcst = False )
        
         (date,model,fcsthr) = extract_file_info(file_to_regrid)  
         data_file_to_regrid= data_dir + "/" + date + "/" + file_to_regrid 
-        print ("INSIDE regrid_data data_file_to_regrid: %s, file_to_regrid: %s")%(data_file_to_regrid,file_to_regrid)
+        print ("[regrid_data] data_file_to_regrid: %s, file_to_regrid: %s")%(data_file_to_regrid,file_to_regrid)
         
         srcfilename_param =  "'srcfilename=" + '"' + data_file_to_regrid +  \
                                  '"' + "' "
@@ -591,7 +591,6 @@ def layer_data(parser, first_prod, first_data, second_prod,second_data,forcing_t
     downscaled_first_dir = parser.get('layering','analysis_assimilation_primary')
     downscaled_secondary_dir = parser.get('layering','analysis_assimilation_secondary')
     forcing_config = forcing_type.lower()
-    logging.info("forcing_type: %s", forcing_type)
     if forcing_config == 'anal_assim':
         layered_output_dir = parser.get('layering', 'analysis_assimilation_output')
     elif forcing_config == 'short_range':
@@ -612,7 +611,6 @@ def layer_data(parser, first_prod, first_data, second_prod,second_data,forcing_t
     # for the final output file, the WRF-Hydro model is NOT looking for these.
     # NCL requires a recognized file extension, therefore remove the .nc
     # extension after the layering is complete.
-    logging.info("first_data=%s",first_data)
     match = re.match(r'[0-9]{10}/([0-9]{12}.LDASIN_DOMAIN1).nc',first_data)
     if match:
         file_name_only = match.group(1)
@@ -830,7 +828,7 @@ def is_in_fcst_range(product_name,fcsthr, parser):
         return True
         
       
-    if int(fcsthr) >= fcst_max:
+    if int(fcsthr) > fcst_max:
         logging.info("Skip file, fcst hour %d is outside of fcst max %d",fcsthr,fcst_max)
         return False
     else:
@@ -884,11 +882,9 @@ def replace_fcst0hr(parser, file_to_replace, product):
         model_time = int(match.group(3))
         file_only = match.group(4) 
         valid_time = int(match.group(5))
-        logging.info("file only from replace_fcst0hr: %s",file_only)
     else:
         logging.error("ERROR[replace_fcst0hr]: filename %s  is unexpected, exiting.", file_to_replace)
         return
-
 
 
     if product == 'RAP':
@@ -899,8 +895,6 @@ def replace_fcst0hr(parser, file_to_replace, product):
             # and date.
             prev_model_time = 23
             date = get_past_or_future_date(curr_date,-1)
-            # XXX REMOVE ME
-            logging.info("******replace_fcst0hr-date= %s")%(date)
             prev_model_time_str = (str(prev_model_time)).rjust(2,'0')
             
 
@@ -938,6 +932,7 @@ def replace_fcst0hr(parser, file_to_replace, product):
         base_dir = parser.get('downscaling','GFS_downscale_output_dir')
         # Get the previous directory corresponding to the previous
         # model/init run. GFS only has 0,6,12,and 18 Z model/init run times.
+        # Available forecasts are 0,3,6,9,12,15,a nd 18 hours.
         prev_model = model_time - 6
         if model_time < 0:
             prev_model_time_str = 18   
