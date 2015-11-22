@@ -932,8 +932,7 @@ def replace_fcst0hr(parser, file_to_replace, product):
         else:
             # If we are here, we didn't find any file from a previous RAP model run...
             logging.error("ERROR: No previous model runs found, exiting...")
-            sys.exit()
-            logging.info("INFO: [replace_fcst0hr] SHOULD NEVER SEE THIS") 
+            return
           
     elif product == 'GFS':
         base_dir = parser.get('downscaling','GFS_downscale_output_dir')
@@ -958,8 +957,7 @@ def replace_fcst0hr(parser, file_to_replace, product):
         else:
             # If we are here, we didn't find any file from a previous RAP model run...
             logging.error("ERROR: No previous model runs found, exiting...")
-            sys.exit()
-            logging.info("INFO: [replace_fcst0hr] SHOULD NEVER SEE THIS") 
+            return
           
 
 
