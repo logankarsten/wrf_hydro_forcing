@@ -2,6 +2,7 @@ import WRF_Hydro_forcing as whf
 import Short_Range_Forcing as srf
 import datetime
 import re
+from ConfigParser import SafeConfigParser
 
 
 def is_within_time_range(start_dt, end_dt, file, prod, is_yellowstone=False):
@@ -22,7 +23,7 @@ def is_within_time_range(start_dt, end_dt, file, prod, is_yellowstone=False):
         match = re.match(r'.*/(RAP|HRRR)/([0-9]{8})/[0-9]{8}_i[0-9]{2,3}_f[0-9]{2,3}_WRF-RR.*',file)
         ymd_dir = match.group(2)
     else: 
-        match = re.match(r'.*/([0-9]{8})/[0-9]{8}_i[0-9]{2}_f[0-9]{2,3}_WRF-RR.*',file)
+        match = re.match(r'.*/([0-9]{8})/[0-9]{8}_i[0-9]{2}_f[0-9]{2,3}_(WRF-RR|HRRR).*',file)
         ymd_dir = match.group(1)
 
     # Create the datetime object for this ymd and compare
@@ -48,22 +49,27 @@ def main():
     # Set flag for testing host
     #is_yellowstone = True
     is_yellowstone = False
+    parser = SafeConfigParser()
+    parser.read('wrf_hydro_forcing.parm')    
 
     # Start and end dates 
     start_dt = datetime.datetime.strptime("20151120","%Y%m%d")
     end_dt = datetime.datetime.strptime("20151120","%Y%m%d")
 
     # Set the directory where the input data resides.
-    if is_yellowstone:
-        RAP_dir_base = "/glade/scratch/lpan/IOC/data/RAP"
-        HRRR_dir_base = "/glade/scratch/lpan/IOC/data/HRRR"
-        RAP_downscale_dir = "/glade/scratch/gochis/IOC_evaluation_datasets/Forcing_Engine/workspace/downscaled/RAP"
-        HRRR_downscale_dir = "/glade/scratch/gochis/IOC_evaluation_datasets/Forcing_Engine/workspace/downscaled/HRRR"
-    else:
-        RAP_dir_base = "/var/autofs/mnt/rapdmg1/data/grib/WRF-RR-CONUS-wrfprs"
-        HRRR_dir_base = "/var/autofs/mnt/rapdmg2/data/grib/HRRR-wrfprs"
-        RAP_downscale_dir = "/d6/forcing_test/downscaled/RAP"
-        HRRR_downscale_dir = "/d6/forcing_test/downscaled/HRRR"
+    # For running on yellowstone:
+    # RAP_dir_base = "/glade/scratch/lpan/IOC/data/RAP"
+    # HRRR_dir_base = "/glade/scratch/lpan/IOC/data/HRRR"
+    # For running on hydro-c1:
+    # RAP_downscale_dir =
+    # "/glade/scratch/gochis/IOC_evaluation_datasets/
+    # Forcing_Engine/workspace/downscaled/RAP"
+    # HRRR_downscale_dir = "/glade/scratch/gochis/
+    # IOC_evaluation_datasets/Forcing_Engine/workspace/downscaled/HRRR"
+    RAP_dir_base = parser.get('data_dir','RAP_data')
+    HRRR_dir_base = parser.get('data_dir', 'HRRR_data')
+    RAP_downscale_dir = parser.get('downscaling', 'RAP_downscale_output_dir')
+    HRRR_downscale_dir = parser.get('downscaling', 'HRRR_downscale_output_dir')
 
     all_RAP_files_with_path = whf.get_filepaths(RAP_dir_base) 
     all_HRRR_files_with_path = whf.get_filepaths(HRRR_dir_base) 
@@ -72,7 +78,7 @@ def main():
     # within the start and end forecast times.
     RAP_files_with_path = [x for x in all_RAP_files_with_path if is_within_time_range(start_dt,end_dt,x,"RAP",is_yellowstone)]
 
-    HRRR_files_with_path = [x for x in all_RAP_files_with_path if is_within_time_range(start_dt,end_dt,x,"HRRR",is_yellowstone)]
+    HRRR_files_with_path = [x for x in all_HRRR_files_with_path if is_within_time_range(start_dt,end_dt,x,"HRRR",is_yellowstone)]
         
     # do the processing on only the input grib files 
     do_regrid(RAP_dir_base,'RAP', RAP_files_with_path, is_yellowstone)
