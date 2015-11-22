@@ -72,12 +72,12 @@ def main():
     # within the start and end forecast times.
     RAP_files_with_path = [x for x in all_RAP_files_with_path if is_within_time_range(start_dt,end_dt,x,"RAP",is_yellowstone)]
 
-    HRRR_files_with_path = [x for x in all_RAP_files_with_path if is_within_time_range(start_dt,end_dt,x,"RAP",is_yellowstone)]
+    HRRR_files_with_path = [x for x in all_RAP_files_with_path if is_within_time_range(start_dt,end_dt,x,"HRRR",is_yellowstone)]
         
     # do the processing on only the input grib files 
     do_regrid(RAP_dir_base,'RAP', RAP_files_with_path, is_yellowstone)
-    do_regrid(HRRR_dir_base, 'HRRR',HRRR_files_with_path, is_yellowstone)
-    do_layering(rap_downscale_dir, hrrr_downscale_dir, is_yellowstone)
+    do_regrid(HRRR_dir_base, 'HRRR', HRRR_files_with_path, is_yellowstone)
+    do_layering(RAP_downscale_dir, HRRR_downscale_dir, is_yellowstone)
 
 
 
