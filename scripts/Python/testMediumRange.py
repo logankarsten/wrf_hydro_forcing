@@ -4,6 +4,13 @@ import datetime
 import re
 from ConfigParser import SafeConfigParser
 
+"""Runner for Medium Range Forcing configuration. 
+   Can be run on either Yellowstone or hydro-c1.
+   If running on Yellowstone, set the is_yellowtone
+   variable to True. Specify time range: YYYYMMDD
+   for the data you wish to process.
+"""
+
 
 def is_within_time_range(start_dt, end_dt, file, prod, is_yellowstone=False):
     """Determines whether the file (full file path) is
