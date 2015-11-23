@@ -117,7 +117,8 @@ def regrid_data( product_name, file_to_regrid, parser, substitute_fcst = False )
         (subdir_file_path,hydro_filename) = \
             create_output_name_and_subdir(product,data_file_to_regrid,data_dir)
         output_file_dir = output_dir_root + "/" + subdir_file_path
-        mkdir_p(output_file_dir)
+        if not os.path.exists(output_file_dir):
+            mkdir_p(output_file_dir)
         outdir_param = "'outdir=" + '"' + output_file_dir + '"' + "' " 
         regridded_file = output_file_dir + "/" +  hydro_filename
         # Create an empty f0 file for now.
@@ -155,7 +156,8 @@ def regrid_data( product_name, file_to_regrid, parser, substitute_fcst = False )
         # Create the full path to the output directory
         # and assign it to the output directory parameter
         output_file_dir = output_dir_root + "/" + subdir_file_path
-        mkdir_p(output_file_dir)
+        if not os.path.exists(output_file_dir):
+            mkdir_p(output_file_dir)
         outdir_param = "'outdir=" + '"' + output_file_dir + '"' + "' " 
         regridded_file = output_file_dir + "/" + hydro_filename
 
@@ -170,7 +172,8 @@ def regrid_data( product_name, file_to_regrid, parser, substitute_fcst = False )
            # it does not # accept an outdir variable.  Incorporate the output
            # directory (outdir) into the outFile variable.
            full_output_file = output_file_dir + "/"  + hydro_filename
-           mkdir_p(output_file_dir)
+           if not os.path.exists(output_file_dir):
+               mkdir_p(output_file_dir)
            outFile_param = "'outFile=" + '"' + full_output_file + '"' + "' "
 
         regrid_params = srcfilename_param + wgtFileName_in_param + \
@@ -464,7 +467,8 @@ def downscale_data(product_name, file_to_downscale, parser, downscale_shortwave=
 
         # Create the full output directory for the downscaled data if it doesn't 
         # already exist. 
-        mkdir_p(full_downscaled_dir) 
+        if not os.path.exists(full_downscaled_dir):
+            mkdir_p(full_downscaled_dir) 
     
     
         # Create the key-value pairs that make up the
@@ -589,7 +593,7 @@ def layer_data(parser, first_prod, first_data, second_prod,second_data,forcing_t
     ncl_exe = parser.get('exe', 'ncl_exe')
     layering_exe = parser.get('exe','Analysis_Assimilation_layering')
     downscaled_first_dir = parser.get('layering','analysis_assimilation_primary')
-    downscaled_secondary_dir = parser.get('layering','analysis_assimilation_secondary')
+    downscaled_second_dir = parser.get('layering','analysis_assimilation_secondary')
     forcing_config = forcing_type.lower()
     if forcing_config == 'anal_assim':
         layered_output_dir = parser.get('layering', 'analysis_assimilation_output')
@@ -602,7 +606,8 @@ def layer_data(parser, first_prod, first_data, second_prod,second_data,forcing_t
         layered_output_dir = parser.get('layering', 'long_range_output')
 
     # Create the destination directory in case it doesn't already exist.
-    mkdir_p(layered_output_dir)
+    if not os.path.exists(layered_output_dir):
+        mkdir_p(layered_output_dir)
     logging.info('Layered output dir: %s', layered_output_dir)
 
     # Retrieve just the file name portion of the first data file (the file name
@@ -620,14 +625,16 @@ def layer_data(parser, first_prod, first_data, second_prod,second_data,forcing_t
 
     # Create the key-value pair of
     # input needed to run the NCL layering script.
-    hrrrFile_param = "'hrrrFile=" + '"' + first_data + '"' + "' "
-    rapFile_param =  "'rapFile="  + '"' + second_data + '"' + "' "
+    hrrrFile_param = "'hrrrFile=" + '"' + downscaled_first_dir + "/" + first_data + '"' + "' "
+    rapFile_param =  "'rapFile="  + '"' + downscaled_second_dir + "/" +second_data + '"' + "' "
     # Create the output filename for the layered file
     layered_outfile = layered_output_dir + "/" \
                                         + file_name_only
     full_layered_outfile = layered_outfile + ".nc"
     outFile_param = "'outFile=" + '"' + full_layered_outfile + '"' + "' "
-    mkdir_p(full_layered_outfile)
+    print ("full_layered_outfile: %s")%(full_layered_outfile)
+    if not os.path.exists(full_layered_outfile):
+        mkdir_p(full_layered_outfile)
     init_indexFlag = "false"
     indexFlag = "true"
     init_indexFlag_param = "'indexFlag=" + '"' +  init_indexFlag + '"' + "' "
@@ -640,7 +647,7 @@ def layer_data(parser, first_prod, first_data, second_prod,second_data,forcing_t
                         layering_exe
     layering_cmd = ncl_exe + " " + layering_params + " " + \
                         layering_exe
-    
+    print ("layering command: %s")%(layering_cmd)    
     init_return_value = os.system(init_layering_cmd)
     if init_return_value != 0:
         logging.error("ERROR[layer_data]: layering was unsuccessful")
@@ -919,7 +926,8 @@ def replace_fcst0hr(parser, file_to_replace, product):
             # Make a copy
             file_dir_fcst0hr = base_dir + "/" + curr_date + (str(model_time)).rjust(2,'0') 
             # Make the directory for the downscaled fcst 0hr 
-            mkdir_p(file_dir_fcst0hr)
+            if not os.path.exists(file_dir_fcst0hr):
+                mkdir_p(file_dir_fcst0hr)
             file_path_to_replace = file_dir_fcst0hr + "/" + file_only
             copy_cmd = "cp " + full_path + " " + file_path_to_replace
             logging.info("copying the previous model run's file: %s",copy_cmd)      
@@ -945,7 +953,8 @@ def replace_fcst0hr(parser, file_to_replace, product):
             # Make a copy
             file_dir_fcst0hr = base_dir + "/" + date + (str(model_time)).rjust(2,'0') 
             # Make the directory for the downscaled fcst 0hr 
-            mkdir_p(file_dir_fcst0hr)
+            if not os.path.exists(file_dir_fcst0hr):
+                mkdir_p(file_dir_fcst0hr)
             file_path_to_replace = file_dir_fcst0hr + "/" + file_only
             copy_cmd = "cp " + full_path + " " + file_path_to_replace
             logging.info("copying the previous model run's file: %s",copy_cmd)      
