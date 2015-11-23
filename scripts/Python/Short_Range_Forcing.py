@@ -15,8 +15,8 @@ that are defined in the wrf_hydro_forcing.parm
 parameter/configuration file.  Logs to a log
 file that is created in the same directory
 from where this script is executed.
-
 """
+
 def forcing(action, prod, file, prod2=None, file2=None):
     """Peforms the action on the given data
        product and corresponding input file.
@@ -49,10 +49,6 @@ def forcing(action, prod, file, prod2=None, file2=None):
  
  
     """
-
-    # Initialize anything that is specific to this
-    # forcing configuration...
-    forcing_config_label = 'Short_Range'
 
     # Read the parameters from the config/param file.
     parser = SafeConfigParser()
@@ -108,7 +104,6 @@ def forcing(action, prod, file, prod2=None, file2=None):
         else:
             # Skip processing this file, exiting...
             logging.info("INFO [Short_Range_Forcing]- Skip processing, requested file is outside max fcst")
-        return
     elif action_requested == 'layer':
         logging.info("Layering requested for %s and %s", prod, prod2)
         # Do some checking to make sure that there are two data products 
