@@ -611,7 +611,7 @@ def layer_data(parser, first_prod, first_data, second_prod,second_data,forcing_t
     # for the final output file, the WRF-Hydro model is NOT looking for these.
     # NCL requires a recognized file extension, therefore remove the .nc
     # extension after the layering is complete.
-    match = re.match(r'[0-9]{10}/([0-9]{12}.LDASIN_DOMAIN1).nc',first_data)
+    match = re.match(r'([0-9]{10}/[0-9]{12}.LDASIN_DOMAIN1).nc',first_data)
     if match:
         file_name_only = match.group(1)
     else:
@@ -623,9 +623,9 @@ def layer_data(parser, first_prod, first_data, second_prod,second_data,forcing_t
     hrrrFile_param = "'hrrrFile=" + '"' + first_data + '"' + "' "
     rapFile_param =  "'rapFile="  + '"' + second_data + '"' + "' "
     # Create the output filename for the layered file
-    full_layered_outfile_no_extension = layered_output_dir + "/" \
+    layered_outfile = layered_output_dir + "/" \
                                         + file_name_only
-    full_layered_outfile = full_layered_outfile_no_exension + ".nc"
+    full_layered_outfile = layered_outfile + ".nc"
     outFile_param = "'outFile=" + '"' + full_layered_outfile + '"' + "' "
     mkdir_p(full_layered_outfile)
     init_indexFlag = "false"
@@ -644,9 +644,11 @@ def layer_data(parser, first_prod, first_data, second_prod,second_data,forcing_t
     init_return_value = os.system(init_layering_cmd)
     if init_return_value != 0:
         logging.error("ERROR[layer_data]: layering was unsuccessful")
-    
-    # Rename the files (same name, no .nc extension)
-    shutil.move(full_layered_outfile, full_layered_outfile_no_extension) 
+
+    # Move/rename the processed files to the corresponding forcing
+    # configuration directory. 
+    # shutil.move(full_layered_outfile, full_layered_outfile_no_extension) 
+
     return_value = os.system(layering_cmd) 
     
     
