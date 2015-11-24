@@ -18,7 +18,6 @@ def is_within_time_range(start_dt, end_dt, file, prod, is_yellowstone=False):
     # the filename, create a datetime object and
     # see if it lies within the start_dt and
     # end_dt datetimes.
-    print ("file: %s")%(file)
     if is_yellowstone:
         match = re.match(r'.*/(RAP|HRRR)/([0-9]{8})/[0-9]{8}_i[0-9]{2,3}_f[0-9]{2,3}_(WRF-RR|HRRR).*',file)
         ymd_dir = match.group(2)
@@ -28,7 +27,6 @@ def is_within_time_range(start_dt, end_dt, file, prod, is_yellowstone=False):
 
     # Create the datetime object for this ymd and compare
     ymd_datetime = datetime.datetime.strptime(ymd_dir, "%Y%m%d")
-    print ("ymd_datetime: %s")%(ymd_datetime)
     if ymd_datetime >= start_dt and ymd_datetime <= end_dt:
         return True
     else:
@@ -57,8 +55,8 @@ def main():
          start_dt = datetime.datetime.strptime("20150930","%Y%m%d")
          end_dt = datetime.datetime.strptime("20151001","%Y%m%d")
     else:
-         start_dt = datetime.datetime.strptime("20151120","%Y%m%d")
-         end_dt = datetime.datetime.strptime("20151120","%Y%m%d")
+         start_dt = datetime.datetime.strptime("20151121","%Y%m%d")
+         end_dt = datetime.datetime.strptime("20151121","%Y%m%d")
 
     # Set the directory where the input data resides.
     # For running on yellowstone:
@@ -80,15 +78,14 @@ def main():
 
     # We are only interested in the RAP and HRRR files that are
     # within the start and end forecast times.
-    RAP_files_with_path = [x for x in all_RAP_files_with_path if is_within_time_range(start_dt,end_dt,x,"RAP",is_yellowstone)]
-
     HRRR_files_with_path = [x for x in all_HRRR_files_with_path if is_within_time_range(start_dt,end_dt,x,"HRRR",is_yellowstone)]
         
-    # do the processing on only the input grib files 
-    do_regrid(RAP_dir_base,'RAP', RAP_files_with_path, is_yellowstone)
-    do_regrid(HRRR_dir_base, 'HRRR', HRRR_files_with_path, is_yellowstone)
-    do_layering(RAP_downscale_dir, HRRR_downscale_dir, is_yellowstone)
+    RAP_files_with_path = [x for x in all_RAP_files_with_path if is_within_time_range(start_dt,end_dt,x,"RAP",is_yellowstone)]
 
+    # do the processing on only the input grib files 
+    do_regrid(HRRR_dir_base, 'HRRR', HRRR_files_with_path, is_yellowstone)
+    do_regrid(RAP_dir_base,'RAP', RAP_files_with_path, is_yellowstone)
+    do_layering(RAP_downscale_dir, HRRR_downscale_dir, is_yellowstone)
 
 
 def do_regrid(dir_base, prod, data_files, is_yellowstone):
