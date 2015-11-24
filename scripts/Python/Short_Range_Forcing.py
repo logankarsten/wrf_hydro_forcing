@@ -114,7 +114,8 @@ def forcing(action, prod, file, prod2=None, file2=None):
             logger.error("ERROR [Short_Range_Forcing]: layering requires two input files")
         else:
             # We have everything we need, request layering
-            whf.layer_data(parser,prod,file, prod2,file2, 'SHORT_RANGE')
+            whf.layer_data(parser,prod,file, prod2,file2, 'Short_Range')
+            whf.move_to_final_location(parser,'Short_Range')
              
     elif action_requested == 'bias':
         logging.info("Bias correction requested for %s", file)
