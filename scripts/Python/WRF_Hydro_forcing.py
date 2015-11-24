@@ -1003,8 +1003,154 @@ def get_past_or_future_date(curr_date, num_days = -1):
     
 
     
+def move_to_final_location(parser, forcing_type):
+    """Move the processed files to the final directory
+       that corresponds to the forcing configuration.
+  
+        Input:
+            parser (SafeConfigParser):  SafeConfigParser used to
+                                        retrieve the information in
+                                        the wrf_hydro_forcing.parm
+                                        configuration/param file.
+
+            forcing_type (string):  One of the four supported
+                                    forcing configurations:
+                                    Anal_Assim, Short_Range,
+                                    Medium_Range, and Long_Range.
+ 
+        Returns:
+            None                   moves the files that are 
+                                   in the source directory 
+                                   (stated in the param/config file)
+                                   to the destination directory
+                                   (stated in the param/config file)
+                                   WITHOUT the '.nc' file extension
+                                   (requested input format to the
+                                    WRF-HYDRO model)
+                               
+
+    """    
+
+    parser = SafeConfigParser()
+    parser.read('wrf_hydro_forcing.parm')
+
+    #forcing_config = "Medium_Range"
+    forcing_config = "Short_Range"
+
+    forcing_type = forcing_config.upper()
+    if forcing_type == 'ANAL_ASSIM':
+        # Move layered RAP and HRRR data
+        # to the Anal_Assim directory
+        anal_assim_dir = parser.get('layering','analysis_assimilation_output')
+        mrms_dir = parser.get('regridding','MRMS_output_dir')
+        anal_assim_files = get_layered_files(anal_assim_dir)
+        for file in anal_assim_files:
+            # Get the filename without the .nc extension
+            match = re.match(r'.*/([0-9]{10}/[0-9]{12}.LDASIN_DOMAIN1).*', file)
+            if match:
+                filename_only = match.group(1)
+                destination = anal_assim_dir + "/" + filename_only
+                shutil.move(file, destination)
+
+            else:
+               logging.WARNING("[move_to_final_location]:filename is of unexpected format: %s", file)
+               continue
+       
+        # Move the MRMS files to their own location.
+        for mrms in mrms_dir:
+            # Get the filename without the .nc extension
+            match = re.match(r'.*/(([0-9]{10})/[0-9]{12}.LDASIN_DOMAIN1).*', file)
+            if match:
+                filename_only = match.group(1)
+                ymd_dir = match.group(2)
+                destination_dir = anal_assim_dir + "/" + ymd_dir  +  "/" + filename_only
+                destination = destination_dir +  "/" + filename_only
+                if not os.path.exists(destination_dir):
+                    whf.mkdir_p(destination_dir)
+                shutil.move(file, destination)
+            else:
+               logging.WARNING("[move_to_final_location]:filename is of unexpected format: %s", mrms)
+               continue
+             
+        
+
+    elif forcing_type == 'SHORT_RANGE':
+        short_range_dir = parser.get('layering','short_range_output')
+        short_range_files = get_layered_files(short_range_dir)
+        length = len(short_range_files)
+        for file in short_range_files:
+            # Get the filename without the .nc extension
+            match = re.match(r'.*/([0-9]{10}/[0-9]{12}.LDASIN_DOMAIN1).*', file)
+            if match:
+                filename_only = match.group(1)
+                destination = short_range_dir + "/" + filename_only
+                shutil.move(file, destination)
+
+            else:
+               logging.WARNING("[move_to_final_location]:filename is of unexpected format :%s", file)
+               continue
+
+
+    elif forcing_type == 'MEDIUM_RANGE':
+        medium_range_dir = parser.get('layering','medium_range_output')
+        print ("medium range dir: %s")%(medium_range_dir)
+        medium_range_files = get_layered_files(medium_range_dir)
+        for file in medium_range_files:
+            # Get the filename without the .nc extension
+            match = re.match(r'.*/([0-9]{10}/[0-9]{12}.LDASIN_DOMAIN1).*', file)
+            if match:
+                filename_only = match.group(1)
+                destination = medium_range_dir + "/" + filename_only
+                shutil.move(file, destination)
+
+            else:
+               logging.WARNING("[move_to_final_location]:filename is of unexpected format :%s", file)
+               continue
+
+
+
+    elif forcing_type == 'LONG_RANGE':
+        long_range_dir = parser.get('layering', 'long_range_output')
+    else:
+        print "Forcing type is not recognized or is unsupported. Try again."
+
+
     
-    
+def get_layered_files(dir):
+    """Retrieves all the files in the layered file directory.
+       Only netCDF files with the '.nc' extension will be
+       considered.
+
+       Args:
+           dir (string):  The directory to search for all layered
+                          files with .nc extension
+
+       Returns:
+           file_paths (list) : List of the full filepath and
+                               files in the input directory.
+    """
+
+    # Create an empty list which will eventually store
+    # all the full filenames
+    file_paths = []
+
+    # Walk the tree
+    for root, directories, files in os.walk(dir):
+        for filename in files:
+            # add it to the list only if it is a grib file
+            match = re.match(r'.*(.nc)$',filename)
+            if match:
+                # Join the two strings to form the full
+                # filepath.
+                filepath = os.path.join(root,filename)
+                file_paths.append(filepath)
+            else:
+                continue
+    return file_paths
+
+
+
+
 
 #--------------------Define the Workflow -------------------------
 
