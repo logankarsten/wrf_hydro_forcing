@@ -102,6 +102,7 @@ def forcing(action, prod, file, prod2=None, file2=None):
                 logging.info("Regridding %s: ", file )
                 regridded_file = whf.regrid_data(product_data_name, file, parser, False)
                 whf.downscale_data(product_data_name,regridded_file, parser,True, False)                
+                whf.move_to_final_location(parser,"Medium Range")
                 
         else:
             # Skip processing this file, exiting...
