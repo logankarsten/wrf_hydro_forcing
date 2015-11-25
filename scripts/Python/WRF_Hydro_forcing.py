@@ -946,6 +946,9 @@ def replace_fcst0hr(parser, file_to_replace, product):
         prev_model = model_time - 6
         if model_time < 0:
             prev_model_time_str = 18   
+            date = get_past_or_future_date(curr_date, -1)
+        else:
+            date = curr_date
         prev_model_time_str = (str(prev_model)).rjust(2,'0')
         full_path = base_dir + '/' + date + prev_model_time_str + "/" +\
                     file_only
