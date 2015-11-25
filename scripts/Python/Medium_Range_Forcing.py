@@ -91,7 +91,7 @@ def forcing(action, prod, file, prod2=None, file2=None):
             # some variables for 0hr forecast, but GFS is not used for Medium Range
             # forcing). We will need to substitute this file for the downscaled
             # file from a previous model run with the same valid time.  
-            # We only need to do this for downscaled files, as the Short Range 
+            # We only need to do this for downscaled files, as the Medium Range 
             # forcing files that are regridded always get downscaled and we don't want
             # to do this for both the regridding and downscaling.
             if fcsthr == 0 and prod == 'GFS':
@@ -102,7 +102,7 @@ def forcing(action, prod, file, prod2=None, file2=None):
                 logging.info("Regridding %s: ", file )
                 regridded_file = whf.regrid_data(product_data_name, file, parser, False)
                 whf.downscale_data(product_data_name,regridded_file, parser,True, False)                
-                whf.move_to_final_location(parser,"Medium Range")
+                whf.move_to_final_location(parser,"Medium_Range")
                 
         else:
             # Skip processing this file, exiting...
