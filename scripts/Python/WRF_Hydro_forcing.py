@@ -84,13 +84,6 @@ def regrid_data( product_name, file_to_regrid, parser, substitute_fcst = False )
        #Values needed for running the regridding script
        output_dir_root = parser.get('regridding','MRMS_output_dir')
        dst_grid_name = parser.get('regridding','MRMS_dst_grid_name')
-    elif product == 'NAM':
-       wgt_file = parser.get('regridding', 'NAM_wgt_bilinear')
-       data_dir =  parser.get('data_dir', 'NAM_data')
-       regridding_exec = parser.get('exe', 'NAM_regridding_exe')
-       #Values needed for running the regridding script
-       output_dir_root = parser.get('regridding','NAM_output_dir')
-       dst_grid_name = parser.get('regridding','NAM_dst_grid_name')
     elif product == 'GFS':
        wgt_file = parser.get('regridding', 'GFS_wgt_bilinear')
        data_dir =  parser.get('data_dir', 'GFS_data')
@@ -197,8 +190,8 @@ def regrid_data( product_name, file_to_regrid, parser, substitute_fcst = False )
                           return value of %s', product,return_value)
             #TO DO: Determine the proper action to take when the NCL file h
             #fails. For now, exit.
-            sys.exit()
-    
+            return 
+        
 
     return regridded_file
 
@@ -416,25 +409,19 @@ def downscale_data(product_name, file_to_downscale, parser, downscale_shortwave=
         data_to_downscale_dir = parser.get('downscaling','HRRR_data_to_downscale')
         hgt_data_file = parser.get('downscaling','HRRR_hgt_data')
         geo_data_file = parser.get('downscaling','HRRR_geo_data')
-        downscale_output_dir = parser.get('downscaling', 'HRRR_downscale_output_dir')
+        downscale_output_dir = parser.get('downscaling', 'HRRR_finished_output_dir')
         downscale_exe = parser.get('exe', 'HRRR_downscaling_exe')
-    elif product == 'NAM':
-        data_to_downscale_dir = parser.get('downscaling','NAM_data_to_downscale')
-        hgt_data_file = parser.get('downscaling','NAM_hgt_data')
-        geo_data_file = parser.get('downscaling','NAM_geo_data')
-        downscale_output_dir = parser.get('downscaling', 'NAM_downscale_output_dir')
-        downscale_exe = parser.get('exe', 'NAM_downscaling_exe')
     elif product == 'GFS':
         data_to_downscale_dir = parser.get('downscaling','GFS_data_to_downscale')
         hgt_data_file = parser.get('downscaling','GFS_hgt_data')
         geo_data_file = parser.get('downscaling','GFS_geo_data')
-        downscale_output_dir = parser.get('downscaling', 'GFS_downscale_output_dir')
+        downscale_output_dir = parser.get('downscaling', 'GFS_finished_output_dir')
         downscale_exe = parser.get('exe', 'GFS_downscaling_exe')
     elif product == 'RAP':
         data_to_downscale_dir = parser.get('downscaling','RAP_data_to_downscale')
         hgt_data_file = parser.get('downscaling','RAP_hgt_data')
         geo_data_file = parser.get('downscaling','RAP_geo_data')
-        downscale_output_dir = parser.get('downscaling', 'RAP_downscale_output_dir')
+        downscale_output_dir = parser.get('downscaling', 'RAP_finished_output_dir')
         downscale_exe = parser.get('exe', 'RAP_downscaling_exe')
     else:
         logging.info("Requested downscaling of unsupported data product %s", product)
@@ -652,9 +639,10 @@ def layer_data(parser, first_prod, first_data, second_prod,second_data,forcing_t
     if init_return_value != 0:
         logging.error("ERROR[layer_data]: layering was unsuccessful")
 
-    # Move/rename the processed files to the corresponding forcing
-    # configuration directory. 
-    # shutil.move(full_layered_outfile, full_layered_outfile_no_extension) 
+    else:
+        # Move/rename the processed files to the corresponding forcing
+        # configuration directory. 
+        shutil.move(full_layered_outfile, layered_outfile) 
 
     return_value = os.system(layering_cmd) 
     
@@ -1008,7 +996,10 @@ def get_past_or_future_date(curr_date, num_days = -1):
     
 def move_to_final_location(parser, forcing_type):
     """Move the processed files to the final directory
-       that corresponds to the forcing configuration.
+       that corresponds to the forcing configuration for
+       input to the WRF-Hydro Model. The files
+       names are unchanged except for the absence 
+       of the '.nc' file extension.
   
         Input:
             parser (SafeConfigParser):  SafeConfigParser used to
@@ -1037,10 +1028,8 @@ def move_to_final_location(parser, forcing_type):
     parser = SafeConfigParser()
     parser.read('wrf_hydro_forcing.parm')
 
-    #forcing_config = "Medium_Range"
-    forcing_config = "Short_Range"
 
-    forcing_type = forcing_config.upper()
+    forcing_type = forcing_type.upper()
     if forcing_type == 'ANAL_ASSIM':
         # Move layered RAP and HRRR data
         # to the Anal_Assim directory
@@ -1053,6 +1042,8 @@ def move_to_final_location(parser, forcing_type):
             if match:
                 filename_only = match.group(1)
                 destination = anal_assim_dir + "/" + filename_only
+                if not os.path.exists(output_file_dir):
+                    whf.mkdir_p(output_file_dir)
                 shutil.move(file, destination)
 
             else:
@@ -1087,6 +1078,8 @@ def move_to_final_location(parser, forcing_type):
             if match:
                 filename_only = match.group(1)
                 destination = short_range_dir + "/" + filename_only
+                if not os.path.exists(destination):
+                    whf.mkdir_p(destination)
                 shutil.move(file, destination)
 
             else:
@@ -1096,14 +1089,20 @@ def move_to_final_location(parser, forcing_type):
 
     elif forcing_type == 'MEDIUM_RANGE':
         medium_range_dir = parser.get('layering','medium_range_output')
-        print ("medium range dir: %s")%(medium_range_dir)
+        logging.info("medium range dir: %s",medium_range_dir)
         medium_range_files = get_layered_files(medium_range_dir)
+        length = len(medium_range_files)
+        logging.info("number of medium range files: %s",length)
         for file in medium_range_files:
             # Get the filename without the .nc extension
             match = re.match(r'.*/([0-9]{10}/[0-9]{12}.LDASIN_DOMAIN1).*', file)
             if match:
                 filename_only = match.group(1)
                 destination = medium_range_dir + "/" + filename_only
+                logging.info("moving file: %s", file)
+                logging.info("final destination: %s", destination)
+                if not os.path.exists(destination):
+                    whf.mkdir_p(destination)
                 shutil.move(file, destination)
 
             else:
@@ -1152,7 +1151,47 @@ def get_layered_files(dir):
     return file_paths
 
 
+def move_to_finished_area(parser, product, src):
+    """Move finished regridded (MRMS) or downscaled HRRR,
+       RAP files to a "finished" area so they can
+       be monitored by an external script which determines
+       when to layer the various products.
+        
 
+       Args:
+            parser (SafeConfigParser): used to obtain the
+                                       parameters set in 
+                                       the wrf_hydro_forcing.parm
+                                       config/parameter file.
+            product (string) :  The name of the product: MRMS, HRRR,
+                                RAP, or GFS
+            
+            src (string): full file path and filename of src
+            dest (string): base file path of destination
+
+       Returns:
+           None
+    """
+    if product == "MRMS":
+        dest_dir = parser.get('regridding','MRMS_finished_output_dir')
+    elif product == "RAP":
+        dest_dir = parser.get('downscaling', 'RAP_finished_output_dir')
+    elif product == "HRRR":
+        dest_dir = parser.get('downscaling', 'HRRR_finished_output_dir')
+   
+    # Get the YYYYMMDDHH subdirectory from the full file path and
+    # name (src).
+    match = re.match(r'.*/([0-9]{10})/([0-9]{12}.LDASIN_DOMAIN1.nc)',src)
+    if match:
+        ymd_dir = match.group(1)
+        file_only = match.group(2)
+        finished_dir = dest_dir + "/" + ymd_dir
+        if not os.path.exists(finished_dir):
+            mkdir_p(finished_dir) 
+        finished_dest = finished_dir + "/" + file_only
+        shutil.move(src, finished_dest) 
+    else:
+        logging.error("[move_to_finished_area]: can't match filename")
 
 
 #--------------------Define the Workflow -------------------------
