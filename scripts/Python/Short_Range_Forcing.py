@@ -75,11 +75,13 @@ def forcing(action, prod, file, prod2=None, file2=None):
         # Get the finished directory locations for the relevant product.
         if prod == 'RAP':
             regridded_dir = parser.get('regridding', 'RAP_output_dir')
+            downscale_dir = parser.get('downscaling', 'RAP_downscale_output_dir')
             finished_downscale_dir = parser.get('downscaling', 'RAP_finished_output_dir')
             downscale_input_dir = parser.get('downscaling',  'RAP_data_to_downscale')
-  
+      
         elif prod == 'HRRR':
             regridded_dir = parser.get('regridding', 'HRRR_output_dir')
+            downscale_dir = parser.get('downscaling', 'HRRR_downscale_output_dir')
             finished_downscale_dir = parser.get('downscaling', 'HRRR_finished_output_dir')
             downscale_input_dir = parser.get('downscaling',  'HRRR_data_to_downscale')
 
@@ -120,11 +122,11 @@ def forcing(action, prod, file, prod2=None, file2=None):
                 if match:
                     ymd_dir = match.group(1) 
                     file_only = match.group(2)
-                    downscaled_dir = finished_downscale_dir + "/" + ymd_dir
+                    downscaled_dir = downscale_dir + "/" + ymd_dir
                     if not os.path.exists(downscaled_dir):
                         mkdir_p(downscaled_dir)
                     downscaled_file = downscaled_dir + "/" + file_only 
-                    whf.move_to_finished_area(parser,prod, downscaled_file) 
+                    whf.move_to_finished_area(parser, prod, downscaled_file) 
                 else:
                     print ("Can't get filename only from the finished regridded file") 
 
@@ -136,7 +138,7 @@ def forcing(action, prod, file, prod2=None, file2=None):
                 # Move the downscaled file to the finished location 
                 match = re.match(r'.*/([0-9]{10})/([0-9]{12}.LDASIN_DOMAIN1.nc)',regridded_file)
                 if match:
-                    full_dir = finished_downscale_dir + "/" + match.group(1)
+                    full_dir = downscale_dir + "/" + match.group(1)
                     full_finished_file = full_dir + "/" + match.group(2)
                     if not os.path.exists(full_dir):
                         logging.info("finished dir doesn't exist, creating it now...")
