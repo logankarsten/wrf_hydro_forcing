@@ -4,6 +4,7 @@ import os
 import sys
 from ConfigParser import SafeConfigParser
 import optparse
+import re
 
 """Medium_Range_Forcing
 Performs regridding,downscaling, bias
@@ -70,6 +71,10 @@ def forcing(action, prod, file, prod2=None, file2=None):
     # for consistent checking
     action_requested = action.lower()
     product_data_name = prod.upper()
+    regridded_dir = parser.get('regridding','GFS_output_dir')
+    downscale_dir = parser.get('downscaling','GFS_downscale_output_dir')
+    finished_downscale_dir = parser.get('downscaling','GFS_finished_output_dir')
+    downscale_input_dir = parser.get('downscaling','GFS_data_to_downscale')
     if action == 'regrid': 
         (date,modelrun,fcsthr) = whf.extract_file_info(file)
         # Determine whether this current file lies within the forecast range
@@ -98,11 +103,30 @@ def forcing(action, prod, file, prod2=None, file2=None):
                 logging.info("Regridding (ignoring f0 RAP files) %s: ", file )
                 regridded_file = whf.regrid_data(product_data_name, file, parser, True)
                 whf.downscale_data(product_data_name,regridded_file, parser, True, True)                
+                match = re.match(r'.*/([0-9]{10})/([0-9]{12}.LDASIN_DOMAIN1.nc)',regridded_file)
+                if match:
+                    ymd_dir = match.group(1)
+                    file_only = match.group(2)
+                    downscaled_dir = downscale_dir + "/" + ymd_dir
+                    if not os.path.exists(downscaled_dir):
+                        mkdir_p(downscaled_dir)
+                    downscaled_file = downscaled_dir + "/" + file_only
+                    whf.move_to_finished_area(parser,"GFS", regridded_file)
+                    whf.move_to_final_location(parser,"Medium_Range")
             else:
                 logging.info("Regridding %s: ", file )
                 regridded_file = whf.regrid_data(product_data_name, file, parser, False)
                 whf.downscale_data(product_data_name,regridded_file, parser,True, False)                
-                whf.move_to_final_location(parser,"Medium_Range")
+                match = re.match(r'.*/([0-9]{10})/([0-9]{12}.LDASIN_DOMAIN1.nc)',regridded_file)
+                if match:
+                    ymd_dir = match.group(1)
+                    file_only = match.group(2)
+                    downscaled_dir = downscale_dir + "/" + ymd_dir
+                    if not os.path.exists(downscaled_dir):
+                        mkdir_p(downscaled_dir)
+                    downscaled_file = downscaled_dir + "/" + file_only
+                    whf.move_to_finished_area(parser,"GFS",regridded_file)
+                    whf.move_to_final_location(parser,"Medium_Range")
                 
         else:
             # Skip processing this file, exiting...
