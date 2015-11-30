@@ -1043,7 +1043,7 @@ def move_to_final_location(parser, forcing_type):
                 filename_only = match.group(1)
                 destination = anal_assim_dir + "/" + filename_only
                 if not os.path.exists(output_file_dir):
-                    whf.mkdir_p(output_file_dir)
+                    mkdir_p(output_file_dir)
                 shutil.move(file, destination)
 
             else:
@@ -1060,7 +1060,7 @@ def move_to_final_location(parser, forcing_type):
                 destination_dir = anal_assim_dir + "/" + ymd_dir  +  "/" + filename_only
                 destination = destination_dir +  "/" + filename_only
                 if not os.path.exists(destination_dir):
-                    whf.mkdir_p(destination_dir)
+                    mkdir_p(destination_dir)
                 shutil.move(file, destination)
             else:
                logging.WARNING("[move_to_final_location]:filename is of unexpected format: %s", mrms)
@@ -1071,7 +1071,6 @@ def move_to_final_location(parser, forcing_type):
     elif forcing_type == 'SHORT_RANGE':
         short_range_dir = parser.get('layering','short_range_output')
         short_range_files = get_layered_files(short_range_dir)
-        length = len(short_range_files)
         for file in short_range_files:
             # Get the filename without the .nc extension
             match = re.match(r'.*/([0-9]{10}/[0-9]{12}.LDASIN_DOMAIN1).*', file)
@@ -1079,7 +1078,7 @@ def move_to_final_location(parser, forcing_type):
                 filename_only = match.group(1)
                 destination = short_range_dir + "/" + filename_only
                 if not os.path.exists(destination):
-                    whf.mkdir_p(destination)
+                    mkdir_p(destination)
                 shutil.move(file, destination)
 
             else:
@@ -1088,11 +1087,11 @@ def move_to_final_location(parser, forcing_type):
 
 
     elif forcing_type == 'MEDIUM_RANGE':
+        # Medium Range has GFS data only and no layering.  Use
+        # the final downscaled directory.
+        medium_range_downscale_dir = parser.get('downscaling','GFS_finished_output_dir')
         medium_range_dir = parser.get('layering','medium_range_output')
-        logging.info("medium range dir: %s",medium_range_dir)
-        medium_range_files = get_layered_files(medium_range_dir)
-        length = len(medium_range_files)
-        logging.info("number of medium range files: %s",length)
+        medium_range_files = get_layered_files(medium_range_downscale_dir)
         for file in medium_range_files:
             # Get the filename without the .nc extension
             match = re.match(r'.*/([0-9]{10}/[0-9]{12}.LDASIN_DOMAIN1).*', file)
@@ -1102,9 +1101,8 @@ def move_to_final_location(parser, forcing_type):
                 logging.info("moving file: %s", file)
                 logging.info("final destination: %s", destination)
                 if not os.path.exists(destination):
-                    whf.mkdir_p(destination)
+                    mkdir_p(destination)
                 shutil.move(file, destination)
-
             else:
                logging.WARNING("[move_to_final_location]:filename is of unexpected format :%s", file)
                continue
@@ -1178,7 +1176,10 @@ def move_to_finished_area(parser, product, src):
         dest_dir = parser.get('downscaling', 'RAP_finished_output_dir')
     elif product == "HRRR":
         dest_dir = parser.get('downscaling', 'HRRR_finished_output_dir')
-   
+    elif product == "GFS":
+        dest_dir = parser.get('downscaling', 'GFS_finished_output_dir')
+    else:
+        logging.error("[move_to_finished_area]: %s is unsupported",product) 
     # Get the YYYYMMDDHH subdirectory from the full file path and
     # name (src).
     match = re.match(r'.*/([0-9]{10})/([0-9]{12}.LDASIN_DOMAIN1.nc)',src)
