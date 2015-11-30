@@ -50,6 +50,7 @@ ncarg_root = /opt/ncl
 # the name of the shared object.
 
 #ncl_def_lib_dir = /d4/hydro-dm/IOC/code/
+
 ncl_def_lib_dir = /home/minnawin/IOC/ncl_shared_objs
 
 #-------------------------------------------------
@@ -66,7 +67,7 @@ MRMS_data = /d2/hydro-dm/var/data/nsslMosaic/grib2/GaugeCorr_QPE/01H
 #NAM_data = /d4/hydro-dm/IOC/test/NAM218
 # NAM227 as directed by NCEP
 NAM_data = /d4/hydro-dm/IOC/data/nam227
-GFS_data = /d4/hydro-dm/IOC/data/GFS_0.25
+GFS_data = /var/autofs/mnt/rapdmg1/data/grib/GFS_0.25-pgrb2
 #RAP_data = /d4/hydro-dm/IOC/data/RAP1km
 RAP_data = /var/autofs/mnt/rapdmg1/data/grib/WRF-RR-CONUS-wrfprs
 
@@ -78,8 +79,10 @@ RAP_data = /var/autofs/mnt/rapdmg1/data/grib/WRF-RR-CONUS-wrfprs
 [fcsthr_max]
 # Last forecast hour for the specified 
 # input model data (HRRR, RAP, etc.) to be included in the forcing
-RAP_fcsthr_max = 18
-HRRR_fcsthr_max = 18
+#RAP_fcsthr_max = 18
+#HRRR_fcsthr_max = 18
+RAP_fcsthr_max = 23
+HRRR_fcsthr_max = 23
 GFS_fcsthr_max = 240
 CFS_fcsthr_max = 720
 
@@ -130,23 +133,29 @@ Analysis_Assimilation_layering = ../NCL/combine.ncl
 #HRRR-specific
 HRRR_wgt_bilinear  = /d4/hydro-dm/IOC/weighting/HRRR1km/HRRR2HYDRO_d01_weight_bilinear.nc
 HRRR_dst_grid_name = /d4/hydro-dm/IOC/weighting/HRRR1km/geo_dst.nc
-HRRR_output_dir = /d4/hydro-dm/IOC/regridded/HRRR
+#HRRR_output_dir = /d4/hydro-dm/IOC/regridded/HRRR
+HRRR_output_dir = /d6/forcing_test/regridded/HRRR
 
 #MRMS-specific
 MRMS_wgt_bilinear =  /d4/hydro-dm/IOC/weighting/RADAR_GAUGE1km/RADAR2HYDRO_d01_weight_bilinear.nc
 MRMS_dst_grid_name = /d4/hydro-dm/IOC/weighting/RADAR_GAUGE1km/geo_dst.nc
-MRMS_output_dir = /d4/hydro-dm/IOC/regridded/MRMS
+#MRMS_output_dir = /d4/hydro-dm/IOC/regridded/MRMS
+MRMS_output_dir = /d6/forcing_test/regridded/MRMS
+#MRMS_finished_output_dir = /d4/hydro-dm/IOC/downscaled/finished_downscaled/MRMS
+MRMS_finished_output_dir = /d6/forcing_test/finished_downscaled/MRMS
 
 #GFS-specific
 #For GFS_0.25 data
 GFS_wgt_bilinear = /d4/hydro-dm/IOC/weighting/GFS1km_25/GFS2HYDRO_d01_weight_bilinear.nc
 GFS_dst_grid_name = /d4/hydro-dm/IOC/weighting/GFS1km_25/geo_dst.nc
-GFS_output_dir = /d4/hydro-dm/IOC/regridded/GFS
+#GFS_output_dir = /d4/hydro-dm/IOC/regridded/GFS
+GFS_output_dir = /d6/forcing_test/regridded/GFS
 
 #RAP-specific
 RAP_wgt_bilinear = /d4/hydro-dm/IOC/weighting/RAP1km/RAP2HYDRO_d01_weight_bilinear.nc
 RAP_dst_grid_name = /d4/hydro-dm/IOC/weighting/RAP1km/geo_dst.nc
-RAP_output_dir = /d4/hydro-dm/IOC/regridded/RAP
+#RAP_output_dir = /d4/hydro-dm/IOC/regridded/RAP
+RAP_output_dir = /d6/forcing_test/regridded/RAP
 
 #-------------------------------------------------
 #    Parameters needed to run downscaling scripts
@@ -167,16 +176,11 @@ HRRR_data_to_downscale = /d4/hydro-dm/IOC/regridded/HRRR
 HRRR_hgt_data = /d4/hydro-dm/IOC/weighting/HRRR1km/HRRRhgt.nc
 HRRR_geo_data = /d4/hydro-dm/IOC/weighting/HRRR1km/geo_dst.nc
 # Directory where downscaled data should be saved
-HRRR_downscale_output_dir = /d4/hydro-dm/IOC/downscaled/HRRR
+#HRRR_downscale_output_dir = /d4/hydro-dm/IOC/downscaled/HRRR
+HRRR_downscale_output_dir = /d6/forcing_test/downscaled/HRRR
+#HRRR_finished_output_dir = /d4/hydro-dm/IOC/finished_downscaled/HRRR
+HRRR_finished_output_dir = /d6/forcing_test/finished_downscaled/HRRR
 
-# NAM 
-# Currently, this is NAM227, as required by NCEP
-# Directory where regridded NAM data to BE DOWNSCALED is located
-NAM_data_to_downscale = /d4/hydro-dm/IOC/regridded/NAM
-NAM_hgt_data = /d4/hydro-dm/IOC/weighting/NAM1km/NAMhgt.nc
-NAM_geo_data = /d4/hydro-dm/IOC/weighting/NAM1km/geo_dst.nc
-# Directory where downscaled data should be saved
-NAM_downscale_output_dir = /d4/hydro-dm/IOC/downscaled/NAM
 
 # GFS 
 # Currently GFS 0.25 degree data
@@ -185,7 +189,10 @@ GFS_data_to_downscale = /d4/hydro-dm/IOC/regridded/GFS
 GFS_hgt_data = /d4/hydro-dm/IOC/weighting/GFS1km_25/GFShgt.nc
 GFS_geo_data = /d4/hydro-dm/IOC/weighting/GFS1km_25/geo_dst.nc
 # Directory where downscaled data should be saved
-GFS_downscale_output_dir = /d4/hydro-dm/IOC/downscaled/GFS
+#GFS_downscale_output_dir = /d4/hydro-dm/IOC/downscaled/GFS
+GFS_downscale_output_dir = /d6/forcing_test/downscaled/GFS
+#GFS_finished_output_dir = /d4/hydro-dm/IOC/finished_downscaled/GFS
+GFS_finished_output_dir = /d6/forcing_test/finished_downscaled/GFS
 
 
 # RAP
@@ -194,7 +201,10 @@ RAP_data_to_downscale = /d4/hydro-dm/IOC/regridded/RAP
 RAP_hgt_data = /d4/hydro-dm/IOC/weighting/RAP1km/RAPhgt.nc
 RAP_geo_data = /d4/hydro-dm/IOC/weighting/RAP1km/geo_dst.nc
 # Directory where downscaled data should be saved
-RAP_downscale_output_dir = /d4/hydro-dm/IOC/downscaled/RAP
+#RAP_downscale_output_dir = /d4/hydro-dm/IOC/downscaled/RAP
+RAP_downscale_output_dir = /d6/forcing_test/downscaled/RAP
+#RAP_finished_output_dir = /d4/hydro-dm/IOC/finished_downscaled/RAP
+RAP_finished_output_dir = /d6/forcing_test/finished_downscaled/RAP
 
 
 
@@ -209,7 +219,26 @@ RAP_downscale_output_dir = /d4/hydro-dm/IOC/downscaled/RAP
 
 # HRRR and RAP used for Analysis and Assimilation
 # Forcing Configuration
-analysis_assimilation_primary = /d4/hydro-dm/IOC/downscaled/HRRR
-analysis_assimilation_secondary = /d4/hydro-dm/IOC/downscaled/RAP
-output_dir = /d4/hydro-dm/IOC/layering/analysis_assimilation
-index_file_location = /d4/hydro-dm/IOC/layering/analysis_assimilation
+#analysis_assimilation_primary = /d4/hydro-dm/IOC/downscaled/HRRR
+#analysis_assimilation_secondary = /d4/hydro-dm/IOC/downscaled/RAP
+
+analysis_assimilation_primary = /d6/forcing_test/finished_downscaled/HRRR
+analysis_assimilation_secondary = /d6/forcing_test/finished_downscaled/RAP
+analysis_assimilation_tertiary = /d6/forcing_test/finished_output_dir/MRMS
+
+#short_range_primary = /d4/hydro-dm/IOC/downscaled/HRRR
+short_range_primary = /d6/forcing_test/finished_downscaled/HRRR
+
+#short_range_secondary = /d4/hydro-dm/IOC/downscaled/RAP
+short_range_secondary = /d6/forcing_test/finished_downscaled/RAP
+
+
+#analysis_assimilation_output = /d4/hydro-dm/IOC/Anal_Assim
+analysis_assimilation_output = /d6/forcing_test/Anal_Assim
+
+#short_range_output = /d4/hydro-dm/IOC/Short_Range
+short_range_output = /d6/forcing_test/Short_Range
+
+medium_range_output = /d6/forcing_test/Medium_Range/
+
+long_range_output = /d4/hydro_dm/IOC/Long_Range
