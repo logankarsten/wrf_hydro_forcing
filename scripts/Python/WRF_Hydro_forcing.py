@@ -409,19 +409,19 @@ def downscale_data(product_name, file_to_downscale, parser, downscale_shortwave=
         data_to_downscale_dir = parser.get('downscaling','HRRR_data_to_downscale')
         hgt_data_file = parser.get('downscaling','HRRR_hgt_data')
         geo_data_file = parser.get('downscaling','HRRR_geo_data')
-        downscale_output_dir = parser.get('downscaling', 'HRRR_finished_output_dir')
+        downscale_output_dir = parser.get('downscaling', 'HRRR_downscale_output_dir')
         downscale_exe = parser.get('exe', 'HRRR_downscaling_exe')
     elif product == 'GFS':
         data_to_downscale_dir = parser.get('downscaling','GFS_data_to_downscale')
         hgt_data_file = parser.get('downscaling','GFS_hgt_data')
         geo_data_file = parser.get('downscaling','GFS_geo_data')
-        downscale_output_dir = parser.get('downscaling', 'GFS_finished_output_dir')
+        downscale_output_dir = parser.get('downscaling', 'GFS_downscale_output_dir')
         downscale_exe = parser.get('exe', 'GFS_downscaling_exe')
     elif product == 'RAP':
         data_to_downscale_dir = parser.get('downscaling','RAP_data_to_downscale')
         hgt_data_file = parser.get('downscaling','RAP_hgt_data')
         geo_data_file = parser.get('downscaling','RAP_geo_data')
-        downscale_output_dir = parser.get('downscaling', 'RAP_finished_output_dir')
+        downscale_output_dir = parser.get('downscaling', 'RAP_downscale_output_dir')
         downscale_exe = parser.get('exe', 'RAP_downscaling_exe')
     else:
         logging.info("Requested downscaling of unsupported data product %s", product)
@@ -521,7 +521,7 @@ def downscale_data(product_name, file_to_downscale, parser, downscale_shortwave=
                              return value of %s', product,return_value)
                 #TO DO: Determine the proper action to take when the NCL file 
                 #fails. For now, exit.
-                sys.exit()
+                return
     
     
 
@@ -608,7 +608,7 @@ def layer_data(parser, first_prod, first_data, second_prod,second_data,forcing_t
         file_name_only = match.group(1)
     else:
         logging.error("ERROR[layer_data]: File name format is not what was expected")
-        exit(-1) 
+        return
 
     # Create the key-value pair of
     # input needed to run the NCL layering script.
@@ -1189,6 +1189,8 @@ def move_to_finished_area(parser, product, src):
         if not os.path.exists(finished_dir):
             mkdir_p(finished_dir) 
         finished_dest = finished_dir + "/" + file_only
+        logging.info("moving %s", src)
+        logging.info("...to %s", finished_dest)
         shutil.move(src, finished_dest) 
     else:
         logging.error("[move_to_finished_area]: can't match filename")
