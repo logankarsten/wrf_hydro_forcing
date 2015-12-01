@@ -120,15 +120,14 @@ def forcing(action, prod, file, prod2=None, file2=None):
                 # script can determine when to layer with other data.
                 match = re.match(r'.*/([0-9]{10})/([0-9]{12}.LDASIN_DOMAIN1.nc)',regridded_file)
                 if match:
-                    ymd_dir = match.group(1) 
-                    file_only = match.group(2)
-                    downscaled_dir = downscale_dir + "/" + ymd_dir
+                    downscaled_dir = downscale_dir + "/" + match.group(1)
                     if not os.path.exists(downscaled_dir):
                         mkdir_p(downscaled_dir)
-                    downscaled_file = downscaled_dir + "/" + file_only 
+                    downscaled_file = downscaled_dir + "/" + match.group(2)
                     whf.move_to_finished_area(parser, prod, downscaled_file) 
                 else:
-                    print ("Can't get filename only from the finished regridded file") 
+                    logging.error("FAIL- cannot move finished file: %s", regridded_file) 
+                    return 
 
             else:
                 regridded_file = whf.regrid_data(product_data_name, file, parser, False)
@@ -143,9 +142,10 @@ def forcing(action, prod, file, prod2=None, file2=None):
                     if not os.path.exists(full_dir):
                         logging.info("finished dir doesn't exist, creating it now...")
                         whf.mkdir_p(full_dir)
-                    whf.move_to_finished_area(parser, prod,full_finished_file)
+                    whf.move_to_finished_area(parser, prod, full_finished_file)
                 else:
-                    print ("Can't get filename only from the finished regridded file") 
+                    logging.error("FAIL- cannot move finished file: %s", full_finished_file) 
+                    return
 
         else:
             # Skip processing this file, exiting...
@@ -156,8 +156,10 @@ def forcing(action, prod, file, prod2=None, file2=None):
         # and two files indicated.
         if prod2 is None:
             logger.error("ERROR [Short_Range_Forcing]: layering requires two products")
+            return
         elif file2 is None:
             logger.error("ERROR [Short_Range_Forcing]: layering requires two input files")
+            return
         else:
             # We have everything we need, request layering
             whf.layer_data(parser,prod,file, prod2,file2, 'Short_Range')
@@ -165,7 +167,7 @@ def forcing(action, prod, file, prod2=None, file2=None):
              
     elif action_requested == 'bias':
         logging.info("Bias correction requested for %s", file)
-        logging.info("Bias correction not yet suppoted for Short Range Forcing")
+        logging.info("Bias correction not suppoted for Short Range Forcing")
             
 
 
