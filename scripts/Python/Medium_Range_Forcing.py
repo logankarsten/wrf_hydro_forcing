@@ -111,7 +111,7 @@ def forcing(action, prod, file, prod2=None, file2=None):
                     if not os.path.exists(downscaled_dir):
                         mkdir_p(downscaled_dir)
                     downscaled_file = downscaled_dir + "/" + file_only
-                    whf.move_to_finished_area(parser,"GFS", regridded_file)
+                    whf.move_to_finished_area(parser,"GFS", downscaled_file)
                     whf.rename_final_file(parser,"Medium_Range")
             else:
                 logging.info("Regridding %s: ", file )
@@ -125,7 +125,7 @@ def forcing(action, prod, file, prod2=None, file2=None):
                     if not os.path.exists(downscaled_dir):
                         mkdir_p(downscaled_dir)
                     downscaled_file = downscaled_dir + "/" + file_only
-                    whf.move_to_finished_area(parser,"GFS",regridded_file)
+                    whf.move_to_finished_area(parser,"GFS",downscaled_file)
                     whf.rename_final_files(parser,"Medium_Range")
                 
         else:
