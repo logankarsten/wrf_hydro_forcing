@@ -55,7 +55,7 @@ def forcing(action, prod, file, prod2=None, file2=None):
 
     # Read the parameters from the config/param file.
     parser = SafeConfigParser()
-    parser.read('wrf_hydro_forcing.parm')
+    parser.read('aa_wrf_hydro_forcing.parm')
 
     # Set up logging, environments, etc.
     forcing_config_label = "Anal_Assim"
@@ -121,7 +121,7 @@ def forcing(action, prod, file, prod2=None, file2=None):
             # We have everything we need, request layering, since layering is the last step,
             # move/rename all finished data (MRMS included) to the final Anal_Assim directory.
             whf.layer_data(parser,prod,file, prod2,file2, 'Anal_Assim')
-            whf.move_to_final_location(parser,'Anal_Assim')
+            whf.rename_final_files(parser,'Anal_Assim')
              
     elif action_requested == 'bias':
         logging.info("Bias correction requested for the Analysis and Assimilation Forcing on file: %s", file)
