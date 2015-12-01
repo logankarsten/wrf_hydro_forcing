@@ -6,8 +6,8 @@ import time
 import numpy as np
 import optparse
 import datetime
-import sys
 import shutil
+import sys
 from ConfigParser import SafeConfigParser
 
 
@@ -642,7 +642,7 @@ def layer_data(parser, first_prod, first_data, second_prod,second_data,forcing_t
     else:
         # Move/rename the processed files to the corresponding forcing
         # configuration directory. 
-        shutil.move(full_layered_outfile, layered_outfile) 
+        os.rename(full_layered_outfile, layered_outfile)
 
     return_value = os.system(layering_cmd) 
     
@@ -994,12 +994,10 @@ def get_past_or_future_date(curr_date, num_days = -1):
     
 
     
-def move_to_final_location(parser, forcing_type):
-    """Move the processed files to the final directory
-       that corresponds to the forcing configuration for
-       input to the WRF-Hydro Model. The files
-       names are unchanged except for the absence 
-       of the '.nc' file extension.
+def rename_final_files(parser, forcing_type):
+    """Rename the processed files in the
+          forcing configuration directory so the
+          .nc file extension is removed.
   
         Input:
             parser (SafeConfigParser):  SafeConfigParser used to
@@ -1038,16 +1036,18 @@ def move_to_final_location(parser, forcing_type):
         anal_assim_files = get_layered_files(anal_assim_dir)
         for file in anal_assim_files:
             # Get the filename without the .nc extension
-            match = re.match(r'.*/([0-9]{10}/[0-9]{12}.LDASIN_DOMAIN1).*', file)
+            match = re.match(r'.*/(([0-9]{10})/[0-9]{12}.LDASIN_DOMAIN1).*', file)
             if match:
                 filename_only = match.group(1)
+                ymd_dir = match.group(2)
+                destination_dir = anal_assim_dir + "/" + ymd_dir
                 destination = anal_assim_dir + "/" + filename_only
-                if not os.path.exists(output_file_dir):
-                    mkdir_p(output_file_dir)
+                if not os.path.exists(destination_dir):
+                    mkdir_p(destination_dir)
                 shutil.move(file, destination)
 
             else:
-               logging.WARNING("[move_to_final_location]:filename is of unexpected format: %s", file)
+               logging.WARNING("[rename_final_files]:filename is of unexpected format: %s", file)
                continue
        
         # Move the MRMS files to their own location.
@@ -1057,13 +1057,14 @@ def move_to_final_location(parser, forcing_type):
             if match:
                 filename_only = match.group(1)
                 ymd_dir = match.group(2)
-                destination_dir = anal_assim_dir + "/" + ymd_dir  +  "/" + filename_only
-                destination = destination_dir +  "/" + filename_only
+                destination_dir = anal_assim_dir + "/" + ymd_dir  
+                destination = mrms_dir +  "/" + filename_only
                 if not os.path.exists(destination_dir):
                     mkdir_p(destination_dir)
-                shutil.move(file, destination)
+                src = mrms_dir + "/" + ymd_dir + "/" + file
+                os.rename(src, destination)
             else:
-               logging.WARNING("[move_to_final_location]:filename is of unexpected format: %s", mrms)
+               logging.WARNING("[rename_final_files]:filename is of unexpected format: %s", mrms)
                continue
              
         
@@ -1073,16 +1074,18 @@ def move_to_final_location(parser, forcing_type):
         short_range_files = get_layered_files(short_range_dir)
         for file in short_range_files:
             # Get the filename without the .nc extension
-            match = re.match(r'.*/([0-9]{10}/[0-9]{12}.LDASIN_DOMAIN1).*', file)
+            match = re.match(r'.*/(([0-9]{10})/[0-9]{12}.LDASIN_DOMAIN1).*', file)
             if match:
                 filename_only = match.group(1)
+                ymd_dir = match.group(2)
+                destination_dir = short_range_dir + "/" + ymd_dir
                 destination = short_range_dir + "/" + filename_only
-                if not os.path.exists(destination):
-                    mkdir_p(destination)
-                shutil.move(file, destination)
+                if not os.path.exists(destination_dir):
+                    mkdir_p(destination_dir)
+                os.rename(file, destination)
 
             else:
-               logging.WARNING("[move_to_final_location]:filename is of unexpected format :%s", file)
+               logging.WARNING("[rename_final_files]:filename is of unexpected format :%s", file)
                continue
 
 
@@ -1094,23 +1097,25 @@ def move_to_final_location(parser, forcing_type):
         medium_range_files = get_layered_files(medium_range_downscale_dir)
         for file in medium_range_files:
             # Get the filename without the .nc extension
-            match = re.match(r'.*/([0-9]{10}/[0-9]{12}.LDASIN_DOMAIN1).*', file)
+            match = re.match(r'.*/(([0-9]{10})/[0-9]{12}.LDASIN_DOMAIN1).*', file)
             if match:
                 filename_only = match.group(1)
+                ymd_dir = match.group(2)
+                destination_dir = medium_range_dir + "/" + ymd_dir 
                 destination = medium_range_dir + "/" + filename_only
+                if not os.path.exists(destination_dir):
+                    mkdir_p(destination_dir)
                 logging.info("moving file: %s", file)
                 logging.info("final destination: %s", destination)
-                if not os.path.exists(destination):
-                    mkdir_p(destination)
-                shutil.move(file, destination)
+                os.rename(file, destination)
             else:
-               logging.WARNING("[move_to_final_location]:filename is of unexpected format :%s", file)
+               logging.WARNING("[rename_final_files]:filename is of unexpected format :%s", file)
                continue
 
-
-
     elif forcing_type == 'LONG_RANGE':
-        long_range_dir = parser.get('layering', 'long_range_output')
+        # Already renamed and moved within the Long_Range_Forcing script.
+        logging.info("[rename_final_files]: request renaming of Long Range files")
+
     else:
         print "Forcing type is not recognized or is unsupported. Try again."
 
