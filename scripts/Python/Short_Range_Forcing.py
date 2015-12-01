@@ -161,7 +161,7 @@ def forcing(action, prod, file, prod2=None, file2=None):
         else:
             # We have everything we need, request layering
             whf.layer_data(parser,prod,file, prod2,file2, 'Short_Range')
-            whf.move_to_final_location(parser,'Short_Range')
+            whf.rename_final_files(parser,'Short_Range')
              
     elif action_requested == 'bias':
         logging.info("Bias correction requested for %s", file)
