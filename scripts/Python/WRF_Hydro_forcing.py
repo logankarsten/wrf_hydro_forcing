@@ -820,7 +820,7 @@ def bias_correction(product_name,file_in,cycleYYYYMMDDHH,fcstYYYYMMDDHH,
         elapsed_time_sec = end_NCL_bias - start_NCL_bias
         logging.info('Time(sec) to bias correct file %s' % elapsed_time_sec)  
         
-def layer_data(parser, first_data, second_data, first_data_product, second_data_product):
+def layer_data(parser, first_data, second_data, first_data_product, second_data_product, forcing_type):
     """Invokes the NCL script, combine.ncl
        to layer/combine two files:  first_data and 
        second_data, with product type of first_prod and
@@ -848,7 +848,7 @@ def layer_data(parser, first_data, second_data, first_data_product, second_data_
                                     model/init time.
               forcing_type (string): The forcing configuration:
                                      Anal_Assim, Short_Range,
-                                     Medium_Range, or Long_Range 
+                                     Medium_Range, or Long_Range
 
         Output:
               None:  For each first and second file that is
