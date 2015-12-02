@@ -71,6 +71,9 @@ GFS_data = /var/autofs/mnt/rapdmg1/data/grib/GFS_0.25-pgrb2
 #RAP_data = /d4/hydro-dm/IOC/data/RAP1km
 RAP_data = /var/autofs/mnt/rapdmg1/data/grib/WRF-RR-CONUS-wrfprs
 CFS_data = /d4/karsten/DFE/IOC_TESTING/long_range/raw_data/com/cfs/prod/cfs
+GFS_data = /var/autofs/mnt/rapdmg1/data/grib/GFS_0.25-pgrb2/
+CFS_data = /d4/karsten/DFE/IOC_TESTING/long_range/raw_data/com/cfs/prod/cfs
+CFS_num_ensemble = 4
 
 #-------------------------------------------------
 #   Forecast hour cutoff times
@@ -86,6 +89,37 @@ HRRR_fcsthr_max = 23
 GFS_fcsthr_max = 240
 CFS_fcsthr_max = 726
 
+
+#-------------------------------------------------
+#  Triggering look back limits
+#-------------------------------------------------
+[triggering]
+#
+# Number of hours back from current issue time to keep state
+#
+HRRR_hours_back = 1
+RAP_hours_back = 1
+GFS_hours_back = 1
+CFS_hours_back = 1
+MRMS_hours_back = 1
+
+short_range_fcst_max_wait_minutes = 20
+short_range_fcst_very_late_minutes = 40
+
+#
+# State file for regrid triggering
+#
+regrid_state_file = ./State.regrid.txt
+
+#
+# State file for long range regrid triggering
+#
+long_range_regrid_state_file = ./State.LongRangeRegrid.txt
+
+#
+# State file for short range layering
+#
+short_range_layering_state_file = ./State.ShortRangeLayering.txt
 
 
 #-------------------------------------------------
@@ -265,6 +299,7 @@ analysis_assimilation_output = /d6/forcing_test/Anal_Assim
 #short_range_output = /d4/hydro-dm/IOC/Short_Range
 short_range_output = /d6/forcing_test/Short_Range
 
-medium_range_output = /d6/forcing_test/Medium_Range/
+#medium_range_output = /d4/hydro-dm/IOC/Medium_Range
+medium_range_output = /d6/forcing_test/Medium_Range
 
 long_range_output = /d4/hydro_dm/IOC/Long_Range
