@@ -68,7 +68,6 @@ def regrid_data( product_name, file_to_regrid, parser, substitute_fcst = False )
     product = product_name.upper()
     ncl_exec = parser.get('exe', 'ncl_exe')
 
-
     if product == 'HRRR':
        wgt_file = parser.get('regridding', 'HRRR_wgt_bilinear')
        data_dir =  parser.get('data_dir', 'HRRR_data')
@@ -98,7 +97,17 @@ def regrid_data( product_name, file_to_regrid, parser, substitute_fcst = False )
        #Values needed for running the regridding script
        output_dir_root = parser.get('regridding','RAP_output_dir')
        dst_grid_name = parser.get('regridding','RAP_dst_grid_name')
-
+    elif product == 'CFSV2':
+       wgt_file = parser.get('regridding','CFS_wgt_bilinear')
+       tmp_dir = parser.get('bias_correction','CFS_tmp_dir')
+       regridding_exec = parser.get('exe','CFS_regridding_exe')
+       dst_grid_name = parser.get('regridding','CFS_dst_grid_name')
+       # Sanity check to make sure files/directories exist.
+       file_exists(wgt_file)
+       # Don't need to check temporary directory as this was done
+       # in bias-correction step.
+       file_exists(regridding_exec)
+       file_exists(dst_grid_name)
 
     # If this is a 0hr forecast and the data product is either GFS or RAP, then do
     # nothing for now, it will need to be replaced during the
@@ -131,51 +140,67 @@ def regrid_data( product_name, file_to_regrid, parser, substitute_fcst = False )
         #  'outdir="/d4/hydro-dm/IOC/regridded/HRRR/2015072309"'
         #  'outFile="201507241900.LDASIN_DOMAIN1.nc"' 
        
-        (date,model,fcsthr) = extract_file_info(file_to_regrid)  
-        data_file_to_regrid= data_dir + "/" + date + "/" + file_to_regrid 
-        print ("[regrid_data] data_file_to_regrid: %s, file_to_regrid: %s")%(data_file_to_regrid,file_to_regrid)
-        
-        srcfilename_param =  "'srcfilename=" + '"' + data_file_to_regrid +  \
-                                 '"' + "' "
-        wgtFileName_in_param =  "'wgtFileName_in = " + '"' + wgt_file + \
-                                    '"' + "' "
-        dstGridName_param =  "'dstGridName=" + '"' + dst_grid_name + '"' + "' "
+        if product == "CFSV2":
+            # Check for existence of input file.
+            file_exists(file_to_regrid)
+            
+            path_split = file_to_regrid.split('.')
+            # Compose output file name, which will be in temporary directory. 
+            regridded_file = path_split[0] + "_regridded." + path_split[1] + \
+                             "." + path_split[2]
+            srcfilename_param =  "'srcfilename=" + '"' + file_to_regrid +  \
+                                     '"' + "' "
+            wgtFileName_in_param =  "'wgtFileName=" + '"' + wgt_file + \
+                                        '"' + "' "
+            dstGridName_param =  "'dstGridName=" + '"' + dst_grid_name + '"' + "' "
+            outfilename_param = "'outfilename=" + '"' + regridded_file + \
+                                '"' + "' "
+
+            regrid_params = srcfilename_param + outfilename_param + \
+                            dstGridName_param + wgtFileName_in_param
+        else:
+       	    (date,model,fcsthr) = extract_file_info(file_to_regrid)  
+            data_file_to_regrid= data_dir + "/" + date + "/" + file_to_regrid 
+            srcfilename_param =  "'srcfilename=" + '"' + data_file_to_regrid +  \
+                                     '"' + "' "
+            wgtFileName_in_param =  "'wgtFileName_in = " + '"' + wgt_file + \
+                                        '"' + "' "
+            dstGridName_param =  "'dstGridName=" + '"' + dst_grid_name + '"' + "' "
     
-        # Create the output filename following the 
-        # naming convention for the WRF-Hydro model 
-        (subdir_file_path,hydro_filename) = \
-            create_output_name_and_subdir(product,data_file_to_regrid,data_dir)
+            # Create the output filename following the 
+            # naming convention for the WRF-Hydro model 
+            (subdir_file_path,hydro_filename) = \
+                create_output_name_and_subdir(product,data_file_to_regrid,data_dir)
        
-        # Create the full path to the output directory
-        # and assign it to the output directory parameter
-        output_file_dir = output_dir_root + "/" + subdir_file_path
-        if not os.path.exists(output_file_dir):
+            # Create the full path to the output directory
+            # and assign it to the output directory parameter
+            output_file_dir = output_dir_root + "/" + subdir_file_path
             mkdir_p(output_file_dir)
-        outdir_param = "'outdir=" + '"' + output_file_dir + '"' + "' " 
-        regridded_file = output_file_dir + "/" + hydro_filename
+            outdir_param = "'outdir=" + '"' + output_file_dir + '"' + "' " 
+            regridded_file = output_file_dir + "/" + hydro_filename
 
-        if product == "HRRR" or product == "NAM" \
-           or product == "GFS" or product == "RAP":
-           full_output_file = output_file_dir + "/"  
-           # Create the new output file subdirectory
-           outFile_param = "'outFile=" + '"' + hydro_filename+ '"' + "' "
-        elif product == "MRMS":
-           # !!!!!!NOTE!!!!!
-           # MRMS regridding script differs from the HRRR and NAM scripts in that 
-           # it does not # accept an outdir variable.  Incorporate the output
-           # directory (outdir) into the outFile variable.
-           full_output_file = output_file_dir + "/"  + hydro_filename
-           if not os.path.exists(output_file_dir):
+            if product == "HRRR" or product == "NAM" \
+               or product == "GFS" or product == "RAP":
+               full_output_file = output_file_dir + "/"  
+               # Create the new output file subdirectory
+               outFile_param = "'outFile=" + '"' + hydro_filename+ '"' + "' "
+            elif product == "MRMS":
+               # !!!!!!NOTE!!!!!
+               # MRMS regridding script differs from the HRRR and NAM scripts in that 
+               # it does not accept an outdir variable.  Incorporate the output
+               # directory (outdir) into the outFile variable.
+               full_output_file = output_file_dir + "/"  + hydro_filename
                mkdir_p(output_file_dir)
-           outFile_param = "'outFile=" + '"' + full_output_file + '"' + "' "
+               outFile_param = "'outFile=" + '"' + full_output_file + '"' + "' "
 
-        regrid_params = srcfilename_param + wgtFileName_in_param + \
-                    dstGridName_param + outdir_param + \
-                    outFile_param
-        regrid_prod_cmd = ncl_exec + " "  + regrid_params + " " + \
+            regrid_params = srcfilename_param + wgtFileName_in_param + \
+                        dstGridName_param + outdir_param + \
+                        outFile_param
+       
+        regrid_prod_cmd = ncl_exec + " -Q "  + regrid_params + " " + \
                       regridding_exec
     
-        logging.debug("regridding command: %s",regrid_prod_cmd)
+        #logging.debug("regridding command: %s",regrid_prod_cmd)
 
         # Measure how long it takes to run the NCL script for regridding.
         start_NCL_regridding = time.time()
@@ -183,12 +208,11 @@ def regrid_data( product_name, file_to_regrid, parser, substitute_fcst = False )
         end_NCL_regridding = time.time()
         elapsed_time_sec = end_NCL_regridding - start_NCL_regridding
         logging.info("Time(sec) to regrid file  %s" %  elapsed_time_sec)
- 
 
         if return_value != 0:
             logging.info('ERROR: The regridding of %s was unsuccessful, \
                           return value of %s', product,return_value)
-            #TO DO: Determine the proper action to take when the NCL file h
+            #TO DO: Determine the proper action to take when the NCL file 
             #fails. For now, exit.
             return 
         
@@ -353,7 +377,7 @@ def mkdir_p(dir):
 
 
 def downscale_data(product_name, file_to_downscale, parser, downscale_shortwave=False,
-                   substitute_fcst=False):
+                   substitute_fcst=False,out_path='./',verYYYYMMDDHH='1900010100'):
     """Performs downscaling of data by calling the necessary
     NCL code (specific to the model/product).  There is an
     additional option to downscale the short wave radiation, SWDOWN.  
@@ -391,6 +415,12 @@ def downscale_data(product_name, file_to_downscale, parser, downscale_shortwave=
                                   file from a previous model run with 
                                   the same valid time and rename it.
                                   'False' by default.
+        out_path (string) : Optional output file path string to specify
+                            the output path. This is more geared towards 
+                            CFSv2 downscaling.
+        verYYYYMMDDHH (string) : Optional string representing datetime
+                                 of data being downscaled. Used for shortwave
+                                 radiation downscaling calculations.
                                   
     Returns:
         None
@@ -423,6 +453,12 @@ def downscale_data(product_name, file_to_downscale, parser, downscale_shortwave=
         geo_data_file = parser.get('downscaling','RAP_geo_data')
         downscale_output_dir = parser.get('downscaling', 'RAP_downscale_output_dir')
         downscale_exe = parser.get('exe', 'RAP_downscaling_exe')
+    elif product == 'CFSV2':
+        out_dir = parser.get('downscaling','CFS_downscale_out_dir')
+        hgt_data_file = parser.get('downscaling','CFS_hgt_data')
+        geo_data_file = parser.get('downscaling','CFS_geo_data')
+        downscale_exe = parser.get('exe','CFS_downscaling_exe')
+        #Double check for existence of directories/files
     else:
         logging.info("Requested downscaling of unsupported data product %s", product)
  
@@ -440,35 +476,51 @@ def downscale_data(product_name, file_to_downscale, parser, downscale_shortwave=
 
     else:
         # Downscale as usual
-        match = re.match(r'(.*)([0-9]{10})/([0-9]{8}([0-9]{2})00.LDASIN_DOMAIN1.*)',file_to_downscale)
-        if match:
-            yr_month_day_init = match.group(2)
-            regridded_file = match.group(3)
-            valid_hr = match.group(4)
-        else:
-            logging.error("ERROR: regridded file's name: %s is an unexpected format",\
-                               file_to_downscale)
-            return 
-        full_downscaled_dir = downscale_output_dir + "/" + yr_month_day_init  
-        full_downscaled_file = full_downscaled_dir + "/" +  regridded_file
+        if product == "CFSV2":
+            # Double check to make sure input file exists
+            file_exists(file_to_downscale)
 
-        # Create the full output directory for the downscaled data if it doesn't 
-        # already exist. 
-        if not os.path.exists(full_downscaled_dir):
-            mkdir_p(full_downscaled_dir) 
+            # Create input NCL command components
+            input_file1_param = "'hgtFileSrc=" + '"' + hgt_data_file + '"' + "' "
+            input_file2_param = "'hgtFileDst=" + '"' + geo_data_file + '"' + "' "
+            input_file3_param = "'inFile=" + '"' + file_to_downscale + '"' + "' "
+            input_file4_param = "'outFile=" + '"' + out_path + '"' + "' "
+            lapse_file_param =  "'lapseFile=" + '"' + lapse_rate_file + '"' + "' "
+            time_param = "'verYYYYMMDDHH=" + '"' + verYYYYMMDDHH.strftime("%Y%m%d%H") + '"' + "' "
+            downscale_params =  input_file1_param + input_file2_param + \
+                      input_file3_param + input_file4_param + lapse_file_param + \
+                      time_param 
+            downscale_cmd = ncl_exec + " -Q " + downscale_params + " " + downscale_exe 
+        else:
+            match = re.match(r'(.*)([0-9]{10})/([0-9]{8}([0-9]{2})00.LDASIN_DOMAIN1.*)',file_to_downscale)
+            if match:
+                yr_month_day_init = match.group(2)
+                regridded_file = match.group(3)
+                valid_hr = match.group(4)
+            else:
+                logging.error("ERROR: regridded file's name: %s is an unexpected format",\
+                                   file_to_downscale)
+                sys.exit() 
+   
+            full_downscaled_dir = downscale_output_dir + "/" + yr_month_day_init  
+            full_downscaled_file = full_downscaled_dir + "/" +  regridded_file
+
+            # Create the full output directory for the downscaled data if it doesn't 
+            # already exist. 
+            if not os.path.exists(full_downscaled_dir):
+                mkdir_p(full_downscaled_dir) 
     
-    
-        # Create the key-value pairs that make up the
-        # input for the NCL script responsible for
-        # the downscaling.
-        input_file1_param = "'inputFile1=" + '"' + hgt_data_file + '"' + "' "
-        input_file2_param = "'inputFile2=" + '"' + geo_data_file + '"' + "' "
-        input_file3_param = "'inputFile3=" + '"' + file_to_downscale + '"' + "' "
-        lapse_file_param =  "'lapseFile=" + '"' + lapse_rate_file + '"' + "' "
-        output_file_param = "'outFile=" + '"' + full_downscaled_file + '"' + "' "
-        downscale_params =  input_file1_param + input_file2_param + \
-                  input_file3_param + lapse_file_param +  output_file_param 
-        downscale_cmd = ncl_exec + " " + downscale_params + " " + downscale_exe
+            # Create the key-value pairs that make up the
+            # input for the NCL script responsible for
+            # the downscaling.
+            input_file1_param = "'inputFile1=" + '"' + hgt_data_file + '"' + "' "
+            input_file2_param = "'inputFile2=" + '"' + geo_data_file + '"' + "' "
+            input_file3_param = "'inputFile3=" + '"' + file_to_downscale + '"' + "' "
+            lapse_file_param =  "'lapseFile=" + '"' + lapse_rate_file + '"' + "' "
+            output_file_param = "'outFile=" + '"' + full_downscaled_file + '"' + "' "
+            downscale_params =  input_file1_param + input_file2_param + \
+                      input_file3_param + lapse_file_param +  output_file_param 
+            downscale_cmd = ncl_exec + " -Q " + downscale_params + " " + downscale_exe
     
         # Downscale the shortwave radiation, if requested...
         # Key-value pairs for downscaling SWDOWN, shortwave radiation.
@@ -480,10 +532,10 @@ def downscale_data(product_name, file_to_downscale, parser, downscale_shortwave=
     
             swdown_geo_file_param = "'inputGeo=" + '"' + geo_data_file + '"' + "' "
             swdown_params = swdown_geo_file_param + " " + swdown_output_file_param
-            downscale_shortwave_cmd = ncl_exec + " " + swdown_params + " " \
+            downscale_shortwave_cmd = ncl_exec + " -Q " + swdown_params + " " \
                                       + downscale_swdown_exe 
             logging.info("SWDOWN downscale command: %s", downscale_shortwave_cmd)
-    
+  
             # Crude measurement of performance for downscaling.
             # Wall clock time used to determine the elapsed time
             # for downscaling each file.
@@ -530,17 +582,245 @@ def downscale_data(product_name, file_to_downscale, parser, downscale_shortwave=
 
 
 
-# STUB for BIAS CORRECTION, TO BE
-# IMPLEMENTED LATER...
-def bias_correction(parser):
-    """ STUB TO BE IMPLEMENTED
+def bias_correction(product_name,file_in,cycleYYYYMMDDHH,fcstYYYYMMDDHH,
+                   parser,em = 0):
+    """ Perform bias correction to input data. The method will vary by product.
+    
+        Args:
+          product_name (string): The name of the model product
+                                 (e.g. RAP, GFS, CFSv2, etc).
+          file_in (string): The input file being applied a bias correction to.
+          cycleYYYYMMDDHH (datetime): Product cycle (init) datetime object.
+          fcstYYYYMMDDHH (datetime): Product forecast datetime object.
+          parser (SafeConfigParser): Parser object used to read 
+                                     values set in the param/config file.
+          em (optional integer): Specifies the ensemble member number.
+
+        Returns:
+          files_out: List of file(s) that were created in the bias-correction.
+
     """
-#
-#
 
+    # Retrieve NCL executable path from config file
+    product = product_name.upper()
+    ncl_exec = parser.get('exe', 'ncl_exe')
+    file_exists(ncl_exec)
 
+    if product == "CFSV2":
+        em_str = str(em)
+        em_str = em_str.zfill(2)
 
-def layer_data(parser, first_prod, first_data, second_prod,second_data,forcing_type):
+        # Obtain CFSv2 forcing engine parameters.
+        ncarg_root = parser.get('default_env_vars', 'ncarg_root')
+        CFS_in_dir = parser.get('data_dir','CFS_data')
+        CFS_bias_exe = parser.get('exe','CFS_bias_correct_exe')
+        CFS_bias_mod = parser.get('exe','CFS_bias_correct_mod')
+        tmp_dir = parser.get('bias_correction','CFS_tmp_dir')
+        CFS_bias_dir = parser.get('bias_correction','CFS_bias_parm_dir')
+        NLDAS_bias_dir = parser.get('bias_correction','NLDAS_bias_parm_dir')         
+        CFS_corr_file = parser.get('bias_correction','CFS_correspond')
+
+        # Check for the NCARG_ROOT environment variable. If it is not set,
+        # use an appropriate default, defined in the configuration file.
+        ncarg_root_found = os.getenv("NCARG_ROOT")
+        if ncarg_root_found is None:
+            ncarg_root = os.environ["NCARG_ROOT"] = ncarg_root
+
+        # Sanity check to ensure all directories/executables are on system.
+        dir_exists(ncarg_root)
+        dir_exists(CFS_in_dir)
+        file_exists(CFS_bias_exe)
+        file_exists(CFS_bias_mod)
+        dir_exists(tmp_dir)
+        dir_exists(CFS_bias_dir)
+        dir_exists(NLDAS_bias_dir)
+        file_exists(CFS_corr_file)
+
+        # Compose previous forecast CFSv2 forecast time step. This is done as the
+        # previous time step of data is used in interpolation. If the two time
+        # steps are identical, still pass information to the NCL scripts as the 
+        # NCL code has checks in place to handle this.
+        if fcstYYYYMMDDHH == cycleYYYYMMDDHH:
+            prevYYYYMMDDHH = fcstYYYYMMDDHH
+        else:
+            prevYYYYMMDDHH = fcstYYYYMMDDHH - \
+                             datetime.timedelta(seconds=6*3600) 
+ 
+        # Create time stamps for composing paths to NLDAS/CFS bias correction datasets.
+        # This is done independently as we need to account for leap years.
+        if fcstYYYYMMDDHH.month == 2:
+            if fcstYYYYMMDDHH.day == 29:
+                fcstYYYYMMDDHHtmp = fcstYYYYMMDDHH - datetime.timedelta(days=1)
+            else:
+                fcstYYYYMMDDHHtmp = fcstYYYYMMDDHH
+        else:
+            fcstYYYYMMDDHHtmp = fcstYYYYMMDDHH
+     
+        # Compose input file path and ensure file exists on system.
+        #XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        # IMPORTANT!!!! THIS WILL NEED TO BE MODIFIED FOR NCEP!!!!!!!!!!!!
+        file_in_path = CFS_in_dir + "/cfs." + cycleYYYYMMDDHH.strftime("%Y%m%d") + \
+                       "/" + cycleYYYYMMDDHH.strftime("%H") + "/6hrly_grib_" + \
+                       em_str + "/flxf" + fcstYYYYMMDDHH.strftime("%Y%m%d%H") + \
+                       "." + em_str + "." + cycleYYYYMMDDHH.strftime("%Y%m%d%H") + \
+                       ".grb2"
+        file_in_path_prev = CFS_in_dir + "/cfs." + cycleYYYYMMDDHH.strftime("%Y%m%d") + \
+                            "/" + cycleYYYYMMDDHH.strftime("%H") + "/6hrly_grib_" + \
+                            em_str + "/flxf" + prevYYYYMMDDHH.strftime("%Y%m%d%H") + \
+                            "." + em_str + "." + cycleYYYYMMDDHH.strftime("%Y%m%d%H") + \
+                            ".grb2"
+        #XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+        file_exists(file_in_path)
+        file_exists(file_in_path_prev)
+
+        # Determine hourly sub-time steps between six-hour CFSv2 forecasts
+        datePrevYYYYMMDDHH = fcstYYYYMMDDHH - datetime.timedelta(seconds=6*3600)
+        datePrevMMDD = datePrevYYYYMMDDHH.strftime('%m%d')
+        datePrevHH = datePrevYYYYMMDDHH.strftime('%H')
+        dateFcstMMDD = fcstYYYYMMDDHH.strftime('%m%d')
+        dateFcstHH = fcstYYYYMMDDHH.strftime('%H')
+        dateSub1YYYYMMDDHH = datePrevYYYYMMDDHH + datetime.timedelta(seconds=3600)
+        dateSub2YYYYMMDDHH = dateSub1YYYYMMDDHH + datetime.timedelta(seconds=3600)
+        dateSub3YYYYMMDDHH = dateSub2YYYYMMDDHH + datetime.timedelta(seconds=3600)
+        dateSub4YYYYMMDDHH = dateSub3YYYYMMDDHH + datetime.timedelta(seconds=3600)
+        dateSub5YYYYMMDDHH = dateSub4YYYYMMDDHH + datetime.timedelta(seconds=3600)
+
+        datePrevYYYYMMDDHHtmp = fcstYYYYMMDDHHtmp - datetime.timedelta(seconds=6*3600)
+        datePrevMMDDtmp = datePrevYYYYMMDDHHtmp.strftime('%m%d')
+        datePrevHHtmp = datePrevYYYYMMDDHHtmp.strftime('%H')
+        dateFcstMMDDtmp = fcstYYYYMMDDHHtmp.strftime('%m%d')
+        dateFcstHHtmp = fcstYYYYMMDDHHtmp.strftime('%H')
+        dateSub1YYYYMMDDHHtmp = datePrevYYYYMMDDHHtmp + datetime.timedelta(seconds=3600)
+        dateSub2YYYYMMDDHHtmp = dateSub1YYYYMMDDHHtmp + datetime.timedelta(seconds=3600)
+        dateSub3YYYYMMDDHHtmp = dateSub2YYYYMMDDHHtmp + datetime.timedelta(seconds=3600)
+        dateSub4YYYYMMDDHHtmp = dateSub3YYYYMMDDHHtmp + datetime.timedelta(seconds=3600)
+        dateSub5YYYYMMDDHHtmp = dateSub4YYYYMMDDHHtmp + datetime.timedelta(seconds=3600)
+
+        # Establish hourly NLDAS parameter files used for bias correction and interpolation
+        NLDAS_param_path_1 = NLDAS_bias_dir + "/nldas2_" + \
+                             dateSub1YYYYMMDDHHtmp.strftime('%m%d%H') + '_dist_params.nc'
+        NLDAS_param_path_2 = NLDAS_bias_dir + "/nldas2_" + \
+                             dateSub2YYYYMMDDHHtmp.strftime('%m%d%H') + '_dist_params.nc'
+        NLDAS_param_path_3 = NLDAS_bias_dir + "/nldas2_" + \
+                             dateSub3YYYYMMDDHHtmp.strftime('%m%d%H') + '_dist_params.nc'
+        NLDAS_param_path_4 = NLDAS_bias_dir + "/nldas2_" + \
+                             dateSub4YYYYMMDDHHtmp.strftime('%m%d%H') + '_dist_params.nc'
+        NLDAS_param_path_5 = NLDAS_bias_dir + "/nldas2_" + \
+                             dateSub5YYYYMMDDHHtmp.strftime('%m%d%H') + '_dist_params.nc'
+        NLDAS_param_path_6 = NLDAS_bias_dir + "/nldas2_" + \
+                             fcstYYYYMMDDHHtmp.strftime('%m%d%H') + '_dist_params.nc' 
+
+        # Ensure files are present on system
+        file_exists(NLDAS_param_path_1)
+        file_exists(NLDAS_param_path_2)
+        file_exists(NLDAS_param_path_3)
+        file_exists(NLDAS_param_path_4)
+        file_exists(NLDAS_param_path_5)
+        file_exists(NLDAS_param_path_6)
+
+        # Establish CFS parameter files used for bias correction and interpolation.
+        # There will be two parameter files for each variable being downscaled.
+        CFS_param_2mT_path0 = CFS_bias_dir + "/cfs_tmp2m_" + datePrevMMDDtmp + \
+                              "_" + datePrevHHtmp + "_dist_params.nc"
+        CFS_param_2mT_path1 = CFS_bias_dir + "/cfs_tmp2m_" + dateFcstMMDDtmp + \
+                              "_" + dateFcstHHtmp + "_dist_params.nc"
+        CFS_param_SW_path0 = CFS_bias_dir + "/cfs_dswsfc_" + datePrevMMDDtmp + \
+                              "_" + datePrevHHtmp + "_dist_params.nc"
+        CFS_param_SW_path1 = CFS_bias_dir + "/cfs_dswsfc_" + dateFcstMMDDtmp + \
+                              "_" + dateFcstHHtmp + "_dist_params.nc"
+        CFS_param_LW_path0 = CFS_bias_dir + "/cfs_dlwsfc_" + datePrevMMDDtmp + \
+                              "_" + datePrevHHtmp + "_dist_params.nc"
+        CFS_param_LW_path1 = CFS_bias_dir + "/cfs_dlwsfc_" + dateFcstMMDDtmp + \
+                              "_" + dateFcstHHtmp + "_dist_params.nc"
+        CFS_param_PCP_path0 = CFS_bias_dir + "/cfs_prate_" + datePrevMMDDtmp + \
+                              "_" + datePrevHHtmp + "_dist_params.nc"
+        CFS_param_PCP_path1 = CFS_bias_dir + "/cfs_prate_" + dateFcstMMDDtmp + \
+                              "_" + dateFcstHHtmp + "_dist_params.nc"
+        CFS_param_PRES_path0 = CFS_bias_dir + "/cfs_pressfc_" + datePrevMMDDtmp + \
+                              "_" + datePrevHHtmp + "_dist_params.nc"
+        CFS_param_PRES_path1 = CFS_bias_dir + "/cfs_pressfc_" + dateFcstMMDDtmp + \
+                              "_" + dateFcstHHtmp + "_dist_params.nc"
+        CFS_param_U_path0 = CFS_bias_dir + "/cfs_ugrd_" + datePrevMMDDtmp + \
+                              "_" + datePrevHHtmp + "_dist_params.nc"
+        CFS_param_U_path1 = CFS_bias_dir + "/cfs_ugrd_" + dateFcstMMDDtmp + \
+                              "_" + dateFcstHHtmp + "_dist_params.nc"
+        CFS_param_V_path0 = CFS_bias_dir + "/cfs_vgrd_" + datePrevMMDDtmp + \
+                              "_" + datePrevHHtmp + "_dist_params.nc"
+        CFS_param_V_path1 = CFS_bias_dir + "/cfs_vgrd_" + dateFcstMMDDtmp + \
+                              "_" + dateFcstHHtmp + "_dist_params.nc"
+        CFS_param_2mQ_path0 = CFS_bias_dir + "/cfs_q2m_" + datePrevMMDDtmp + \
+                              "_" + datePrevHHtmp + "_dist_params.nc"
+        CFS_param_2mQ_path1 = CFS_bias_dir + "/cfs_q2m_" + dateFcstMMDDtmp + \
+                              "_" + dateFcstHHtmp + "_dist_params.nc"
+
+        # Ensure parameter files are on the system
+        file_exists(CFS_param_2mT_path0)
+        file_exists(CFS_param_2mT_path1)
+        file_exists(CFS_param_SW_path0)
+        file_exists(CFS_param_SW_path1)
+        file_exists(CFS_param_LW_path0)
+        file_exists(CFS_param_LW_path1)
+        file_exists(CFS_param_PCP_path0)
+        file_exists(CFS_param_PCP_path1)
+        file_exists(CFS_param_PRES_path0)
+        file_exists(CFS_param_PRES_path1)
+        file_exists(CFS_param_U_path0)
+        file_exists(CFS_param_U_path1)
+        file_exists(CFS_param_V_path0)
+        file_exists(CFS_param_V_path1)
+        file_exists(CFS_param_2mQ_path0)
+        file_exists(CFS_param_2mQ_path1)
+
+        # Compose NCL command that calls bias-correction program.
+        bias_params = "'fileIn=" + '"' + file_in_path + '"' + "' " + \
+                      "'tmpDir=" + '"' + tmp_dir + '"' + "' " + \
+                      "'nldasParamHr1=" + '"' + NLDAS_param_path_1 + '"' + "' " + \
+                      "'nldasParamHr2=" + '"' + NLDAS_param_path_2 + '"' + "' " + \
+                      "'nldasParamHr3=" + '"' + NLDAS_param_path_3 + '"' + "' " + \
+                      "'nldasParamHr4=" + '"' + NLDAS_param_path_4 + '"' + "' " + \
+                      "'nldasParamHr5=" + '"' + NLDAS_param_path_5 + '"' + "' " + \
+                      "'nldasParamHr6=" + '"' + NLDAS_param_path_6 + '"' + "' " + \
+                      "'cfs2TParam0=" + '"' + CFS_param_2mT_path0 + '"' + "' " + \
+                      "'cfs2TParam1=" + '"' + CFS_param_2mT_path1 + '"' + "' " + \
+                      "'cfsSWParam0=" + '"' + CFS_param_SW_path0 + '"' + "' " + \
+                      "'cfsSWParam1=" + '"' + CFS_param_SW_path1 + '"' + "' " + \
+                      "'cfsLWParam0=" + '"' + CFS_param_LW_path0 + '"' + "' " + \
+                      "'cfsLWParam1=" + '"' + CFS_param_LW_path1 + '"' + "' " + \
+                      "'cfsPCPParam0=" + '"' + CFS_param_PCP_path0 + '"' + "' " + \
+                      "'cfsPCPParam1=" + '"' + CFS_param_PCP_path1 + '"' + "' " + \
+                      "'cfsPRESParam0=" + '"' + CFS_param_PRES_path0 + '"' + "' " + \
+                      "'cfsPRESParam1=" + '"' + CFS_param_PRES_path1 + '"' + "' " + \
+                      "'cfsUParam0=" + '"' + CFS_param_U_path0 + '"' + "' " + \
+                      "'cfsUParam1=" + '"' + CFS_param_U_path1 + '"' + "' " + \
+                      "'cfsVParam0=" + '"' + CFS_param_V_path0 + '"' + "' " + \
+                      "'cfsVParam1=" + '"' + CFS_param_V_path1 + '"' + "' " + \
+                      "'cfs2QParam0=" + '"' + CFS_param_2mQ_path0 + '"' + "' " + \
+                      "'cfs2QParam1=" + '"' + CFS_param_2mQ_path1 + '"' + "' " + \
+                      "'cycleYYYYMMDDHH=" + '"' + cycleYYYYMMDDHH.strftime("%Y%m%d%H") + \
+                      '"' + "' " + \
+                      "'fcstYYYYMMDDHH=" + '"' + fcstYYYYMMDDHH.strftime("%Y%m%d%H") + \
+                      '"' + "' " + \
+                      "'prevYYYYMMDDHH=" + '"' + prevYYYYMMDDHH.strftime("%Y%m%d%H") + \
+                      '"' + "' " + \
+                      "'modFile=" + '"' + CFS_bias_mod + '"' + "' " + \
+                      "'corrFile=" + '"' + CFS_corr_file + '"' + "' " + \
+                      "'fileInPrev=" + '"' + file_in_path_prev + '"' + "' " + \
+                      "'em=" + '"' + em_str + '"' + "' "  
+        ncl_cmd = "ncl -Q " + CFS_bias_exe + " " + bias_params
+        #logging.debug("Bias command: %s",ncl_cmd)
+
+        # Measure how long it takes to run the NCL script for bias correction.
+        start_NCL_bias = time.time()
+        return_value = os.system(ncl_cmd)
+        if return_value != 0:
+            logging.error('Bias correction returned an exit status of ' + return_value)
+            sys.exit(1)
+        end_NCL_bias = time.time()
+        elapsed_time_sec = end_NCL_bias - start_NCL_bias
+        logging.info('Time(sec) to bias correct file %s' % elapsed_time_sec)  
+        
+def layer_data(parser, first_data, second_data, first_data_product, second_data_product):
     """Invokes the NCL script, combine.ncl
        to layer/combine two files:  first_data and 
        second_data, with product type of first_prod and
@@ -654,12 +934,13 @@ def read_input():
  
        Args:
            None
-
        Returns:
           Tuple:
              opts (list): The list of options supplied by user
              args (list): The list of positional arguments 
     """
+
+
     parser = optparse.OptionParser()
     parser.add_option('--regrid', help='regrid and downscale',\
                   dest='r_d_bool', default=False, action='store_true')
@@ -791,6 +1072,40 @@ def extract_file_info(input_file):
     else:
         logging.error("ERROR [extract_file_info]: File name doesn't follow expected format")
 
+def extract_file_info_cfs(input_file):
+
+    """ Extract file date, model run time (UTC),
+        forecast hour (UTC), and ensemble member
+        from the (raw) input data file name (i.e.
+        data that hasn't been regridded, downscaled,
+        etc.).
+ 
+        Args:
+           input_file (string): Contains the date, model run
+                                time (UTC), forecast time (UTC),
+                                and ensemble member.
+       Returns:
+           date (string): YYYYMMDD
+           model_run (int): HH
+           fcst_hr (int): HHH
+           em (int) :: N
+    """
+
+    # Regexp check for model data
+    match = re.match(r'.*([0-9]{8})/([0-9]{8})_i([0-9]{2})_f([0-9]{3,4})_e([0-9]{2}).*',input_file)
+    if match:
+        date = match.group(1)
+        date2 = match.group(1)
+        if date != date2:
+            logging.error("ERROR [extract_file_info_cfs]: File name doesn't follow expected format")
+            sys.exit(1)
+        model_run = int(match.group(3))
+        fcst_hr = int(match.group(4))
+        em = int(match.group(5))
+        return (date, model_run, fcst_hr, em)
+    else:
+        logging.error("ERROR [extract_file_info]:2File name doesn't follow expected format")
+        sys.exit(1)
 
 def is_in_fcst_range(product_name,fcsthr, parser):
     """  Determine if this current file to be processed has a forecast
@@ -817,7 +1132,7 @@ def is_in_fcst_range(product_name,fcsthr, parser):
         fcst_max = int(parser.get('fcsthr_max','HRRR_fcsthr_max'))
     elif product_name == 'GFS':
         fcst_max = int(parser.get('fcsthr_max','GFS_fcsthr_max'))
-    elif product_name == 'CFS':
+    elif product_name == 'CFSv2':
         fcst_max = int(parser.get('fcsthr_max','CFS_fcsthr_max'))
     elif product_name == 'MRMS':
         # MRMS is from observational data, no forecasted data, just
@@ -991,7 +1306,26 @@ def get_past_or_future_date(curr_date, num_days = -1):
     prev_date = ''.join(prev_list)
     return prev_date
     
+def dir_exists(dir):
+    """ Check for directory existence 
+        Args:
+           dir (string): The directory in question.
+    """
+
+    if not os.path.isdir(dir):
+        logging.error('Directory: ' + dir + ' not found.')
+        sys.exit(1)  
+
+def file_exists(file):    
+    """ Check for file (or symbolic link) existence
+        Args:
+           file (string): The file in question.
+    """  
     
+    # Using ispath instead of isfile to account for symbolic links
+    if not os.path.exists(file):
+        logging.error('File: ' + file + ' not found.')
+        sys.exit(1) 
 
     
 def rename_final_files(parser, forcing_type):
