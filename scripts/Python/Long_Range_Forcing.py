@@ -49,9 +49,11 @@ def forcing(argv):
         elif opt in ("-i", "--ifile"):
             file_in = arg
 
+    logging.debug("file_in = %s", file_in)
+
     # Obtain CFSv2 forcing engine parameters.
     parser = SafeConfigParser()
-    configFile = '/d4/karsten/DFE/wrf_hydro_forcing/parm/wrf_hydro_forcing.parm'
+    configFile = 'wrf_hydro_forcing.parm'
     parser.read(configFile)
     logging_level = parser.get('log_level', 'forcing_engine_log_level')
     out_dir = parser.get('downscaling','CFS_downscale_out_dir') 
@@ -84,6 +86,7 @@ def forcing(argv):
     log_path = out_path + "/" + dateCycleYYYYMMDDHH.strftime('%Y%m%d%H') + \
                "_" + dateFcstYYYYMMDDHH.strftime('%Y%m%d%H') + \
                "_" + dateCurrent.strftime('%Y%m%d%H%M%S') + '_Long_Range.log' 
+    print log_path
 
     # Open log file
     if logging_level == 'DEBUG':
@@ -96,7 +99,7 @@ def forcing(argv):
         set_level = logging.ERROR
     else:
         set_level = logging.CRITICAL
-
+    print set_level
     logging.basicConfig(format='%(asctime)s %(message)s',
                         filename=log_path, level=set_level)
 

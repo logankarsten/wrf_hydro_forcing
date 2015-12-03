@@ -399,14 +399,6 @@ begin
     filedimdef(ncdf,dimNames,dimSizes,dimUnlim)
 
     ; Predefine the dimensionality of the variables to be written out
-    filevardef(ncdf,"lat",typeof(lat_arr),dimNames)
-    filevarattdef(ncdf,"lat",lat_arr)
-    ncdf->lat = (/lat_arr/)
-
-    filevardef(ncdf,"lon",typeof(lon_arr),dimNames)
-    filevarattdef(ncdf,"lon",lon_arr)
-    ncdf->lon = (/lon_arr/)
-
     filevardef(ncdf,"T2D",typeof(cfs_adjusted_2T_hour),dimNames)
     filevarattdef(ncdf,"T2D",cfs_adjusted_2T_hour)
     ncdf->T2D = (/cfs_adjusted_2T_hour/)

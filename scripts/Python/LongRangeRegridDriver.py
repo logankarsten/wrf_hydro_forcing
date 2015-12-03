@@ -14,6 +14,7 @@ import logging
 import datetime
 import time
 import DataFiles as df
+import Long_Range_Forcing as lrf
 from ConfigParser import SafeConfigParser
 
 #----------------------------------------------------------------------------
@@ -77,8 +78,11 @@ def regridCFS(cfsFname):
 
    """
    logging.info("REGRIDDING CFS DATA, file=%s", cfsFname)
-   logging.info("Action TBD")
-   logging.info("DONE REGRIDDING CFS DATA, file=%s", cfsFname)
+   cmd = "python Long_Range_Forcing.py -i "
+   cmd += cfsFname
+   logging.info("command: %s", cmd)
+   ret = os.system(cmd)
+   logging.info("DONE REGRIDDING CFS DATA, file=%s, return status=%d", cfsFname, ret)
 
 
 #----------------------------------------------------------------------------

@@ -102,6 +102,7 @@ def forcing(action, prod, file, prod2=None, file2=None):
                 whf.downscale_data(product_data_name,regridded_file, parser, True, True)                
             elif prod == 'MRMS':
                 regridded_file = whf.regrid_data(product_data_name, file, parser, False)
+                logging.debug("MRMS regridded file = %s", regridded_file)
             else:
                 regridded_file = whf.regrid_data(product_data_name, file, parser, False)
                 whf.downscale_data(product_data_name,regridded_file, parser,True, False)                

@@ -820,7 +820,7 @@ def bias_correction(product_name,file_in,cycleYYYYMMDDHH,fcstYYYYMMDDHH,
         elapsed_time_sec = end_NCL_bias - start_NCL_bias
         logging.info('Time(sec) to bias correct file %s' % elapsed_time_sec)  
         
-def layer_data(parser, first_data, second_data, first_data_product, second_data_product):
+def layer_data(parser, first_data, second_data, first_data_product, second_data_product, forcing_type):
     """Invokes the NCL script, combine.ncl
        to layer/combine two files:  first_data and 
        second_data, with product type of first_prod and
@@ -848,7 +848,7 @@ def layer_data(parser, first_data, second_data, first_data_product, second_data_
                                     model/init time.
               forcing_type (string): The forcing configuration:
                                      Anal_Assim, Short_Range,
-                                     Medium_Range, or Long_Range 
+                                     Medium_Range, or Long_Range
 
         Output:
               None:  For each first and second file that is
@@ -1221,7 +1221,13 @@ def replace_fcst0hr(parser, file_to_replace, product):
         # In this directory, search for the fcst 0hr file with the same name.  If it 
         # exists, copy it over to the YYYYMMDDHH directory of the
         # fcst 0hr file in the downscaling output directory.  
-        base_dir = parser.get('downscaling','RAP_downscale_output_dir')
+
+        # MINNA: you will see this, seems like only the 'finished' ones will be there, right?
+        # I commented out a line and replaced it with the line after, seemed straightforward,
+        # signed, Dave A.
+        #base_dir = parser.get('downscaling','RAP_downscale_output_dir')
+        base_dir = parser.get('downscaling','RAP_finished_output_dir')
+
         full_path = base_dir + '/' + date + prev_model_time_str + "/" + \
                     file_only
         logging.info("INFO [replace_fcst0hr]: full path = %s", full_path)
@@ -1242,6 +1248,12 @@ def replace_fcst0hr(parser, file_to_replace, product):
             return
           
     elif product == 'GFS':
+        # For MINNA:  This seems like it won't work because there is no data in
+        # the 'GFS_downscale_output_dir', nor in the 'GFS_finished_output_dir', perhaps
+        # it needs to look in the medium_range directory,  and do something a little different
+        # since there is no .nc on the files there as for copying it... I did NOT do any
+        # changes, just this comment..
+        
         base_dir = parser.get('downscaling','GFS_downscale_output_dir')
         # Get the previous directory corresponding to the previous
         # model/init run. GFS only has 0,6,12,and 18 Z model/init run times.
@@ -1267,7 +1279,7 @@ def replace_fcst0hr(parser, file_to_replace, product):
             os.system(copy_cmd)
             return
         else:
-            # If we are here, we didn't find any file from a previous RAP model run...
+            # If we are here, we didn't find any file from a previous GFS model run...
             logging.error("ERROR: No previous model runs found, exiting...")
             return
           
@@ -1504,7 +1516,6 @@ def move_to_finished_area(parser, product, src):
                                 RAP, or GFS
             
             src (string): full file path and filename of src
-            dest (string): base file path of destination
 
        Returns:
            None
@@ -1532,6 +1543,10 @@ def move_to_finished_area(parser, product, src):
         logging.info("moving %s", src)
         logging.info("...to %s", finished_dest)
         shutil.move(src, finished_dest) 
+        #cmd = "mv "+ src + " " + finished_dest
+        #logging.info(cmd)
+        #status = os.system(cmd)
+        #logging.info("Stataus = %d", status)
     else:
         logging.error("[move_to_finished_area]: can't match filename")
 
