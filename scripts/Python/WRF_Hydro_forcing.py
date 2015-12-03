@@ -4,6 +4,10 @@ import logging
 import re
 import time
 import numpy as np
+import optparse
+import datetime
+import shutil
+import sys
 from ConfigParser import SafeConfigParser
 
 
@@ -25,28 +29,35 @@ from ConfigParser import SafeConfigParser
 
 
 
-def regrid_data( product_name, parser ):
+def regrid_data( product_name, file_to_regrid, parser, substitute_fcst = False ):
     """Provides a wrapper to the regridding scripts originally
     written in NCL.  For HRRR data regridding, the
     HRRR-2-WRF_Hydro_ESMF_forcing.ncl script is invoked.
     For MRMS data MRMS-2-WRF_Hydro_ESMF_forcing.ncl is invoked.
-    Finally, for NAM212 data, NAM-2-WRF_Hydro_ESMF_forcing.ncl 
-    is invoked.  All product files (HRRR, MRMS, NAM, RAP etc.) are
-    retrieved and stored in a list. The appropriate regridding
-    script is invoked for each file in the list.  The regridded
-    files are stored in an output directory defined in the
-    parm/config file.
+    The appropriate regridding script is invoked for the file 
+    to regrid.  The regridded file is stored in an output directory
+    defined in the parm/config file.
 
     Args:
         product_name (string):  The name of the product 
                                 e.g. HRRR, MRMS, NAM
+        file_to_regrid (string): The filename of the
+                                  input data to process.
         parser (ConfigParser):  The parser to the config/parm
                                 file containing all defined values
                                 necessary for running the regridding.
+        substitute_fcst (bool):  Default = False If this is a 0 hr
+                               forecast file, then skip regridding,
+                               it will need to be replaced with
+                               another file during the 
+                               downscale_data() step.
     Returns:
-        elapsed_times (numpy array):  A Numpy array containing the 
-                                      elapsed time in seconds for 
-                                      regridding each file.
+        regridded_output (string): The full filepath and filename
+                                   of the regridded file.  If the data
+                                   product is GFS or RAP and it is the
+                                   fcst 0hr file, then just create an
+                                   empty file that follows the naming
+                                   convention of a regridded file.
 
     """
 
@@ -55,137 +66,165 @@ def regrid_data( product_name, parser ):
     # which are needed to invoke the regridding 
     # scripts.
     product = product_name.upper()
-    dst_grid_name = parser.get('regridding','dst_grid_name')
     ncl_exec = parser.get('exe', 'ncl_exe')
 
-    # Create an array to store the elapsed times for
-    # regridding each file.
-    elapsed_array = []
-
     if product == 'HRRR':
-       logging.info("Regridding HRRR")
        wgt_file = parser.get('regridding', 'HRRR_wgt_bilinear')
        data_dir =  parser.get('data_dir', 'HRRR_data')
        regridding_exec = parser.get('exe', 'HRRR_regridding_exe')
-       data_files_to_process = get_filepaths(data_dir)   
        #Values needed for running the regridding script
        output_dir_root = parser.get('regridding','HRRR_output_dir')
+       dst_grid_name = parser.get('regridding','HRRR_dst_grid_name')
     elif product == 'MRMS':
-       logging.info("Regridding MRMS")
        wgt_file = parser.get('regridding', 'MRMS_wgt_bilinear')
        data_dir =  parser.get('data_dir', 'MRMS_data')
        regridding_exec = parser.get('exe', 'MRMS_regridding_exe')
-       data_files_to_process = get_filepaths(data_dir)   
+       #data_files_to_process = get_filepaths(data_dir)   
        #Values needed for running the regridding script
        output_dir_root = parser.get('regridding','MRMS_output_dir')
-    elif product == 'NAM':
-       logging.info("Regridding NAM")
-       wgt_file = parser.get('regridding', 'NAM_wgt_bilinear')
-       data_dir =  parser.get('data_dir', 'NAM_data')
-       regridding_exec = parser.get('exe', 'NAM_regridding_exe')
-       data_files_to_process = get_filepaths(data_dir)
-       #Values needed for running the regridding script
-       output_dir_root = parser.get('regridding','NAM_output_dir')
+       dst_grid_name = parser.get('regridding','MRMS_dst_grid_name')
     elif product == 'GFS':
-       logging.info("Regridding GFS")
        wgt_file = parser.get('regridding', 'GFS_wgt_bilinear')
        data_dir =  parser.get('data_dir', 'GFS_data')
        regridding_exec = parser.get('exe', 'GFS_regridding_exe')
-       data_files_to_process = get_filepaths(data_dir)
        #Values needed for running the regridding script
        output_dir_root = parser.get('regridding','GFS_output_dir')
+       dst_grid_name = parser.get('regridding','GFS_dst_grid_name')
     elif product == 'RAP':
-       logging.info("Regridding RAP")
        wgt_file = parser.get('regridding', 'RAP_wgt_bilinear')
        data_dir =  parser.get('data_dir', 'RAP_data')
        regridding_exec = parser.get('exe', 'RAP_regridding_exe')
-       data_files_to_process = get_filepaths(data_dir)
        #Values needed for running the regridding script
        output_dir_root = parser.get('regridding','RAP_output_dir')
+       dst_grid_name = parser.get('regridding','RAP_dst_grid_name')
+    elif product == 'CFSV2':
+       wgt_file = parser.get('regridding','CFS_wgt_bilinear')
+       tmp_dir = parser.get('bias_correction','CFS_tmp_dir')
+       regridding_exec = parser.get('exe','CFS_regridding_exe')
+       dst_grid_name = parser.get('regridding','CFS_dst_grid_name')
+       # Sanity check to make sure files/directories exist.
+       file_exists(wgt_file)
+       # Don't need to check temporary directory as this was done
+       # in bias-correction step.
+       file_exists(regridding_exec)
+       file_exists(dst_grid_name)
 
-
-
-    # For each file in the data directory,
-    # generate the key-value pairs for 
-    # input to the regridding script.
-    # The key-value pairs for the input should look like: 
-    #  'srcfilename="/d4/hydro-dm/IOC/data/HRRR/20150723_i23_f010_HRRR.grb2"' 
-    #  'wgtFileName_in=
-    #     "d4/hydro-dm/IOC/weighting/HRRR1km/HRRR2HYDRO_d01_weight_bilinear.nc"'
-    #  'dstGridName="/d4/hydro-dm/IOC/data/geo_dst.nc"' 
-    #  'outdir="/d4/hydro-dm/IOC/regridded/HRRR/20150723/i09"'
-    #  'outFile="20150724_i09_f010_HRRR.nc"' 
-
-    for data_file_to_process in data_files_to_process:
-        #input_filename = data_dir + '/' + data_file_to_process
-        input_filename =  data_file_to_process
-        srcfilename_param =  "'srcfilename=" + '"' + input_filename +  \
-                             '"' + "' "
-       # logging.info("input data file: %s", data_file_to_process)
-        wgtFileName_in_param =  "'wgtFileName_in = " + '"' + wgt_file + \
-                                '"' + "' "
-        dstGridName_param =  "'dstGridName=" + '"' + dst_grid_name + '"' + "' "
-
-        # Create the output filename following the RAL 
-        # naming convention: 
+    # If this is a 0hr forecast and the data product is either GFS or RAP, then do
+    # nothing for now, it will need to be replaced during the
+    # downscaling step.
+    if substitute_fcst:
+        (date,model,fcsthr) = extract_file_info(file_to_regrid)  
+        data_file_to_regrid= data_dir + "/" + date + "/" + file_to_regrid 
+        (date,model,fcsthr) = extract_file_info(file_to_regrid)  
         (subdir_file_path,hydro_filename) = \
-            create_output_name_and_subdir(product,data_file_to_process,data_dir)
-   
-        #logging.info("hydro filename: %s", hydro_filename)
-        # Create the full path to the output directory
-        # and assign it to the output directory parameter
+            create_output_name_and_subdir(product,data_file_to_regrid,data_dir)
         output_file_dir = output_dir_root + "/" + subdir_file_path
+        if not os.path.exists(output_file_dir):
+            mkdir_p(output_file_dir)
         outdir_param = "'outdir=" + '"' + output_file_dir + '"' + "' " 
-        #logging.info("outdir_param: %s", outdir_param)
+        regridded_file = output_file_dir + "/" +  hydro_filename
+        # Create an empty f0 file for now.
+        with open(regridded_file,'a'):
+            os.utime(regridded_file,None)
+        return regridded_file  
+        
+    else:
 
-        if product == "HRRR" or product == "NAM" \
-           or product == "GFS" or product == "RAP":
-           #full_output_file = output_file_dir + "/"  + subdir_file_path
-           full_output_file = output_file_dir + "/"  
-           # Create the new output file subdirectory
-           mkdir_p(output_file_dir)
-           outFile_param = "'outFile=" + '"' + hydro_filename+ '"' + "' "
-        elif product == "MRMS":
-           # !!!!!!NOTE!!!!!
-           # MRMS regridding script differs from the HRRR and NAM scripts in that it does not
-           # accept an outdir variable.  Incorporate the output directory (outdir)
-           # into the outFile variable.
-           full_output_file = output_file_dir + "/"  + hydro_filename
-           mkdir_p(output_file_dir)
-           outFile_param = "'outFile=" + '"' + full_output_file + '"' + "' "
-   
-        regrid_params = srcfilename_param + wgtFileName_in_param + \
+        # Generate the key-value pairs for 
+        # input to the regridding script.
+        # The key-value pairs for the input should look like: 
+        #  'srcfilename="/d4/hydro-dm/IOC/data/HRRR/20150723_i23_f010_HRRR.grb2"' 
+        #  'wgtFileName_in=
+        #     "d4/hydro-dm/IOC/weighting/HRRR1km/HRRR2HYDRO_d01_weight_bilinear.nc"'
+        #  'dstGridName="/d4/hydro-dm/IOC/data/geo_dst.nc"' 
+        #  'outdir="/d4/hydro-dm/IOC/regridded/HRRR/2015072309"'
+        #  'outFile="201507241900.LDASIN_DOMAIN1.nc"' 
+       
+        if product == "CFSV2":
+            # Check for existence of input file.
+            file_exists(file_to_regrid)
+            
+            path_split = file_to_regrid.split('.')
+            # Compose output file name, which will be in temporary directory. 
+            regridded_file = path_split[0] + "_regridded." + path_split[1] + \
+                             "." + path_split[2]
+            srcfilename_param =  "'srcfilename=" + '"' + file_to_regrid +  \
+                                     '"' + "' "
+            wgtFileName_in_param =  "'wgtFileName=" + '"' + wgt_file + \
+                                        '"' + "' "
+            dstGridName_param =  "'dstGridName=" + '"' + dst_grid_name + '"' + "' "
+            outfilename_param = "'outfilename=" + '"' + regridded_file + \
+                                '"' + "' "
+
+            regrid_params = srcfilename_param + outfilename_param + \
+                            dstGridName_param + wgtFileName_in_param
+        else:
+       	    (date,model,fcsthr) = extract_file_info(file_to_regrid)  
+            data_file_to_regrid= data_dir + "/" + date + "/" + file_to_regrid 
+            srcfilename_param =  "'srcfilename=" + '"' + data_file_to_regrid +  \
+                                     '"' + "' "
+            wgtFileName_in_param =  "'wgtFileName_in = " + '"' + wgt_file + \
+                                        '"' + "' "
+            dstGridName_param =  "'dstGridName=" + '"' + dst_grid_name + '"' + "' "
+    
+            # Create the output filename following the 
+            # naming convention for the WRF-Hydro model 
+            (subdir_file_path,hydro_filename) = \
+                create_output_name_and_subdir(product,data_file_to_regrid,data_dir)
+       
+            # Create the full path to the output directory
+            # and assign it to the output directory parameter
+            output_file_dir = output_dir_root + "/" + subdir_file_path
+            mkdir_p(output_file_dir)
+            outdir_param = "'outdir=" + '"' + output_file_dir + '"' + "' " 
+            regridded_file = output_file_dir + "/" + hydro_filename
+
+            if product == "HRRR" or product == "NAM" \
+               or product == "GFS" or product == "RAP":
+               full_output_file = output_file_dir + "/"  
+               # Create the new output file subdirectory
+               outFile_param = "'outFile=" + '"' + hydro_filename+ '"' + "' "
+            elif product == "MRMS":
+               # !!!!!!NOTE!!!!!
+               # MRMS regridding script differs from the HRRR and NAM scripts in that 
+               # it does not accept an outdir variable.  Incorporate the output
+               # directory (outdir) into the outFile variable.
+               full_output_file = output_file_dir + "/"  + hydro_filename
+               mkdir_p(output_file_dir)
+               outFile_param = "'outFile=" + '"' + full_output_file + '"' + "' "
+
+            regrid_params = srcfilename_param + wgtFileName_in_param + \
                         dstGridName_param + outdir_param + \
                         outFile_param
-        regrid_prod_cmd = ncl_exec + " "  + regrid_params + " " + \
-                          regridding_exec
-        
-        logging.debug("regridding command: %s",regrid_prod_cmd)
+       
+        regrid_prod_cmd = ncl_exec + " -Q "  + regrid_params + " " + \
+                      regridding_exec
+    
+        #logging.debug("regridding command: %s",regrid_prod_cmd)
+
         # Measure how long it takes to run the NCL script for regridding.
         start_NCL_regridding = time.time()
         return_value = os.system(regrid_prod_cmd)
         end_NCL_regridding = time.time()
         elapsed_time_sec = end_NCL_regridding - start_NCL_regridding
-        elapsed_array.append(elapsed_time_sec)
-     
+        logging.info("Time(sec) to regrid file  %s" %  elapsed_time_sec)
 
         if return_value != 0:
             logging.info('ERROR: The regridding of %s was unsuccessful, \
                           return value of %s', product,return_value)
-            #TO DO: Determine the proper action to take when the NCL file h
+            #TO DO: Determine the proper action to take when the NCL file 
             #fails. For now, exit.
-            exit()
+            return 
         
-    return elapsed_array
 
-
+    return regridded_file
 
 def get_filepaths(dir):
-    """ Generates the file names in a directory tree
-    by walking the tree either top-down or bottom-up.
-    For each directory in the tree rooted at 
-    the directory top (including top itself), it
-    produces a 3-tuple: (dirpath, dirnames, filenames).
+    """Generates the file names in a directory tree
+       by walking the tree either top-down or bottom-up.
+       For each directory in the tree rooted at 
+       the directory top (including top itself), it
+       produces a 3-tuple: (dirpath, dirnames, filenames).
     
     Args:
         dir (string): The base directory from which we 
@@ -204,29 +243,37 @@ def get_filepaths(dir):
     # Walk the tree
     for root, directories, files in os.walk(dir):
         for filename in files:
-            # Join the two strings to form the full
-            # filepath.
-            filepath = os.path.join(root,filename)
-            # add it to the list
-            file_paths.append(filepath)
+            # add it to the list only if it is a grib file
+            match = re.match(r'.*(grib|grb|grib2|grb2)$',filename)
+            if match:
+                # Join the two strings to form the full
+                # filepath.
+                filepath = os.path.join(root,filename)
+                file_paths.append(filepath)
+            else:
+                continue
     return file_paths
 
 
 
+    
 def create_output_name_and_subdir(product, filename, input_data_file):
-    """ Creates the full filename for the regridded data which follows 
-    the RAL standard:  
-       basedir/YYYYMMDD/i_hh/YYMMDD_ihh_fnnnn_<product>.nc
-    Where the i_hh is the model run time/init time in hours
-    fnnn is the forecast time in hours and <product> is the
-    name of the model/data product:
-       e.g. HRRR, NAM, MRMS, GFS, etc.
+    """Creates the full filename for the regridded data which ties-in
+       to the WRF-Hydro Model expected input: 
+       (WRF-Hydro Model) basedir/<product>/YYYYMMDDHH/YYMMDDhh00_LDASIN_DOMAIN1.nc
+       Where the HH is the model run time/init time in hours
+       hh00 is the valid time in hours and 00 minutes and <product> is the
+       name of the model/data product:  e.g. HRRR, NAM, MRMS, GFS, etc.
+       The valid time is the sum of the model run time (aka init time) and the
+       forecast time (fnnnn) in hours.  If the valid time exceeds 24 hours, the
+       YYYYMMDD is incremented appropriately to reflect how many days into the
+       future the valid time represents.
 
     Args:
         product (string):  The product name: HRRR, MRMS, or NAM.
 
-        filename (string): The name of the data file:
-                           YYYYMMDD_ihh_fnnn_product.nc
+        filename (string): The name of the input data file:
+                           YYYYMMDD_ihh_fnnn_product.grb
 
         input_data_file (string):  The full path and name
                                   of the (input) data 
@@ -245,48 +292,65 @@ def create_output_name_and_subdir(product, filename, input_data_file):
         
         year_month_day_subdir (string): The subdirectory under which the 
                                         processed files will be stored:
-                                        YYYYMMDD/i_hh
+                                        YYYYMMDDHH/
+                                        HH= model run hour
 
         hydro_filename (string):  The name of the processed output
-                                  file.      
+                                  file:YYYYMMDDhh00.LDASIN_DOMAIN1      
+                                  where hh is the valid time adjusted
+                                  for 24-hour time.  Valid time is the
+                                  sum of the fcst hour and the model 
+                                  run (init time).
  
     """
 
-    # Convert product to uppercase for an easy, consistent 
+    # Convert product to uppercase for easy, consistent 
     # comparison.
     product_name = product.upper() 
 
     if product == 'HRRR' or product == 'GFS' \
        or product == "NAM" or product == 'RAP':
-        match = re.match(r'.*([0-9]{8})_(i[0-9]{2})_(f[0-9]{2,4})',filename)
+        match =  re.match(r'.*/([0-9]{8})_i([0-9]{2})_f([0-9]{3,4}).*',filename)
         if match:
             year_month_day = match.group(1)
-            init_hr = match.group(2)
-            fcst_hr = match.group(3)
-            year_month_day_subdir = year_month_day + "/" + init_hr 
+            init_hr = int(match.group(2))
+            fcst_hr = int(match.group(3))
+            valid_time = fcst_hr + init_hr
+            init_hr_str = (str(init_hr)).rjust(2,'0')
+            year_month_day_subdir = year_month_day + init_hr_str
         else:
-            logging.error("ERROR: %s data filename %s has an unexpected name.", \
-                           product_name,filename) 
-            exit()
-
+            logging.error("ERROR [create_output_name_and_subdir]: %s has an unexpected name." ,filename) 
+            return
+ 
     elif product == 'MRMS':
         match = re.match(r'.*([0-9]{8})_([0-9]{2}).*',filename) 
         if match:
            year_month_day = match.group(1)
-           init_hr = "i" + match.group(2)
+           init_hr =  match.group(2)
+
            # Radar data- not a model, therefore no forecast
-           fcst_hr = "f000"
-           year_month_day_subdir = year_month_day + "/" + init_hr 
+           # therefore valid time is the init time
+           valid_time = int(init_hr)
+           year_month_day_subdir = year_month_day + init_hr 
         else:
            logging.error("ERROR: MRMS data filename %s \
                           has an unexpected file name.",\
                           filename) 
-           exit()
+           return
 
-    # Assemble the filename and the full output directory path
-    hydro_filename = year_month_day + "_" + init_hr + \
-                      "_" + fcst_hr + "_" + product_name + ".nc"
-    #logging.debug("Generated the output filename for %s: %s",product, hydro_filename)
+   
+    if valid_time >= 24:
+        num_days_ahead =  valid_time/24
+        # valid time in 24 hour time
+        valid_time_str =  str(valid_time%24)
+        valid_time_corr = valid_time_str.rjust(2,'0')
+        updated_date = get_past_or_future_date(year_month_day, num_days_ahead)
+        # Assemble the filename and the full output directory path
+        hydro_filename = updated_date + valid_time_corr + "00.LDASIN_DOMAIN1.nc" 
+    else:
+        # Assemble the filename and the full output directory path
+        valid_time_str = (str(valid_time)).rjust(2,'0')
+        hydro_filename = year_month_day + valid_time_str + "00.LDASIN_DOMAIN1.nc" 
 
     return (year_month_day_subdir, hydro_filename)
 
@@ -312,9 +376,9 @@ def mkdir_p(dir):
         else: raise            
 
 
-def downscale_data(product_name, parser, downscale_shortwave=False):
-    """
-    Performs downscaling of data by calling the necessary
+def downscale_data(product_name, file_to_downscale, parser, downscale_shortwave=False,
+                   substitute_fcst=False,out_path='./',verYYYYMMDDHH='1900010100'):
+    """Performs downscaling of data by calling the necessary
     NCL code (specific to the model/product).  There is an
     additional option to downscale the short wave radiation, SWDOWN.  
     If downscaling SWDOWN (shortwave radiation) is requested  
@@ -329,6 +393,10 @@ def downscale_data(product_name, parser, downscale_shortwave=False):
 
     Args:
         product_name (string):  The product name: ie HRRR, NAM, GFS, etc. 
+      
+        file_to_downscale (string): The file to be downscaled, this is 
+                                 the full file path to the regridded
+                                 file.
 
         parser (ConfigParser) : The ConfigParser which can access the
                                 Python config file wrf_hydro_forcing.parm
@@ -341,13 +409,22 @@ def downscale_data(product_name, parser, downscale_shortwave=False):
                                 the NCL wrapper to the Fortan
                                 code.
                                 Set to 'False' by default.
-    Returns:
-        elapsed_array (List):  A list of the elapsed time for
-                               performing the downscaling. Each entry 
-                               represents the time to downscale a file.  
 
-                               
-                              
+        substitute_fcst (boolean) : 'True'- if this is a zero hour 
+                                  forecast, then copy the downscaled 
+                                  file from a previous model run with 
+                                  the same valid time and rename it.
+                                  'False' by default.
+        out_path (string) : Optional output file path string to specify
+                            the output path. This is more geared towards 
+                            CFSv2 downscaling.
+        verYYYYMMDDHH (string) : Optional string representing datetime
+                                 of data being downscaled. Used for shortwave
+                                 radiation downscaling calculations.
+                                  
+    Returns:
+        None
+
         
     """
 
@@ -357,84 +434,94 @@ def downscale_data(product_name, parser, downscale_shortwave=False):
     lapse_rate_file = parser.get('downscaling','lapse_rate_file')
     ncl_exec = parser.get('exe', 'ncl_exe')
     
- 
-    # Create an array to store the elapsed times for
-    # downscaling each file.
-    elapsed_array = []
 
     if product  == 'HRRR':
-        logging.info("Downscaling HRRR")
         data_to_downscale_dir = parser.get('downscaling','HRRR_data_to_downscale')
         hgt_data_file = parser.get('downscaling','HRRR_hgt_data')
         geo_data_file = parser.get('downscaling','HRRR_geo_data')
         downscale_output_dir = parser.get('downscaling', 'HRRR_downscale_output_dir')
         downscale_exe = parser.get('exe', 'HRRR_downscaling_exe')
-    elif product == 'NAM':
-        logging.info("Downscaling NAM")
-        data_to_downscale_dir = parser.get('downscaling','NAM_data_to_downscale')
-        hgt_data_file = parser.get('downscaling','NAM_hgt_data')
-        geo_data_file = parser.get('downscaling','NAM_geo_data')
-        downscale_output_dir = parser.get('downscaling', 'NAM_downscale_output_dir')
-        downscale_exe = parser.get('exe', 'NAM_downscaling_exe')
     elif product == 'GFS':
-        logging.info("Downscaling GFS")
         data_to_downscale_dir = parser.get('downscaling','GFS_data_to_downscale')
         hgt_data_file = parser.get('downscaling','GFS_hgt_data')
         geo_data_file = parser.get('downscaling','GFS_geo_data')
         downscale_output_dir = parser.get('downscaling', 'GFS_downscale_output_dir')
-        logging.info("GFS data to downscale: %s ", downscale_output_dir)
         downscale_exe = parser.get('exe', 'GFS_downscaling_exe')
     elif product == 'RAP':
-        logging.info("Downscaling RAP")
         data_to_downscale_dir = parser.get('downscaling','RAP_data_to_downscale')
         hgt_data_file = parser.get('downscaling','RAP_hgt_data')
         geo_data_file = parser.get('downscaling','RAP_geo_data')
         downscale_output_dir = parser.get('downscaling', 'RAP_downscale_output_dir')
-        #DEBUGXXX
-        logging.info("output dir for downscaled data %s", downscale_output_dir)
         downscale_exe = parser.get('exe', 'RAP_downscaling_exe')
+    elif product == 'CFSV2':
+        out_dir = parser.get('downscaling','CFS_downscale_out_dir')
+        hgt_data_file = parser.get('downscaling','CFS_hgt_data')
+        geo_data_file = parser.get('downscaling','CFS_geo_data')
+        downscale_exe = parser.get('exe','CFS_downscaling_exe')
+        #Double check for existence of directories/files
+    else:
+        logging.info("Requested downscaling of unsupported data product %s", product)
  
-    
-    # Get the data to downscale, and for each file, call the 
-    # corresponding downscaling script
-    #logging.info("dir with downscaled data: %s", data_to_downscale_dir)
-    data_to_downscale = get_filepaths(data_to_downscale_dir)
-    
-    for data in data_to_downscale:
-        match = re.match(r'(.*)/(([0-9]{8})_(i[0-9]{2})_f.*)',data)
-        if match:
-            yr_month_day = match.group(3)
-            downscaled_file = match.group(2)
-            init_hr = match.group(4)
+     
+    # If this is a fcst 0hr file and is either RAP or GFS, then search for
+    # a suitable replacement since this file will have one or more 
+    # missing variable(s).
+    # Otherwise, proceed with creating the request to downscale.
+ 
+    if substitute_fcst:
+        # Find another downscaled file from the previous model/
+        # init time with the same valid time as this file, then 
+        # copy to this fcst 0hr file.
+        replace_fcst0hr(parser, file_to_downscale,product)
+
+    else:
+        # Downscale as usual
+        if product == "CFSV2":
+            # Double check to make sure input file exists
+            file_exists(file_to_downscale)
+
+            # Create input NCL command components
+            input_file1_param = "'hgtFileSrc=" + '"' + hgt_data_file + '"' + "' "
+            input_file2_param = "'hgtFileDst=" + '"' + geo_data_file + '"' + "' "
+            input_file3_param = "'inFile=" + '"' + file_to_downscale + '"' + "' "
+            input_file4_param = "'outFile=" + '"' + out_path + '"' + "' "
+            lapse_file_param =  "'lapseFile=" + '"' + lapse_rate_file + '"' + "' "
+            time_param = "'verYYYYMMDDHH=" + '"' + verYYYYMMDDHH.strftime("%Y%m%d%H") + '"' + "' "
+            downscale_params =  input_file1_param + input_file2_param + \
+                      input_file3_param + input_file4_param + lapse_file_param + \
+                      time_param 
+            downscale_cmd = ncl_exec + " -Q " + downscale_params + " " + downscale_exe 
         else:
-            logging.error("ERROR: regridded file's name: %s is an unexpected format",\
-                           data)
-        
-       
-        full_downscaled_dir = downscale_output_dir + "/" + yr_month_day + "/"\
-                                + init_hr  
-        full_downscaled_file = full_downscaled_dir + "/" +  downscaled_file
-        # Create the full output directory for the downscaled data if it doesn't 
-        # already exist. 
-        mkdir_p(full_downscaled_dir) 
-        #mkdir_p(downscale_output_dir) 
+            match = re.match(r'(.*)([0-9]{10})/([0-9]{8}([0-9]{2})00.LDASIN_DOMAIN1.*)',file_to_downscale)
+            if match:
+                yr_month_day_init = match.group(2)
+                regridded_file = match.group(3)
+                valid_hr = match.group(4)
+            else:
+                logging.error("ERROR: regridded file's name: %s is an unexpected format",\
+                                   file_to_downscale)
+                sys.exit() 
+   
+            full_downscaled_dir = downscale_output_dir + "/" + yr_month_day_init  
+            full_downscaled_file = full_downscaled_dir + "/" +  regridded_file
 
-        logging.info("full_downscaled_file: %s", full_downscaled_file)
-        logging.debug("Full output filename for second downscaling: %s" , full_downscaled_file)
- 
-        # Create the key-value pairs that make up the
-        # input for the NCL script responsible for
-        # the downscaling.
-        input_file1_param = "'inputFile1=" + '"' + hgt_data_file + '"' + "' "
-        input_file2_param = "'inputFile2=" + '"' + geo_data_file + '"' + "' "
-        input_file3_param = "'inputFile3=" + '"' + data + '"' + "' "
-        lapse_file_param =  "'lapseFile=" + '"' + lapse_rate_file + '"' + "' "
-        output_file_param = "'outFile=" + '"' + full_downscaled_file + '"' + "' "
-        downscale_params =  input_file1_param + input_file2_param + \
-                  input_file3_param + lapse_file_param +  output_file_param 
-        downscale_cmd = ncl_exec + " " + downscale_params + " " + downscale_exe
-        logging.debug("Downscale command : %s", downscale_cmd)
-
+            # Create the full output directory for the downscaled data if it doesn't 
+            # already exist. 
+            if not os.path.exists(full_downscaled_dir):
+                mkdir_p(full_downscaled_dir) 
+    
+            # Create the key-value pairs that make up the
+            # input for the NCL script responsible for
+            # the downscaling.
+            input_file1_param = "'inputFile1=" + '"' + hgt_data_file + '"' + "' "
+            input_file2_param = "'inputFile2=" + '"' + geo_data_file + '"' + "' "
+            input_file3_param = "'inputFile3=" + '"' + file_to_downscale + '"' + "' "
+            lapse_file_param =  "'lapseFile=" + '"' + lapse_rate_file + '"' + "' "
+            output_file_param = "'outFile=" + '"' + full_downscaled_file + '"' + "' "
+            downscale_params =  input_file1_param + input_file2_param + \
+                      input_file3_param + lapse_file_param +  output_file_param 
+            downscale_cmd = ncl_exec + " -Q " + downscale_params + " " + downscale_exe
+    
         # Downscale the shortwave radiation, if requested...
         # Key-value pairs for downscaling SWDOWN, shortwave radiation.
         if downscale_shortwave:
@@ -442,291 +529,1012 @@ def downscale_data(product_name, parser, downscale_shortwave=False):
             downscale_swdown_exe = parser.get('exe', 'shortwave_downscaling_exe') 
             swdown_output_file_param = "'outFile=" + '"' + \
                                        full_downscaled_file + '"' + "' "
-
+    
             swdown_geo_file_param = "'inputGeo=" + '"' + geo_data_file + '"' + "' "
             swdown_params = swdown_geo_file_param + " " + swdown_output_file_param
-            downscale_shortwave_cmd = ncl_exec + " " + swdown_params + " " \
+            downscale_shortwave_cmd = ncl_exec + " -Q " + swdown_params + " " \
                                       + downscale_swdown_exe 
             logging.info("SWDOWN downscale command: %s", downscale_shortwave_cmd)
-
+  
             # Crude measurement of performance for downscaling.
             # Wall clock time used to determine the elapsed time
             # for downscaling each file.
             start = time.time()
-
+    
             #Invoke the NCL script for performing a single downscaling.
             return_value = os.system(downscale_cmd)
             swdown_return_value = os.system(downscale_shortwave_cmd)
             end = time.time()
             elapsed = end - start
-            elapsed_array.append(elapsed)
-
+    
             # Check for successful or unsuccessful downscaling
             # of the required and shortwave radiation
             if return_value != 0 or swdown_return_value != 0:
                 logging.info('ERROR: The downscaling of %s was unsuccessful, \
                              return value of %s', product,return_value)
-                exit()
-
+                sys.exit()
+    
         else:
-            # Only one downscaling, no additional downscaling of
-            # the short wave radiation.
-
+            # No additional downscaling of
+            # the short wave radiation is required.
+    
             # Crude measurement of performance for downscaling.
             start = time.time()
-
+    
             #Invoke the NCL script for performing the generic downscaling.
             return_value = os.system(downscale_cmd)
             end = time.time()
             elapsed = end - start
-            elapsed_array.append(elapsed)
-
+            logging.info("Elapsed time (sec) for downscaling: %s",elapsed)
+    
             # Check for successful or unsuccessful downscaling
             if return_value != 0:
                 logging.info('ERROR: The downscaling of %s was unsuccessful, \
                              return value of %s', product,return_value)
                 #TO DO: Determine the proper action to take when the NCL file 
                 #fails. For now, exit.
-                exit()
-
-    return elapsed_array
-
-
-
-def create_benchmark_summary(product, activity, elapsed_times):
+                return
     
-    """ Create a summary of the min, max, and mean
-        time to perform a processing activity for 
-        each data file. The information is placed 
-        in the log file.
+    
 
+
+
+
+
+
+def bias_correction(product_name,file_in,cycleYYYYMMDDHH,fcstYYYYMMDDHH,
+                   parser,em = 0):
+    """ Perform bias correction to input data. The method will vary by product.
+    
         Args:
-           product (string):  The name of the product under
-                              consideration.
-           activity (string): The processing activity: 
-                              regridding, downscaling, etc.
-           elapsed_times (ndarray): Numpy ndarray of elapsed 
-                                   times (wall clock time 
-                                   for now) for each of the
-                                   files that were processed.
-       
-       Output:
-           None:  Generates an entry in the log file, as
-                  an "info" entry, which states the min,
-                  max, and average time in seconds.
+          product_name (string): The name of the model product
+                                 (e.g. RAP, GFS, CFSv2, etc).
+          file_in (string): The input file being applied a bias correction to.
+          cycleYYYYMMDDHH (datetime): Product cycle (init) datetime object.
+          fcstYYYYMMDDHH (datetime): Product forecast datetime object.
+          parser (SafeConfigParser): Parser object used to read 
+                                     values set in the param/config file.
+          em (optional integer): Specifies the ensemble member number.
+
+        Returns:
+          files_out: List of file(s) that were created in the bias-correction.
+
+    """
+
+    # Retrieve NCL executable path from config file
+    product = product_name.upper()
+    ncl_exec = parser.get('exe', 'ncl_exe')
+    file_exists(ncl_exec)
+
+    if product == "CFSV2":
+        em_str = str(em)
+        em_str = em_str.zfill(2)
+
+        # Obtain CFSv2 forcing engine parameters.
+        ncarg_root = parser.get('default_env_vars', 'ncarg_root')
+        CFS_in_dir = parser.get('data_dir','CFS_data')
+        CFS_bias_exe = parser.get('exe','CFS_bias_correct_exe')
+        CFS_bias_mod = parser.get('exe','CFS_bias_correct_mod')
+        tmp_dir = parser.get('bias_correction','CFS_tmp_dir')
+        CFS_bias_dir = parser.get('bias_correction','CFS_bias_parm_dir')
+        NLDAS_bias_dir = parser.get('bias_correction','NLDAS_bias_parm_dir')         
+        CFS_corr_file = parser.get('bias_correction','CFS_correspond')
+
+        # Check for the NCARG_ROOT environment variable. If it is not set,
+        # use an appropriate default, defined in the configuration file.
+        ncarg_root_found = os.getenv("NCARG_ROOT")
+        if ncarg_root_found is None:
+            ncarg_root = os.environ["NCARG_ROOT"] = ncarg_root
+
+        # Sanity check to ensure all directories/executables are on system.
+        dir_exists(ncarg_root)
+        dir_exists(CFS_in_dir)
+        file_exists(CFS_bias_exe)
+        file_exists(CFS_bias_mod)
+        dir_exists(tmp_dir)
+        dir_exists(CFS_bias_dir)
+        dir_exists(NLDAS_bias_dir)
+        file_exists(CFS_corr_file)
+
+        # Compose previous forecast CFSv2 forecast time step. This is done as the
+        # previous time step of data is used in interpolation. If the two time
+        # steps are identical, still pass information to the NCL scripts as the 
+        # NCL code has checks in place to handle this.
+        if fcstYYYYMMDDHH == cycleYYYYMMDDHH:
+            prevYYYYMMDDHH = fcstYYYYMMDDHH
+        else:
+            prevYYYYMMDDHH = fcstYYYYMMDDHH - \
+                             datetime.timedelta(seconds=6*3600) 
+ 
+        # Create time stamps for composing paths to NLDAS/CFS bias correction datasets.
+        # This is done independently as we need to account for leap years.
+        if fcstYYYYMMDDHH.month == 2:
+            if fcstYYYYMMDDHH.day == 29:
+                fcstYYYYMMDDHHtmp = fcstYYYYMMDDHH - datetime.timedelta(days=1)
+            else:
+                fcstYYYYMMDDHHtmp = fcstYYYYMMDDHH
+        else:
+            fcstYYYYMMDDHHtmp = fcstYYYYMMDDHH
      
-    """
-    if len(elapsed_times) > 0:
-        elapsed_array = np.array(elapsed_times)
-        min_time = np.min(elapsed_array)
-        max_time = np.max(elapsed_array)
-        avg_time = np.mean(elapsed_array)
-        med_time = np.median(elapsed_array) 
+        # Compose input file path and ensure file exists on system.
+        #XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        # IMPORTANT!!!! THIS WILL NEED TO BE MODIFIED FOR NCEP!!!!!!!!!!!!
+        file_in_path = CFS_in_dir + "/cfs." + cycleYYYYMMDDHH.strftime("%Y%m%d") + \
+                       "/" + cycleYYYYMMDDHH.strftime("%H") + "/6hrly_grib_" + \
+                       em_str + "/flxf" + fcstYYYYMMDDHH.strftime("%Y%m%d%H") + \
+                       "." + em_str + "." + cycleYYYYMMDDHH.strftime("%Y%m%d%H") + \
+                       ".grb2"
+        file_in_path_prev = CFS_in_dir + "/cfs." + cycleYYYYMMDDHH.strftime("%Y%m%d") + \
+                            "/" + cycleYYYYMMDDHH.strftime("%H") + "/6hrly_grib_" + \
+                            em_str + "/flxf" + prevYYYYMMDDHH.strftime("%Y%m%d%H") + \
+                            "." + em_str + "." + cycleYYYYMMDDHH.strftime("%Y%m%d%H") + \
+                            ".grb2"
+        #XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
-        logging.info("=========================================")
-        logging.info("SUMMARY for %s %s ", activity,product) 
-        logging.info("=========================================")
-        logging.info("Average elapsed time (sec): %s", avg_time)
-        logging.info("Median elapsed time (sec): %s", med_time)
-        logging.info("Min elapsed time (sec): %s ", min_time)
-        logging.info("Max elapsedtime (sec): %s ", max_time)
-    else:
-        logging.error("ERROR: Nothing was returned....")
-    
+        file_exists(file_in_path)
+        file_exists(file_in_path_prev)
 
+        # Determine hourly sub-time steps between six-hour CFSv2 forecasts
+        datePrevYYYYMMDDHH = fcstYYYYMMDDHH - datetime.timedelta(seconds=6*3600)
+        datePrevMMDD = datePrevYYYYMMDDHH.strftime('%m%d')
+        datePrevHH = datePrevYYYYMMDDHH.strftime('%H')
+        dateFcstMMDD = fcstYYYYMMDDHH.strftime('%m%d')
+        dateFcstHH = fcstYYYYMMDDHH.strftime('%H')
+        dateSub1YYYYMMDDHH = datePrevYYYYMMDDHH + datetime.timedelta(seconds=3600)
+        dateSub2YYYYMMDDHH = dateSub1YYYYMMDDHH + datetime.timedelta(seconds=3600)
+        dateSub3YYYYMMDDHH = dateSub2YYYYMMDDHH + datetime.timedelta(seconds=3600)
+        dateSub4YYYYMMDDHH = dateSub3YYYYMMDDHH + datetime.timedelta(seconds=3600)
+        dateSub5YYYYMMDDHH = dateSub4YYYYMMDDHH + datetime.timedelta(seconds=3600)
 
+        datePrevYYYYMMDDHHtmp = fcstYYYYMMDDHHtmp - datetime.timedelta(seconds=6*3600)
+        datePrevMMDDtmp = datePrevYYYYMMDDHHtmp.strftime('%m%d')
+        datePrevHHtmp = datePrevYYYYMMDDHHtmp.strftime('%H')
+        dateFcstMMDDtmp = fcstYYYYMMDDHHtmp.strftime('%m%d')
+        dateFcstHHtmp = fcstYYYYMMDDHHtmp.strftime('%H')
+        dateSub1YYYYMMDDHHtmp = datePrevYYYYMMDDHHtmp + datetime.timedelta(seconds=3600)
+        dateSub2YYYYMMDDHHtmp = dateSub1YYYYMMDDHHtmp + datetime.timedelta(seconds=3600)
+        dateSub3YYYYMMDDHHtmp = dateSub2YYYYMMDDHHtmp + datetime.timedelta(seconds=3600)
+        dateSub4YYYYMMDDHHtmp = dateSub3YYYYMMDDHHtmp + datetime.timedelta(seconds=3600)
+        dateSub5YYYYMMDDHHtmp = dateSub4YYYYMMDDHHtmp + datetime.timedelta(seconds=3600)
 
-# STUB for BIAS CORRECTION, TO BE
-# IMPLEMENTED LATER...
-def bias_correction(parser):
-    """ STUB TO BE IMPLEMENTED
-    """
-#
-#
+        # Establish hourly NLDAS parameter files used for bias correction and interpolation
+        NLDAS_param_path_1 = NLDAS_bias_dir + "/nldas2_" + \
+                             dateSub1YYYYMMDDHHtmp.strftime('%m%d%H') + '_dist_params.nc'
+        NLDAS_param_path_2 = NLDAS_bias_dir + "/nldas2_" + \
+                             dateSub2YYYYMMDDHHtmp.strftime('%m%d%H') + '_dist_params.nc'
+        NLDAS_param_path_3 = NLDAS_bias_dir + "/nldas2_" + \
+                             dateSub3YYYYMMDDHHtmp.strftime('%m%d%H') + '_dist_params.nc'
+        NLDAS_param_path_4 = NLDAS_bias_dir + "/nldas2_" + \
+                             dateSub4YYYYMMDDHHtmp.strftime('%m%d%H') + '_dist_params.nc'
+        NLDAS_param_path_5 = NLDAS_bias_dir + "/nldas2_" + \
+                             dateSub5YYYYMMDDHHtmp.strftime('%m%d%H') + '_dist_params.nc'
+        NLDAS_param_path_6 = NLDAS_bias_dir + "/nldas2_" + \
+                             fcstYYYYMMDDHHtmp.strftime('%m%d%H') + '_dist_params.nc' 
 
+        # Ensure files are present on system
+        file_exists(NLDAS_param_path_1)
+        file_exists(NLDAS_param_path_2)
+        file_exists(NLDAS_param_path_3)
+        file_exists(NLDAS_param_path_4)
+        file_exists(NLDAS_param_path_5)
+        file_exists(NLDAS_param_path_6)
 
+        # Establish CFS parameter files used for bias correction and interpolation.
+        # There will be two parameter files for each variable being downscaled.
+        CFS_param_2mT_path0 = CFS_bias_dir + "/cfs_tmp2m_" + datePrevMMDDtmp + \
+                              "_" + datePrevHHtmp + "_dist_params.nc"
+        CFS_param_2mT_path1 = CFS_bias_dir + "/cfs_tmp2m_" + dateFcstMMDDtmp + \
+                              "_" + dateFcstHHtmp + "_dist_params.nc"
+        CFS_param_SW_path0 = CFS_bias_dir + "/cfs_dswsfc_" + datePrevMMDDtmp + \
+                              "_" + datePrevHHtmp + "_dist_params.nc"
+        CFS_param_SW_path1 = CFS_bias_dir + "/cfs_dswsfc_" + dateFcstMMDDtmp + \
+                              "_" + dateFcstHHtmp + "_dist_params.nc"
+        CFS_param_LW_path0 = CFS_bias_dir + "/cfs_dlwsfc_" + datePrevMMDDtmp + \
+                              "_" + datePrevHHtmp + "_dist_params.nc"
+        CFS_param_LW_path1 = CFS_bias_dir + "/cfs_dlwsfc_" + dateFcstMMDDtmp + \
+                              "_" + dateFcstHHtmp + "_dist_params.nc"
+        CFS_param_PCP_path0 = CFS_bias_dir + "/cfs_prate_" + datePrevMMDDtmp + \
+                              "_" + datePrevHHtmp + "_dist_params.nc"
+        CFS_param_PCP_path1 = CFS_bias_dir + "/cfs_prate_" + dateFcstMMDDtmp + \
+                              "_" + dateFcstHHtmp + "_dist_params.nc"
+        CFS_param_PRES_path0 = CFS_bias_dir + "/cfs_pressfc_" + datePrevMMDDtmp + \
+                              "_" + datePrevHHtmp + "_dist_params.nc"
+        CFS_param_PRES_path1 = CFS_bias_dir + "/cfs_pressfc_" + dateFcstMMDDtmp + \
+                              "_" + dateFcstHHtmp + "_dist_params.nc"
+        CFS_param_U_path0 = CFS_bias_dir + "/cfs_ugrd_" + datePrevMMDDtmp + \
+                              "_" + datePrevHHtmp + "_dist_params.nc"
+        CFS_param_U_path1 = CFS_bias_dir + "/cfs_ugrd_" + dateFcstMMDDtmp + \
+                              "_" + dateFcstHHtmp + "_dist_params.nc"
+        CFS_param_V_path0 = CFS_bias_dir + "/cfs_vgrd_" + datePrevMMDDtmp + \
+                              "_" + datePrevHHtmp + "_dist_params.nc"
+        CFS_param_V_path1 = CFS_bias_dir + "/cfs_vgrd_" + dateFcstMMDDtmp + \
+                              "_" + dateFcstHHtmp + "_dist_params.nc"
+        CFS_param_2mQ_path0 = CFS_bias_dir + "/cfs_q2m_" + datePrevMMDDtmp + \
+                              "_" + datePrevHHtmp + "_dist_params.nc"
+        CFS_param_2mQ_path1 = CFS_bias_dir + "/cfs_q2m_" + dateFcstMMDDtmp + \
+                              "_" + dateFcstHHtmp + "_dist_params.nc"
 
-def layer_data(parser, primary_data, secondary_data):
-    """ Invokes the NCL script, combine.ncl
-        to layer/combine two files:  a primary and secondary
-        file (with identical date/time, model run time, and
-        forecast time) are found by iterating through a list
-        of primary files and determining if the corresponding
-        secondary file exists.
+        # Ensure parameter files are on the system
+        file_exists(CFS_param_2mT_path0)
+        file_exists(CFS_param_2mT_path1)
+        file_exists(CFS_param_SW_path0)
+        file_exists(CFS_param_SW_path1)
+        file_exists(CFS_param_LW_path0)
+        file_exists(CFS_param_LW_path1)
+        file_exists(CFS_param_PCP_path0)
+        file_exists(CFS_param_PCP_path1)
+        file_exists(CFS_param_PRES_path0)
+        file_exists(CFS_param_PRES_path1)
+        file_exists(CFS_param_U_path0)
+        file_exists(CFS_param_U_path1)
+        file_exists(CFS_param_V_path0)
+        file_exists(CFS_param_V_path1)
+        file_exists(CFS_param_2mQ_path0)
+        file_exists(CFS_param_2mQ_path1)
+
+        # Compose NCL command that calls bias-correction program.
+        bias_params = "'fileIn=" + '"' + file_in_path + '"' + "' " + \
+                      "'tmpDir=" + '"' + tmp_dir + '"' + "' " + \
+                      "'nldasParamHr1=" + '"' + NLDAS_param_path_1 + '"' + "' " + \
+                      "'nldasParamHr2=" + '"' + NLDAS_param_path_2 + '"' + "' " + \
+                      "'nldasParamHr3=" + '"' + NLDAS_param_path_3 + '"' + "' " + \
+                      "'nldasParamHr4=" + '"' + NLDAS_param_path_4 + '"' + "' " + \
+                      "'nldasParamHr5=" + '"' + NLDAS_param_path_5 + '"' + "' " + \
+                      "'nldasParamHr6=" + '"' + NLDAS_param_path_6 + '"' + "' " + \
+                      "'cfs2TParam0=" + '"' + CFS_param_2mT_path0 + '"' + "' " + \
+                      "'cfs2TParam1=" + '"' + CFS_param_2mT_path1 + '"' + "' " + \
+                      "'cfsSWParam0=" + '"' + CFS_param_SW_path0 + '"' + "' " + \
+                      "'cfsSWParam1=" + '"' + CFS_param_SW_path1 + '"' + "' " + \
+                      "'cfsLWParam0=" + '"' + CFS_param_LW_path0 + '"' + "' " + \
+                      "'cfsLWParam1=" + '"' + CFS_param_LW_path1 + '"' + "' " + \
+                      "'cfsPCPParam0=" + '"' + CFS_param_PCP_path0 + '"' + "' " + \
+                      "'cfsPCPParam1=" + '"' + CFS_param_PCP_path1 + '"' + "' " + \
+                      "'cfsPRESParam0=" + '"' + CFS_param_PRES_path0 + '"' + "' " + \
+                      "'cfsPRESParam1=" + '"' + CFS_param_PRES_path1 + '"' + "' " + \
+                      "'cfsUParam0=" + '"' + CFS_param_U_path0 + '"' + "' " + \
+                      "'cfsUParam1=" + '"' + CFS_param_U_path1 + '"' + "' " + \
+                      "'cfsVParam0=" + '"' + CFS_param_V_path0 + '"' + "' " + \
+                      "'cfsVParam1=" + '"' + CFS_param_V_path1 + '"' + "' " + \
+                      "'cfs2QParam0=" + '"' + CFS_param_2mQ_path0 + '"' + "' " + \
+                      "'cfs2QParam1=" + '"' + CFS_param_2mQ_path1 + '"' + "' " + \
+                      "'cycleYYYYMMDDHH=" + '"' + cycleYYYYMMDDHH.strftime("%Y%m%d%H") + \
+                      '"' + "' " + \
+                      "'fcstYYYYMMDDHH=" + '"' + fcstYYYYMMDDHH.strftime("%Y%m%d%H") + \
+                      '"' + "' " + \
+                      "'prevYYYYMMDDHH=" + '"' + prevYYYYMMDDHH.strftime("%Y%m%d%H") + \
+                      '"' + "' " + \
+                      "'modFile=" + '"' + CFS_bias_mod + '"' + "' " + \
+                      "'corrFile=" + '"' + CFS_corr_file + '"' + "' " + \
+                      "'fileInPrev=" + '"' + file_in_path_prev + '"' + "' " + \
+                      "'em=" + '"' + em_str + '"' + "' "  
+        ncl_cmd = "ncl -Q " + CFS_bias_exe + " " + bias_params
+        #logging.debug("Bias command: %s",ncl_cmd)
+
+        # Measure how long it takes to run the NCL script for bias correction.
+        start_NCL_bias = time.time()
+        return_value = os.system(ncl_cmd)
+        if return_value != 0:
+            logging.error('Bias correction returned an exit status of ' + return_value)
+            sys.exit(1)
+        end_NCL_bias = time.time()
+        elapsed_time_sec = end_NCL_bias - start_NCL_bias
+        logging.info('Time(sec) to bias correct file %s' % elapsed_time_sec)  
+        
+def layer_data(parser, first_data, second_data, first_data_product, second_data_product, forcing_type):
+    """Invokes the NCL script, combine.ncl
+       to layer/combine two files:  first_data and 
+       second_data, with product type of first_prod and
+       second_prod respectively.
 
 
         Args:
               parser (ConfigParser):  The parser to the config/parm
                                       file containing all the defined
                                       values.
-              primary_data (string):  The name of the primary product
+              first_prod (string): The product name of the 
+                                   first data product. 
+              first_data (string):  The name of the first data file
+                                    (e.g. RAP or HRRR)
+                                    with the YYYYMMDDHH directory 
+                                    so we can associate the model/init
+                                    time.
+              second_prod (string): The product name of the 
+                                    second data product.  
  
-              secondary_data (string): The name of the secondary product
+              second_data (string): The name of the second data file
+                                    (e.g. HRRR or RAP)
+                                    and its YYYYMMDDHH directory, so
+                                    we can identify its accompanying
+                                    model/init time.
+              forcing_type (string): The forcing configuration:
+                                     Anal_Assim, Short_Range,
+                                     Medium_Range, or Long_Range
 
         Output:
-              None:  For each primary and secondary file that is
+              None:  For each first and second file that is
                      combined/layered, create a file
                      (name and location defined in the config/parm 
                      file).
     """
-
-    # Retrieve any necessary parameters from the wrf_hydro_forcing config/parm
-    # file...
-    # 1) directory where HRRR and RAP downscaled data reside
-    # 2) output directory where layered files will be saved
-    # 3) location of any executables/scripts
+    # Retrieve any necessary data from the parameter/config file.
     ncl_exe = parser.get('exe', 'ncl_exe')
     layering_exe = parser.get('exe','Analysis_Assimilation_layering')
-    downscaled_primary_dir = parser.get('layering','analysis_assimilation_primary')
-    downscaled_secondary_dir = parser.get('layering','analysis_assimilation_secondary')
-    layered_output_dir = parser.get('layering','output_dir')
+    downscaled_first_dir = parser.get('layering','analysis_assimilation_primary')
+    downscaled_second_dir = parser.get('layering','analysis_assimilation_secondary')
+    forcing_config = forcing_type.lower()
+    if forcing_config == 'anal_assim':
+        layered_output_dir = parser.get('layering', 'analysis_assimilation_output')
+    elif forcing_config == 'short_range':
+        layered_output_dir = parser.get('layering', 'short_range_output')
+    elif forcing_config == 'medium_range':
+        layered_output_dir = parser.get('layering', 'medium_range_output')
+    else :
+        #forcing_config == 'long_range'
+        layered_output_dir = parser.get('layering', 'long_range_output')
 
+    # Create the destination directory in case it doesn't already exist.
+    if not os.path.exists(layered_output_dir):
+        mkdir_p(layered_output_dir)
+    logging.info('Layered output dir: %s', layered_output_dir)
 
-    # Loop through any available files in
-    # the directory that defines the first choice/priority data.
-    # Assemble the name of the corresponding secondary filename
-    # by deriving the date (YYYYMMDD), modelrun (ihh), and 
-    # forecast time (_fhhh) from the primary filename and path.
-    # Then check if this file exists, if so, then pass this pair into
-    # a list of tuples comprised of (primary file, secondary file).
-    # After a list of paired files has been completed, these files
-    # will be layered/combined by invoking the NCL script, combine.ncl.
-    primary_files = get_filepaths(downscaled_primary_dir)
-    
-    # Determine which primary and secondary files we can layer, based on
-    # matching dates, model runs, and forecast times.
-    list_paired_files = find_layering_files(primary_files, downscaled_secondary_dir)
-    
-    # Now we have all the paired files to layer, create the key-value pair of
+    # Retrieve just the file name portion of the first data file (the file name
+    # portion of the first and second data file will be identical, they differ
+    # by their directory path names). Note: DO NOT include the .nc file extension
+    # for the final output file, the WRF-Hydro model is NOT looking for these.
+    # NCL requires a recognized file extension, therefore remove the .nc
+    # extension after the layering is complete.
+    match = re.match(r'([0-9]{10}/[0-9]{12}.LDASIN_DOMAIN1).nc',first_data)
+    if match:
+        file_name_only = match.group(1)
+    else:
+        logging.error("ERROR[layer_data]: File name format is not what was expected")
+        return
+
+    # Create the key-value pair of
     # input needed to run the NCL layering script.
-    num_matched_pairs = len(list_paired_files)
-    for pair in list_paired_files:
-        hrrrFile_param = "'hrrrFile=" + '"' + pair[0] + '"' + "' "
-        rapFile_param =  "'rapFile="  + '"' + pair[1] + '"' + "' "
-        full_layered_outfile = layered_output_dir + "/" + pair[2]
-        outFile_param = "'outFile=" + '"' + full_layered_outfile + '"' + "' "
+    hrrrFile_param = "'hrrrFile=" + '"' + downscaled_first_dir + "/" + first_data + '"' + "' "
+    rapFile_param =  "'rapFile="  + '"' + downscaled_second_dir + "/" +second_data + '"' + "' "
+    # Create the output filename for the layered file
+    layered_outfile = layered_output_dir + "/" \
+                                        + file_name_only
+    full_layered_outfile = layered_outfile + ".nc"
+    outFile_param = "'outFile=" + '"' + full_layered_outfile + '"' + "' "
+    print ("full_layered_outfile: %s")%(full_layered_outfile)
+    if not os.path.exists(full_layered_outfile):
         mkdir_p(full_layered_outfile)
-        init_indexFlag = "false"
-        indexFlag = "true"
-        init_indexFlag_param = "'indexFlag=" + '"' +  init_indexFlag + '"' + "' "
-        indexFlag_param = "'indexFlag=" + '"' + indexFlag + '"' + "' "
-        init_layering_params = hrrrFile_param + rapFile_param + init_indexFlag_param\
-                               + outFile_param 
-        layering_params = hrrrFile_param + rapFile_param + indexFlag_param\
-                          + outFile_param
-        init_layering_cmd = ncl_exe + " " + init_layering_params + " " + \
-                            layering_exe
-        layering_cmd = ncl_exe + " " + layering_params + " " + \
-                            layering_exe
-         
-        init_return_value = os.system(init_layering_cmd)
-        return_value = os.system(layering_cmd) 
-    
-    
-def find_layering_files(primary_files,downscaled_secondary_dir):
-    """Given a list of the primary files (full path + filename),
-    retrieve the corresponding secondary file if it exists.  
-    Create and return a list of tuples: (primary file, secondary file, 
-    layered file). 
+    init_indexFlag = "false"
+    indexFlag = "true"
+    init_indexFlag_param = "'indexFlag=" + '"' +  init_indexFlag + '"' + "' "
+    indexFlag_param = "'indexFlag=" + '"' + indexFlag + '"' + "' "
+    init_layering_params = hrrrFile_param + rapFile_param + init_indexFlag_param\
+                           + outFile_param 
+    layering_params = hrrrFile_param + rapFile_param + indexFlag_param\
+                      + outFile_param
+    init_layering_cmd = ncl_exe + " " + init_layering_params + " " + \
+                        layering_exe
+    layering_cmd = ncl_exe + " " + layering_params + " " + \
+                        layering_exe
+    print ("layering command: %s")%(layering_cmd)    
+    init_return_value = os.system(init_layering_cmd)
+    if init_return_value != 0:
+        logging.error("ERROR[layer_data]: layering was unsuccessful")
 
-    Args:
-        primary_files(list):  A list of the primary files
-                              which we are trying to find
-                              a corresponding "match" in
-                              the secondary file directory
-        downscaled_secondary_dir(string): The name of the
-                                          directory for the
-                                          secondary data.
-    Output:
-        list_paired_files (list): A list of tuples, where 
-                                  the tuple consists of 
-                                  (primary file, secondary
-                                   file, and layered file name)
-        
+    else:
+        # Move/rename the processed files to the corresponding forcing
+        # configuration directory. 
+        os.rename(full_layered_outfile, layered_outfile)
+
+    return_value = os.system(layering_cmd) 
+    
+    
+def read_input():
+    """Read in the command line arguments
+       Uses optparse, which is available for Python 2.6
+       (currently used in WCOSS)
  
+       Args:
+           None
+       Returns:
+          Tuple:
+             opts (list): The list of options supplied by user
+             args (list): The list of positional arguments 
     """
-    secondary_product = "RAP"
-    list_paired_files = []
-    paired_files = ()
 
-    for primary_file in primary_files:
-        match = re.match(r'.*/downscaled/([A-Za-z]{3,4})/([0-9]{8})/i([0-9]{2})/[0-9]{8}_i[0-9]{2}_f([0-9]{3})_[A-Za-z]{3,4}.nc',primary_file)
-        if match:
-            product = match.group(1)
-            date = match.group(2)
-            modelrun_str = match.group(3)
-            fcst_hr_str = match.group(4)
-            # Assemble the corresponding secondary file based on the date, modelrun, 
-            # and forecast hour. 
-            secondary_file = downscaled_secondary_dir +  \
-                             "/" + date + "/i" + modelrun_str + "/" + date +\
-                             "_i"+ modelrun_str + "_f" + fcst_hr_str + "_" +\
-                             secondary_product + ".nc"  
-            layered_filename = date + "_i" + modelrun_str + "_f" + \
-                               fcst_hr_str + "_Analysis-Assimilation.nc"
-               
-        
-            # Determine if this "manufactured" secondary file exists, if so, then 
-            # create a tuple to represent this pair: (primary file, 
-            # secondary file, layered file) then add this tuple of 
-            # files to the list and continue. If not, then continue 
-            # with the next primary file in the primary_files list.
-            if os.path.isfile(secondary_file):
-                paired_files = (primary_file, secondary_file,layered_filename)
-                list_paired_files.append(paired_files)
-                num = len(list_paired_files)
-            else:
-                logging.info("No matching date, or model run or forecast time for\
-                             #secondary file")
-                continue
+
+    parser = optparse.OptionParser()
+    parser.add_option('--regrid', help='regrid and downscale',\
+                  dest='r_d_bool', default=False, action='store_true')
+    parser.add_option('--bias', help='bias correction', dest='bias_bool',\
+                  default=False, action='store_true')
+    parser.add_option('--layer', help='layer', dest='layer_bool',\
+                  default=False, action='store_true')
+
+    # tell optparse to store option's arg in specified destination
+    # member of opts
+    parser.add_option('--prod', help='data product', dest='data_prod',\
+                       action='store')
+    parser.add_option('--prod2', help='second data product \
+                      (for layering and bias correction)', dest='data_prod2',\
+                       action='store')
+    parser.add_option('--File', help='file name',dest='file_name',\
+                      action='store', nargs=1)
+    parser.add_option('--File2', help='second file name \
+                       (for layering and bias correction)',dest='file_name2',\
+                        action='store', nargs=1)
+    (opts,args) = parser.parse_args()
+
+    # Making sure all necessary options appeared
+    if opts.layer_bool:
+        if (opts.data_prod and not opts.data_prod2):
+            print "Layering requires two data products"
+            parser.print_help()
+        elif (opts.file_name and not opts.file_name2) :
+            print "Layering requires two input files"
+            parser.print_help()
+
+    if opts.r_d_bool:
+        print "Regrid and downscale requested"
+        if(not opts.data_prod or not opts.file_name):
+            print "Regrid (& downscale) requires one data product \
+                   and one file name"
+            parser.print_help()
         else:
-            logging.error('ERROR: filename structure is not what was expected')
+            print "data prod: %s"%opts.data_prod
+            print "filename: %s"%opts.file_name
+
+    return (opts,args)
 
 
+def initial_setup(parser,forcing_config_label):
+    """  Set up any environment variables, logging levels, etc.
+         before any processing begins.
 
-    return list_paired_files
+         Args:
+            parser (SafeConfigParser):  the parsing object 
+                                          necessary for parsing
+                                          the config/parm file.
+            forcing_config_label (string):  The name of the log
+                                          file to associate with
+                                          the forcing configuration.
+                            
+         Returns:
+            logging (logging):  The logging object to which we can
+                                write.   
+                                           
+    """
 
+    #Read in all relevant params from the config/param file
+    ncl_exec = parser.get('exe', 'ncl_exe')
+    ncarg_root = parser.get('default_env_vars', 'ncarg_root')
+    logging_level = parser.get('log_level', 'forcing_engine_log_level')
 
-def create_benchmark_summary(product, activity, elapsed_times):
-    
-    """ Create a summary of the min, max, and mean
-        time to perform a processing activity for 
-        each data file. The information is placed 
-        in the log file.
+    # Check for the NCARG_ROOT environment variable. If it is not set,
+    # use an appropriate default, defined in the configuration file.
+    ncarg_root_found = os.getenv("NCARG_ROOT")
+    if ncarg_root_found is None:
+        ncarg_root = os.environ["NCARG_ROOT"] = ncarg_root
+
+    # Set the NCL_DEF_LIB_DIR to indicate where ALL shared objects
+    # reside.
+    ncl_def_lib_dir = parser.get('default_env_vars','ncl_def_lib_dir')
+    ncl_def_lib_dir = os.environ["NCL_DEF_LIB_DIR"] = ncl_def_lib_dir
+
+    # Set the logging level based on what was defined in the parm/config file
+    if logging_level == 'DEBUG':
+        set_level = logging.DEBUG
+    elif logging_level == 'INFO':
+        set_level = logging.INFO
+    elif logging_level == 'WARNING':
+        set_level = logging.WARNING
+    elif logging_level == 'ERROR':
+        set_level = logging.ERROR
+    else:
+        set_level = logging.CRITICAL
+
+    logging_filename =  forcing_config_label + ".log"
+    logging.basicConfig(format='%(asctime)s %(message)s',
+                         filename=logging_filename, level=set_level)
+
+    return logging     
+
+def extract_file_info(input_file):
+
+    """ Extract the date, model run time (UTC) and
+        forecast hour (UTC) from the (raw) input 
+        data file name (i.e. data that hasn't been
+        regridded, downscaled,etc.).
 
         Args:
-           product (string):  The name of the product under
-                              consideration.
-           activity (string): The processing activity: 
-                              regridding, downscaling, etc.
-           elapsed_times (ndarray): Numpy ndarray of elapsed 
-                                   times (wall clock time 
-                                   for now) for each of the
-                                   files that were processed.
-       
-       Output:
-           None:  Generates an entry in the log file, as
-                  an "info" entry, which states the min,
-                  max, and average time in seconds.
-     
+            input_file (string):  Contains the date, model run
+                                  time (UTC) and the forecast
+                                  time in UTC.
+        Returns:
+            date (string):  YYYYMMDD
+            model_run (int): HH
+            fcst_hr (int):  HHH
     """
-    if len(elapsed_times) > 0:
-        elapsed_array = np.array(elapsed_times)
-        min_time = np.min(elapsed_array)
-        max_time = np.max(elapsed_array)
-        avg_time = np.mean(elapsed_array)
-        med_time = np.median(elapsed_array) 
 
-        logging.info("=========================================")
-        logging.info("SUMMARY for %s %s ", activity,product) 
-        logging.info("=========================================")
-        logging.info("Average elapsed time (sec): %s", avg_time)
-        logging.info("Median elapsed time (sec): %s", med_time)
-        logging.info("Min elapsed time (sec): %s ", min_time)
-        logging.info("Max elapsedtime (sec): %s ", max_time)
+    # Regexp check for model data
+    match = re.match(r'.*([0-9]{8})_i([0-9]{2})_f([0-9]{3,4}).*', input_file)
+
+    # Regexp check for MRMS data
+    match2 = re.match(r'.*(GaugeCorr_QPE_00.00)_([0-9]{8})_([0-9]{6})',input_file)
+    if match:
+       date = match.group(1)
+       model_run = int(match.group(2))
+       fcst_hr  = int(match.group(3))
+       return (date, model_run, fcst_hr)
+    elif match2:
+       date = match2.group(2)
+       model_run = match2.group(3)
+       fcst_hr = int(0)
+       return (date, model_run, fcst_hr)
     else:
-        logging.error("ERROR: Nothing was returned....")
+        logging.error("ERROR [extract_file_info]: File name doesn't follow expected format")
+
+def extract_file_info_cfs(input_file):
+
+    """ Extract file date, model run time (UTC),
+        forecast hour (UTC), and ensemble member
+        from the (raw) input data file name (i.e.
+        data that hasn't been regridded, downscaled,
+        etc.).
+ 
+        Args:
+           input_file (string): Contains the date, model run
+                                time (UTC), forecast time (UTC),
+                                and ensemble member.
+       Returns:
+           date (string): YYYYMMDD
+           model_run (int): HH
+           fcst_hr (int): HHH
+           em (int) :: N
+    """
+
+    # Regexp check for model data
+    match = re.match(r'.*([0-9]{8})/([0-9]{8})_i([0-9]{2})_f([0-9]{3,4})_e([0-9]{2}).*',input_file)
+    if match:
+        date = match.group(1)
+        date2 = match.group(1)
+        if date != date2:
+            logging.error("ERROR [extract_file_info_cfs]: File name doesn't follow expected format")
+            sys.exit(1)
+        model_run = int(match.group(3))
+        fcst_hr = int(match.group(4))
+        em = int(match.group(5))
+        return (date, model_run, fcst_hr, em)
+    else:
+        logging.error("ERROR [extract_file_info]:2File name doesn't follow expected format")
+        sys.exit(1)
+
+def is_in_fcst_range(product_name,fcsthr, parser):
+    """  Determine if this current file to be processed has a forecast
+         hour that falls within the range bound by the max forecast hour 
+         Supports checking for RAP, HRRR, and GFS data.  
+         
+         Args:
+            fcsthr (int):  The current file's (i.e. the data file under
+                           consideration) forecast hour.
+            parser (SafeConfigParser): The parser object. 
+     
+         Returns:
+            boolean:  True if this is within the max forecast hour
+                      False otherwise.
+                           
+    """
+
+    # Determine whether this current file lies within the forecast range
+    # for this data (e.g. if processing RAP, use only the 0hr-18hr forecasts).
+    # Skip if this file corresponds to a forecast hour outside of the range.
+    if product_name == 'RAP':
+        fcst_max = int(parser.get('fcsthr_max','RAP_fcsthr_max'))
+    elif product_name == 'HRRR':
+        fcst_max = int(parser.get('fcsthr_max','HRRR_fcsthr_max'))
+    elif product_name == 'GFS':
+        fcst_max = int(parser.get('fcsthr_max','GFS_fcsthr_max'))
+    elif product_name == 'CFSv2':
+        fcst_max = int(parser.get('fcsthr_max','CFS_fcsthr_max'))
+    elif product_name == 'MRMS':
+        # MRMS is from observational data, no forecasted data, just
+        # return True...
+        return True
+        
+      
+    if int(fcsthr) > fcst_max:
+        logging.info("Skip file, fcst hour %d is outside of fcst max %d",fcsthr,fcst_max)
+        return False
+    else:
+        return True
+
+
+
+
+
+
+def replace_fcst0hr(parser, file_to_replace, product):
+    """ There are some missing variables in the 0hr forecast
+          for RAP and GFS (such as precipitation
+          and radiation fields), which cause
+          problems when input to the WRF-Hydro model.
+          Substitute these files with downscaled data 
+          file from the previous model run/init time:
+          YYYYMMDDHH, where HH is the model/init time.
+          The file associated with this previous model/init
+          time is readily identified as a file with the same name 
+          in an earlier model/init run's subdirectory (i.e. previous
+          HH = HH-1).
+   
+          Args:
+             parser (SafeConfigParser): parser object used to
+                                        read values set in the
+                                        param/config file.
+             file_to_replace (string);  The fcst 0hr file that 
+                                        needs to be substituted
+                                        with a downscaled file
+                                        from a previous model
+                                        run and same valid time.
+             product (string):  The name of the model product
+                                (e.g. RAP, GFS, etc.)
+
+
+
+          Returns:
+             None        Creates a copy of the file and saves
+                         it to the appropriate directory:
+                         YYYYMMDDHH, where HH is the model/init time.
+
+
+    """
+    # Retrieve the date, model time,valid time, and filename from the full filename 
+    logging.info("INFO[replace_fcst0hr]: file to replace=%s", file_to_replace)
+    match = re.match(r'(.*)/([0-9]{8})([0-9]{2})/([0-9]{8}([0-9]{2})00.LDASIN_DOMAIN1.nc)',file_to_replace)
+    if match:
+        base_dir = match.group(1)
+        curr_date = match.group(2)
+        model_time = int(match.group(3))
+        file_only = match.group(4) 
+        valid_time = int(match.group(5))
+    else:
+        logging.error("ERROR[replace_fcst0hr]: filename %s  is unexpected, exiting.", file_to_replace)
+        return
+
+
+    if product == 'RAP':
+        # Get the previous directory corresponding to the previous
+        # model run/init time.
+        if model_time == 0:
+            # Use the previous day's last model run
+            # and date.
+            prev_model_time = 23
+            date = get_past_or_future_date(curr_date,-1)
+            prev_model_time_str = (str(prev_model_time)).rjust(2,'0')
+            
+
+        else:
+            prev_model_time = model_time - 1
+            prev_model_time_str = (str(prev_model_time)).rjust(2,'0')
+            date = curr_date
     
+        # Create the full file path and name to create the directory of
+        # the previous model run/init time (i.e. YYYYMMDDH'H', 
+        # where H'H' is the previous model run/init).
+        # In this directory, search for the fcst 0hr file with the same name.  If it 
+        # exists, copy it over to the YYYYMMDDHH directory of the
+        # fcst 0hr file in the downscaling output directory.  
+        base_dir = parser.get('downscaling','RAP_downscale_output_dir')
+        full_path = base_dir + '/' + date + prev_model_time_str + "/" + \
+                    file_only
+        logging.info("INFO [replace_fcst0hr]: full path = %s", full_path)
+        if os.path.isfile(full_path):
+            # Make a copy
+            file_dir_fcst0hr = base_dir + "/" + curr_date + (str(model_time)).rjust(2,'0') 
+            # Make the directory for the downscaled fcst 0hr 
+            if not os.path.exists(file_dir_fcst0hr):
+                mkdir_p(file_dir_fcst0hr)
+            file_path_to_replace = file_dir_fcst0hr + "/" + file_only
+            copy_cmd = "cp " + full_path + " " + file_path_to_replace
+            logging.info("copying the previous model run's file: %s",copy_cmd)      
+            os.system(copy_cmd)
+            return
+        else:
+            # If we are here, we didn't find any file from a previous RAP model run...
+            logging.error("ERROR: No previous model runs found, exiting...")
+            return
+          
+    elif product == 'GFS':
+        base_dir = parser.get('downscaling','GFS_downscale_output_dir')
+        # Get the previous directory corresponding to the previous
+        # model/init run. GFS only has 0,6,12,and 18 Z model/init run times.
+        # Available forecasts are 0,3,6,9,12,15,a nd 18 hours.
+        prev_model = model_time - 6
+        if model_time < 0:
+            prev_model_time_str = 18   
+            date = get_past_or_future_date(curr_date, -1)
+        else:
+            date = curr_date
+        prev_model_time_str = (str(prev_model)).rjust(2,'0')
+        full_path = base_dir + '/' + date + prev_model_time_str + "/" +\
+                    file_only
+        if os.path.isfile(full_path):
+            # Make a copy
+            file_dir_fcst0hr = base_dir + "/" + date + (str(model_time)).rjust(2,'0') 
+            # Make the directory for the downscaled fcst 0hr 
+            if not os.path.exists(file_dir_fcst0hr):
+                mkdir_p(file_dir_fcst0hr)
+            file_path_to_replace = file_dir_fcst0hr + "/" + file_only
+            copy_cmd = "cp " + full_path + " " + file_path_to_replace
+            logging.info("copying the previous model run's file: %s",copy_cmd)      
+            os.system(copy_cmd)
+            return
+        else:
+            # If we are here, we didn't find any file from a previous RAP model run...
+            logging.error("ERROR: No previous model runs found, exiting...")
+            return
+          
+
+
+
+       
+def get_past_or_future_date(curr_date, num_days = -1):
+    """   Determines the date in YMD format
+          (i.e. YYYYMMDD) for the day before the specified date.
+         
+          Args:
+             curr_date (string): The current date. We want to 
+                                 determine the nth-previous day's 
+                                 date in YMD format.
+             num_days (int)    : By default, set to -1 to determine
+                                 the previous day's date. Set to
+                                 positive integer value for n days
+                                 following the curr_date, and -n
+                                 days for n days preceeding the
+                                 curr_date.
+          Returns:
+             prev_date (string): The nth previous day's date in 
+                                 YMD format (YYYYMMDD).
+
+    """        
+
+    curr_dt = datetime.datetime.strptime(curr_date, "%Y%m%d")
+    prev_dt = curr_dt + datetime.timedelta(days=num_days)
+    year = str(prev_dt.year)
+    month = str(prev_dt.month)
+    day = str(prev_dt.day)
+    month  = month.rjust(2,'0')
+    day = day.rjust(2, '0')
+    prev_list = [year, month, day]
+    prev_date = ''.join(prev_list)
+    return prev_date
+    
+def dir_exists(dir):
+    """ Check for directory existence 
+        Args:
+           dir (string): The directory in question.
+    """
+
+    if not os.path.isdir(dir):
+        logging.error('Directory: ' + dir + ' not found.')
+        sys.exit(1)  
+
+def file_exists(file):    
+    """ Check for file (or symbolic link) existence
+        Args:
+           file (string): The file in question.
+    """  
+    
+    # Using ispath instead of isfile to account for symbolic links
+    if not os.path.exists(file):
+        logging.error('File: ' + file + ' not found.')
+        sys.exit(1) 
+
+    
+def rename_final_files(parser, forcing_type):
+    """Rename the processed files in the
+          forcing configuration directory so the
+          .nc file extension is removed.
+  
+        Input:
+            parser (SafeConfigParser):  SafeConfigParser used to
+                                        retrieve the information in
+                                        the wrf_hydro_forcing.parm
+                                        configuration/param file.
+
+            forcing_type (string):  One of the four supported
+                                    forcing configurations:
+                                    Anal_Assim, Short_Range,
+                                    Medium_Range, and Long_Range.
+ 
+        Returns:
+            None                   moves the files that are 
+                                   in the source directory 
+                                   (stated in the param/config file)
+                                   to the destination directory
+                                   (stated in the param/config file)
+                                   WITHOUT the '.nc' file extension
+                                   (requested input format to the
+                                    WRF-HYDRO model)
+                               
+
+    """    
+
+    parser = SafeConfigParser()
+    parser.read('wrf_hydro_forcing.parm')
+
+
+    forcing_type = forcing_type.upper()
+    if forcing_type == 'ANAL_ASSIM':
+        # Move layered RAP and HRRR data
+        # to the Anal_Assim directory
+        anal_assim_dir = parser.get('layering','analysis_assimilation_output')
+        mrms_dir = parser.get('regridding','MRMS_output_dir')
+        anal_assim_files = get_layered_files(anal_assim_dir)
+        for file in anal_assim_files:
+            # Get the filename without the .nc extension
+            match = re.match(r'.*/(([0-9]{10})/[0-9]{12}.LDASIN_DOMAIN1).*', file)
+            if match:
+                filename_only = match.group(1)
+                ymd_dir = match.group(2)
+                destination_dir = anal_assim_dir + "/" + ymd_dir
+                destination = anal_assim_dir + "/" + filename_only
+                if not os.path.exists(destination_dir):
+                    mkdir_p(destination_dir)
+                shutil.move(file, destination)
+
+            else:
+               logging.WARNING("[rename_final_files]:filename is of unexpected format: %s", file)
+               continue
+       
+        # Move the MRMS files to their own location.
+        for mrms in mrms_dir:
+            # Get the filename without the .nc extension
+            match = re.match(r'.*/(([0-9]{10})/[0-9]{12}.LDASIN_DOMAIN1).*', file)
+            if match:
+                filename_only = match.group(1)
+                ymd_dir = match.group(2)
+                destination_dir = anal_assim_dir + "/" + ymd_dir  
+                destination = mrms_dir +  "/" + filename_only
+                if not os.path.exists(destination_dir):
+                    mkdir_p(destination_dir)
+                src = mrms_dir + "/" + ymd_dir + "/" + file
+                os.rename(src, destination)
+            else:
+               logging.WARNING("[rename_final_files]:filename is of unexpected format: %s", mrms)
+               continue
+             
+        
+
+    elif forcing_type == 'SHORT_RANGE':
+        short_range_dir = parser.get('layering','short_range_output')
+        short_range_files = get_layered_files(short_range_dir)
+        for file in short_range_files:
+            # Get the filename without the .nc extension
+            match = re.match(r'.*/(([0-9]{10})/[0-9]{12}.LDASIN_DOMAIN1).*', file)
+            if match:
+                filename_only = match.group(1)
+                ymd_dir = match.group(2)
+                destination_dir = short_range_dir + "/" + ymd_dir
+                destination = short_range_dir + "/" + filename_only
+                if not os.path.exists(destination_dir):
+                    mkdir_p(destination_dir)
+                os.rename(file, destination)
+
+            else:
+               logging.WARNING("[rename_final_files]:filename is of unexpected format :%s", file)
+               continue
+
+
+    elif forcing_type == 'MEDIUM_RANGE':
+        # Medium Range has GFS data only and no layering.  Use
+        # the final downscaled directory.
+        medium_range_downscale_dir = parser.get('downscaling','GFS_finished_output_dir')
+        medium_range_dir = parser.get('layering','medium_range_output')
+        medium_range_files = get_layered_files(medium_range_downscale_dir)
+        for file in medium_range_files:
+            # Get the filename without the .nc extension
+            match = re.match(r'.*/(([0-9]{10})/[0-9]{12}.LDASIN_DOMAIN1).*', file)
+            if match:
+                filename_only = match.group(1)
+                ymd_dir = match.group(2)
+                destination_dir = medium_range_dir + "/" + ymd_dir 
+                destination = medium_range_dir + "/" + filename_only
+                if not os.path.exists(destination_dir):
+                    mkdir_p(destination_dir)
+                logging.info("moving file: %s", file)
+                logging.info("final destination: %s", destination)
+                os.rename(file, destination)
+            else:
+               logging.WARNING("[rename_final_files]:filename is of unexpected format :%s", file)
+               continue
+
+    elif forcing_type == 'LONG_RANGE':
+        # Already renamed and moved within the Long_Range_Forcing script.
+        logging.info("[rename_final_files]: request renaming of Long Range files")
+
+    else:
+        print "Forcing type is not recognized or is unsupported. Try again."
+
+
+    
+def get_layered_files(dir):
+    """Retrieves all the files in the layered file directory.
+       Only netCDF files with the '.nc' extension will be
+       considered.
+
+       Args:
+           dir (string):  The directory to search for all layered
+                          files with .nc extension
+
+       Returns:
+           file_paths (list) : List of the full filepath and
+                               files in the input directory.
+    """
+
+    # Create an empty list which will eventually store
+    # all the full filenames
+    file_paths = []
+
+    # Walk the tree
+    for root, directories, files in os.walk(dir):
+        for filename in files:
+            # add it to the list only if it is a grib file
+            match = re.match(r'.*(.nc)$',filename)
+            if match:
+                # Join the two strings to form the full
+                # filepath.
+                filepath = os.path.join(root,filename)
+                file_paths.append(filepath)
+            else:
+                continue
+    return file_paths
+
+
+def move_to_finished_area(parser, product, src):
+    """Move finished regridded (MRMS) or downscaled HRRR,
+       RAP files to a "finished" area so they can
+       be monitored by an external script which determines
+       when to layer the various products.
+        
+
+       Args:
+            parser (SafeConfigParser): used to obtain the
+                                       parameters set in 
+                                       the wrf_hydro_forcing.parm
+                                       config/parameter file.
+            product (string) :  The name of the product: MRMS, HRRR,
+                                RAP, or GFS
+            
+            src (string): full file path and filename of src
+            dest (string): base file path of destination
+
+       Returns:
+           None
+    """
+    if product == "MRMS":
+        dest_dir = parser.get('regridding','MRMS_finished_output_dir')
+    elif product == "RAP":
+        dest_dir = parser.get('downscaling', 'RAP_finished_output_dir')
+    elif product == "HRRR":
+        dest_dir = parser.get('downscaling', 'HRRR_finished_output_dir')
+    elif product == "GFS":
+        dest_dir = parser.get('downscaling', 'GFS_finished_output_dir')
+    else:
+        logging.error("[move_to_finished_area]: %s is unsupported",product) 
+    # Get the YYYYMMDDHH subdirectory from the full file path and
+    # name (src).
+    match = re.match(r'.*/([0-9]{10})/([0-9]{12}.LDASIN_DOMAIN1.nc)',src)
+    if match:
+        ymd_dir = match.group(1)
+        file_only = match.group(2)
+        finished_dir = dest_dir + "/" + ymd_dir
+        if not os.path.exists(finished_dir):
+            mkdir_p(finished_dir) 
+        finished_dest = finished_dir + "/" + file_only
+        logging.info("moving %s", src)
+        logging.info("...to %s", finished_dest)
+        shutil.move(src, finished_dest) 
+    else:
+        logging.error("[move_to_finished_area]: can't match filename")
+
 
 #--------------------Define the Workflow -------------------------
 
