@@ -63,9 +63,7 @@ begin
   V2D_in = f1->V2D
   LWDOWN_in = f1->LWDOWN
   RAINRATE_in = f1->RAINRATE
-  lon_in=f1->XLONG_M
-  lat_in=f1->XLAT_M
-  dims=dimsizes(lat_in)
+  dims=dimsizes(T2D_in)
   nlat = dims(0)
   nlon = dims(1)
 
@@ -101,23 +99,6 @@ begin
   TOPO_ADJF90:: topo_adj(HGT_dst,xlat,xlong,dx,dy,nx,ny,cosa,sina,xtime, \
                 julian,swdown_in,swdown_out)
   
-  ;----------------------------------------------------
-  ; These variables aren't downscaled, but still
-  ; need to be read in as they will be in the final
-  ; output file.
-  ;----------------------------------------------------
-
-  U2D_in = f1->U2D
-  V2D_in = f1->V2D
-  LWDOWN_in = f1->LWDOWN
-  SWDOWN_in = f1->SWDOWN
-  RAINRATE_in = f1->RAINRATE
-  lat_in=f1->XLAT_M
-  lon_in=f1->XLONG_M
-  dims=dimsizes(lat_in)
-  nlat = dims(0)
-  nlon = dims(1)
-
   ;---------------------------------
   ; Perform downscaling
   ;---------------------------------
@@ -141,16 +122,6 @@ begin
   LWDOWN_final = new((/1,nlat,nlon/),"double")
   SWDOWN_final = new((/1,nlat,nlon/),"double")
 
-  ; Flip data to write south to north
-  ;T2D_out = T2D_out(::-1,:)
-  ;Q2D_out = Q2D_out(::-1,:)
-  ;U2D_in = U2D_in(::-1,:)
-  ;V2D_in = V2D_in(::-1,:)
-  ;PSFC_out = PSFC_out(::-1,:)
-  ;RAINRATE_in = RAINRATE_in(::-1,:)
-  ;LWDOWN_in = LWDOWN_in(::-1,:)
-  ;SWDOWN_in = SWDOWN_in(::-1,:)
-
   T2D_final(0,:,:) = T2D_out(:,:)
   Q2D_final(0,:,:) = Q2D_out(:,:)
   U2D_final(0,:,:) = U2D_in(:,:)
@@ -163,22 +134,6 @@ begin
   ;--------------------------------
   ; Establish meta-data
   ;--------------------------------
-
-  lat_in@FieldType = 104
-  lat_in@MemoryOrder = 104
-  lat_in@units = "degrees latitude"
-  lat_in@description = "Latitude on mass grid"
-  lat_in@stagger = "M"
-  lat_in@sr_x = 1
-  lat_in@sr_y = 1
-
-  lon_in@FieldType = 104
-  lon_in@MemoryOrder = 104
-  lon_in@units = "degrees longitude"
-  lon_in@description = "Longitude on mass grid"
-  lon_in@stagger = "M"
-  lon_in@sr_x = 1
-  lon_in@sr_y = 1
 
   T2D_final@missing_value = 1.e+20
   T2D_final@_FillValue = 1.e+20
@@ -252,22 +207,6 @@ begin
   filedimdef(ncdf,dimNames,dimSizes,dimUnlim)
 
   ; Predefine the dimensionality of the variables to be written out
-  filevardef(ncdf,"lat",typeof(lat_in),dimNames2)
-  filevarattdef(ncdf,"lat",lat_in)
-  ncdf->lat = (/lat_in/)
-
-  filevardef(ncdf,"lon",typeof(lon_in),dimNames2)
-  filevarattdef(ncdf,"lon",lon_in)
-  ncdf->lon = (/lon_in/)
-
-  filevardef(ncdf,"XLAT_M",typeof(lat_in),dimNames2)
-  filevarattdef(ncdf,"XLAT_M",lat_in)
-  ncdf->XLAT_M = (/lat_in/)
-   
-  filevardef(ncdf,"XLONG_M",typeof(lon_in),dimNames2)
-  filevarattdef(ncdf,"XLONG_M",lon_in)
-  ncdf->XLONG_M = (/lon_in/)
-
   filevardef(ncdf,"T2D",typeof(T2D_final),dimNames)
   filevarattdef(ncdf,"T2D",T2D_final)
   ncdf->T2D = (/T2D_final/) 
