@@ -130,6 +130,7 @@ def forcing(argv):
             status = os.system(cmd)
             if status != 0:
                 logging.error("Failure to remove " + fileBiasCorrected)
+                sys.exit(1)
 
   
         # Third, perform topography downscaling to generate final
@@ -145,8 +146,17 @@ def forcing(argv):
                             dateCycleYYYYMMDDHH.strftime('%Y%m%d%H') + "_" + \
                                 dateTempYYYYMMDDHH.strftime('%Y%m%d%H') + \
                                 "_regridded.M" + em_str.zfill(2) + ".nc"
-            LDASIN_path_tmp = tmp_dir + "/" + dateTempYYYYMMDDHH.strftime('%Y%m%d%H') + ".LDASIN_DOMAIN1.nc"
-            LDASIN_path_final = out_path + "/" + dateTempYYYYMMDDHH.strftime('%Y%m%d%H') + ".LDASIN_DOMAIN1"
+            LDASIN_path_tmp = tmp_dir + "/" + dateTempYYYYMMDDHH.strftime('%Y%m%d%H') + "00.LDASIN_DOMAIN1.nc"
+            LDASIN_path_final = out_path + "/" + dateTempYYYYMMDDHH.strftime('%Y%m%d%H') + "00.LDASIN_DOMAIN1"
+            # Check to see if final file already exists. If it does, this implies something went wrong and it 
+            # needs to be removed
+            if os.path.exists(LDASIN_path_final):
+                cmd = "rm -rf " + LDASIN_path_final
+                status = os.system(cmd)
+                if status != 0:
+                    logging.error("Failure to remove old file " + LDASIN_path_final)
+                    sys.exit(1)
+                
             whf.downscale_data("CFSv2",fileRegridded,parser, out_path=LDASIN_path_tmp, \
                                verYYYYMMDDHH=dateTempYYYYMMDDHH)
             # Double check to make sure file was created, delete temporary regridded file
@@ -156,11 +166,13 @@ def forcing(argv):
             status = os.system(cmd)
             if status != 0:
                 logging.error("Failure to rename " + LDASIN_path_tmp)
+                sys.exit(1)
             whf.file_exists(LDASIN_path_final)
             cmd = "rm -rf " + fileRegridded
             status = os.system(cmd)
             if status != 0:
                 logging.error("Failure to remove " + fileRegridded)
+                sys.exit(1)
         
         # Exit gracefully with an exit status of 0
         sys.exit(0)

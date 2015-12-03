@@ -28,7 +28,6 @@ load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_code.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_csm.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/contrib/ut_string.ncl"
-;load "./ESMF_regridding.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/esmf/ESMF_regridding.ncl"
 
 begin
@@ -95,14 +94,6 @@ begin
   filedimdef(ncdf,dimNames,dimSizes,dimUnlim)
 
   ; Predefine the dimensionality of the variables to be written out
-  filevardef(ncdf,"XLAT_M",typeof(dlat2d),dimNames)
-  filevarattdef(ncdf,"XLAT_M",dlat2d)
-  ncdf->XLAT_M = (/dlat2d/)
-
-  filevardef(ncdf,"XLONG_M",typeof(dlon2d),dimNames)
-  filevarattdef(ncdf,"XLONG_M",dlon2d)
-  ncdf->XLONG_M = (/dlon2d/)
-
   filevardef(ncdf,"T2D",typeof(T2D_regrid),dimNames)
   filevarattdef(ncdf,"T2D",T2D_regrid)
   ncdf->T2D = (/T2D_regrid/) 

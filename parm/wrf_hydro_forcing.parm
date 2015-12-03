@@ -100,8 +100,8 @@ esmf_exe=/usr/local/esmf
 ncl_exe = /opt/ncl-6.3.0/bin/ncl
 
 # Bias correction
-CFS_bias_correct_mod = /d4/karsten/DFE/IOC_TESTING/long_range/programs/CFSv2_bias_correct_mod.ncl
-CFS_bias_correct_exe = /d4/karsten/DFE/IOC_TESTING/long_range/programs/CFSv2_bias_correct.ncl
+CFS_bias_correct_mod = /d4/karsten/DFE/wrf_hydro_forcing/scripts/NCL/CFSv2_bias_correct_mod.ncl
+CFS_bias_correct_exe = /d4/karsten/DFE/wrf_hydro_forcing/scripts/NCL/CFSv2_bias_correct.ncl
 
 # Regridding
 #HRRR_regridding_exe = /d4/hydro-dm/IOC/code/HRRR-2-WRF_Hydro_ESMF_regrid.ncl
@@ -112,7 +112,7 @@ MRMS_regridding_exe = ../NCL/MRMS-2-WRF_Hydro_ESMF_regrid.ncl
 NAM_regridding_exe =  ../NCL/NAM-2-WRF_Hydro_ESMF_regrid.ncl
 GFS_regridding_exe = ../NCL/GFS2Hydro_forcing_ESMFregrid.ncl
 RAP_regridding_exe = ../NCL/RAP-2-WRF_Hydro_ESMF_regrid.ncl
-CFS_regridding_exe = /d4/karsten/DFE/IOC_TESTING/long_range/programs/CFSv2_regrid_conus.ncl
+CFS_regridding_exe = /d4/karsten/DFE/wrf_hydro_forcing/scripts/NCL/CFSv2_regrid_conus.ncl
 
 # Downscaling
 # Use the same downscaling script for all products. The hgt file, geo file, and
@@ -121,7 +121,7 @@ HRRR_downscaling_exe = ../NCL/All_WRF_Hydro_downscale.ncl
 NAM_downscaling_exe = ../NCL/All_WRF_Hydro_downscale.ncl
 GFS_downscaling_exe = ../NCL/All_WRF_Hydro_downscale.ncl
 RAP_downscaling_exe = ../NCL/All_WRF_Hydro_downscale.ncl
-CFS_downscaling_exe = /d4/karsten/DFE/IOC_TESTING/long_range/programs/CFSv2_downscale_conus.ncl 
+CFS_downscaling_exe = /d4/karsten/DFE/wrf_hydro_forcing/scripts/NCL/CFSv2_downscale_conus.ncl 
 
 topo_adj_fortran_exe = /d4/hydro-dm/IOC/code/topo_adjf90.so
 shortwave_downscaling_exe = ../NCL/topo_adj.ncl
