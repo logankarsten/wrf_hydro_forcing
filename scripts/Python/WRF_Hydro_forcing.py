@@ -423,7 +423,7 @@ def downscale_data(product_name, file_to_downscale, parser, downscale_shortwave=
                                  radiation downscaling calculations.
                                   
     Returns:
-        None
+        0 for success, 1 for failure
 
         
     """
@@ -472,7 +472,7 @@ def downscale_data(product_name, file_to_downscale, parser, downscale_shortwave=
         # Find another downscaled file from the previous model/
         # init time with the same valid time as this file, then 
         # copy to this fcst 0hr file.
-        replace_fcst0hr(parser, file_to_downscale,product)
+        return replace_fcst0hr(parser, file_to_downscale,product)
 
     else:
         # Downscale as usual
@@ -500,7 +500,7 @@ def downscale_data(product_name, file_to_downscale, parser, downscale_shortwave=
             else:
                 logging.error("ERROR: regridded file's name: %s is an unexpected format",\
                                    file_to_downscale)
-                sys.exit() 
+                return 1
    
             full_downscaled_dir = downscale_output_dir + "/" + yr_month_day_init  
             full_downscaled_file = full_downscaled_dir + "/" +  regridded_file
@@ -552,7 +552,7 @@ def downscale_data(product_name, file_to_downscale, parser, downscale_shortwave=
             if return_value != 0 or swdown_return_value != 0:
                 logging.info('ERROR: The downscaling of %s was unsuccessful, \
                              return value of %s', product,return_value)
-                sys.exit()
+                return 1
     
         else:
             # No additional downscaling of
@@ -573,8 +573,9 @@ def downscale_data(product_name, file_to_downscale, parser, downscale_shortwave=
                              return value of %s', product,return_value)
                 #TO DO: Determine the proper action to take when the NCL file 
                 #fails. For now, exit.
-                return
-    
+                return 1
+            else:
+                return 0
     
 
 
@@ -1222,7 +1223,7 @@ def replace_fcst0hr(parser, file_to_replace, product):
         # exists, copy it over to the YYYYMMDDHH directory of the
         # fcst 0hr file in the downscaling output directory.  
 
-        # MINNA: you will see this, seems like only the 'finished' ones will be there, right?
+        # MINNA: the downscaled are moved to finished, so need to look there.
         # I commented out a line and replaced it with the line after, seemed straightforward,
         # signed, Dave A.
         #base_dir = parser.get('downscaling','RAP_downscale_output_dir')

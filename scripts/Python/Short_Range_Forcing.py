@@ -114,22 +114,24 @@ def forcing(action, prod, file, prod2=None, file2=None):
                 regridded_file = whf.regrid_data(product_data_name, file, parser, True)
 
                 # Downscaling...
-                whf.downscale_data(product_data_name,regridded_file, parser, True, True)                
-
-                # Move the finished downscaled file to the "finished" area so the triggering
-                # script can determine when to layer with other data.
-                match = re.match(r'.*/([0-9]{10})/([0-9]{12}.LDASIN_DOMAIN1.nc)',regridded_file)
-                if match:
-                    downscaled_dir = finished_downscale_dir + "/" + match.group(1)
-                    input_dir = downscale_dir + "/" + match.group(1)
-                    if not os.path.exists(downscaled_dir):
-                        whf.mkdir_p(downscaled_dir)
-                    downscaled_file = downscaled_dir + "/" + match.group(2)
-                    input_file = input_dir + "/" + match.group(2)
-                    whf.move_to_finished_area(parser, prod, input_file) 
+                stat= whf.downscale_data(product_data_name,regridded_file, parser, True, True)
+                if (stat == 0):
+                    # Move the finished downscaled file to the "finished" area so the triggering
+                    # script can determine when to layer with other data.
+                    match = re.match(r'.*/([0-9]{10})/([0-9]{12}.LDASIN_DOMAIN1.nc)',regridded_file)
+                    if match:
+                        downscaled_dir = finished_downscale_dir + "/" + match.group(1)
+                        input_dir = downscale_dir + "/" + match.group(1)
+                        if not os.path.exists(downscaled_dir):
+                            whf.mkdir_p(downscaled_dir)
+                            downscaled_file = downscaled_dir + "/" + match.group(2)
+                            input_file = input_dir + "/" + match.group(2)
+                            whf.move_to_finished_area(parser, prod, input_file) 
+                    else:
+                        logging.error("FAIL- cannot move finished file: %s", regridded_file) 
+                        return 
                 else:
-                    logging.error("FAIL- cannot move finished file: %s", regridded_file) 
-                    return 
+                    logging.error("FAIL dould not downscale data for hour 0 RAP")
 
             else:
                 regridded_file = whf.regrid_data(product_data_name, file, parser, False)
