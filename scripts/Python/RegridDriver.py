@@ -93,7 +93,7 @@ def regridHRRR(fname):
 
    """
    logging.info("REGRIDDING HRRR DATA, file=%s", fname)
-   #srf.forcing('regrid', 'HRRR', fname[9:])
+   srf.forcing('regrid', 'HRRR', fname[9:])
    logging.info("DONE REGRIDDING HRRR DATA, file=%s", fname)
     
 #----------------------------------------------------------------------------
@@ -111,7 +111,7 @@ def regridRAP(fname):
 
    """
    logging.info("REGRIDDING RAP DATA, file=%s", fname)
-   #srf.forcing('regrid', 'RAP', fname[9:])
+   srf.forcing('regrid', 'RAP', fname[9:])
    logging.info("DONE REGRIDDING RAP DATA, file=%s", fname)
     
 #----------------------------------------------------------------------------
@@ -129,7 +129,7 @@ def regridMRMS(mrmsFname):
 
    """
    logging.info("REGRIDDING MRMS DATA, file=%s", mrmsFname)
-   #aaf.forcing('regrid', 'MRMS', mrmsFname[9:])
+   aaf.forcing('regrid', 'MRMS', mrmsFname[9:])
    logging.info("DONE REGRIDDING MRMS DATA, file=%s", mrmsFname)
 
 #----------------------------------------------------------------------------
@@ -147,7 +147,7 @@ def regridGFS(gfsFname):
 
    """
    logging.info("REGRIDDING GFS DATA, file=%s", gfsFname)
-   #mrf.forcing('regrid', 'GFS', gfsFname[9:])
+   mrf.forcing('regrid', 'GFS', gfsFname[9:])
    logging.info("DONE REGRIDDING GFS DATA, file=%s", gfsFname)
 
 #----------------------------------------------------------------------------

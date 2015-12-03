@@ -120,11 +120,13 @@ def forcing(action, prod, file, prod2=None, file2=None):
                 # script can determine when to layer with other data.
                 match = re.match(r'.*/([0-9]{10})/([0-9]{12}.LDASIN_DOMAIN1.nc)',regridded_file)
                 if match:
-                    downscaled_dir = downscale_dir + "/" + match.group(1)
+                    downscaled_dir = finished_downscale_dir + "/" + match.group(1)
+                    input_dir = downscale_dir + "/" + match.group(1)
                     if not os.path.exists(downscaled_dir):
-                        mkdir_p(downscaled_dir)
+                        whf.mkdir_p(downscaled_dir)
                     downscaled_file = downscaled_dir + "/" + match.group(2)
-                    whf.move_to_finished_area(parser, prod, downscaled_file) 
+                    input_file = input_dir + "/" + match.group(2)
+                    whf.move_to_finished_area(parser, prod, input_file) 
                 else:
                     logging.error("FAIL- cannot move finished file: %s", regridded_file) 
                     return 
@@ -137,12 +139,16 @@ def forcing(action, prod, file, prod2=None, file2=None):
                 # Move the downscaled file to the finished location 
                 match = re.match(r'.*/([0-9]{10})/([0-9]{12}.LDASIN_DOMAIN1.nc)',regridded_file)
                 if match:
-                    full_dir = downscale_dir + "/" + match.group(1)
+                    full_dir = finished_downscale_dir + "/" + match.group(1)
+                    input_dir = downscale_dir + "/" + match.group(1)
+                    full_input_file = input_dir + "/" + match.group(2)
                     full_finished_file = full_dir + "/" + match.group(2)
                     if not os.path.exists(full_dir):
                         logging.info("finished dir doesn't exist, creating it now...")
                         whf.mkdir_p(full_dir)
-                    whf.move_to_finished_area(parser, prod, full_finished_file)
+                    logging.info("Moving now, source = %s", full_input_file)
+                    whf.move_to_finished_area(parser, prod, full_input_file)
+                    #whf.move_to_finished_area(parser, prod, full_finished_file)
                 else:
                     logging.error("FAIL- cannot move finished file: %s", full_finished_file) 
                     return
@@ -162,7 +168,7 @@ def forcing(action, prod, file, prod2=None, file2=None):
             return
         else:
             # We have everything we need, request layering
-            whf.layer_data(parser,prod,file, prod2,file2, 'Short_Range')
+            whf.layer_data(parser,file, file2, prod, prod2, 'Short_Range')
             whf.rename_final_files(parser,'Short_Range')
              
     elif action_requested == 'bias':

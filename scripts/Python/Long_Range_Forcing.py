@@ -49,9 +49,11 @@ def forcing(argv):
         elif opt in ("-i", "--ifile"):
             file_in = arg
 
+    logging.debug("file_in = %s", file_in)
+
     # Obtain CFSv2 forcing engine parameters.
     parser = SafeConfigParser()
-    configFile = '/d4/karsten/DFE/wrf_hydro_forcing/parm/wrf_hydro_forcing.parm'
+    configFile = 'wrf_hydro_forcing.parm'
     parser.read(configFile)
     logging_level = parser.get('log_level', 'forcing_engine_log_level')
     out_dir = parser.get('downscaling','CFS_downscale_out_dir') 
@@ -84,6 +86,7 @@ def forcing(argv):
     log_path = out_path + "/" + dateCycleYYYYMMDDHH.strftime('%Y%m%d%H') + \
                "_" + dateFcstYYYYMMDDHH.strftime('%Y%m%d%H') + \
                "_" + dateCurrent.strftime('%Y%m%d%H%M%S') + '_Long_Range.log' 
+    print log_path
 
     # Open log file
     if logging_level == 'DEBUG':
@@ -96,7 +99,7 @@ def forcing(argv):
         set_level = logging.ERROR
     else:
         set_level = logging.CRITICAL
-
+    print set_level
     logging.basicConfig(format='%(asctime)s %(message)s',
                         filename=log_path, level=set_level)
 
@@ -130,7 +133,6 @@ def forcing(argv):
             status = os.system(cmd)
             if status != 0:
                 logging.error("Failure to remove " + fileBiasCorrected)
-                sys.exit(1)
 
   
         # Third, perform topography downscaling to generate final
@@ -146,17 +148,8 @@ def forcing(argv):
                             dateCycleYYYYMMDDHH.strftime('%Y%m%d%H') + "_" + \
                                 dateTempYYYYMMDDHH.strftime('%Y%m%d%H') + \
                                 "_regridded.M" + em_str.zfill(2) + ".nc"
-            LDASIN_path_tmp = tmp_dir + "/" + dateTempYYYYMMDDHH.strftime('%Y%m%d%H') + "00.LDASIN_DOMAIN1.nc"
-            LDASIN_path_final = out_path + "/" + dateTempYYYYMMDDHH.strftime('%Y%m%d%H') + "00.LDASIN_DOMAIN1"
-            # Check to see if final file already exists. If it does, this implies something went wrong and it 
-            # needs to be removed
-            if os.path.exists(LDASIN_path_final):
-                cmd = "rm -rf " + LDASIN_path_final
-                status = os.system(cmd)
-                if status != 0:
-                    logging.error("Failure to remove old file " + LDASIN_path_final)
-                    sys.exit(1)
-                
+            LDASIN_path_tmp = tmp_dir + "/" + dateTempYYYYMMDDHH.strftime('%Y%m%d%H') + ".LDASIN_DOMAIN1.nc"
+            LDASIN_path_final = out_path + "/" + dateTempYYYYMMDDHH.strftime('%Y%m%d%H') + ".LDASIN_DOMAIN1"
             whf.downscale_data("CFSv2",fileRegridded,parser, out_path=LDASIN_path_tmp, \
                                verYYYYMMDDHH=dateTempYYYYMMDDHH)
             # Double check to make sure file was created, delete temporary regridded file
@@ -166,13 +159,11 @@ def forcing(argv):
             status = os.system(cmd)
             if status != 0:
                 logging.error("Failure to rename " + LDASIN_path_tmp)
-                sys.exit(1)
             whf.file_exists(LDASIN_path_final)
             cmd = "rm -rf " + fileRegridded
             status = os.system(cmd)
             if status != 0:
                 logging.error("Failure to remove " + fileRegridded)
-                sys.exit(1)
         
         # Exit gracefully with an exit status of 0
         sys.exit(0)

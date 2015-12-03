@@ -186,9 +186,9 @@ def parmRead(fname):
     logging.basicConfig(format='%(asctime)s %(message)s',
                         filename=logging_filename, level=set_level)
 
-    hrrrDir = parser.get('downscaling', 'HRRR_downscale_output_dir')
+    hrrrDir = parser.get('downscaling', 'HRRR_finished_output_dir')
     #mrmsDir = parser.get('data_dir', 'MRMS_data')
-    rapDir = parser.get('downscaling', 'RAP_downscale_output_dir')
+    rapDir = parser.get('downscaling', 'RAP_finished_output_dir')
     layerDir = parser.get('layering', 'short_range_output')
     maxFcstHour = int(parser.get('fcsthr_max', 'HRRR_fcsthr_max'))
 
@@ -429,8 +429,8 @@ class ForecastStatus:
         # make note if going from nothing to something
         nothing = (self._hrrr == 0 and self._rap == 0)
 
-        if (nothing):
-            logging.debug("Nothing, so trying to get stuff")
+        #if (nothing):
+            #logging.debug("Nothing, so trying to get stuff")
         if (self._hrrr == 0):
             # update HRRR status
             self._hrrr = self.forecastExists(parms._hrrrDir)
@@ -905,8 +905,13 @@ def main(argv):
     parms = parmRead("wrf_hydro_forcing.parm")
 
     # query each directory to get newest thing, and update overall newest
+    logging.debug("Looking in %s and %s", parms._hrrrDir, parms._rapDir)
     newestT = newestIssueTime(parms._hrrrDir)
     newestT2 = newestIssueTime(parms._rapDir)
+    if (not newestT) and (not newestT2):
+        logging.debug("NO INPUT DATA available")
+        return 0
+    
     if (newestT2 > newestT):
         newestT = newestT2
     logging.debug("Newest issue time = %s", newestT)
