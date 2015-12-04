@@ -74,50 +74,47 @@ def forcing(action, prod, file, prod2=None, file2=None):
     product_data_name = prod.upper()
     if action == 'regrid': 
         (date,modelrun,fcsthr) = whf.extract_file_info(file)
-        # Determine whether this current file lies within the forecast range
-        # for the data product (e.g. if processing RAP, use only the 0hr-18hr forecasts).
-        # Skip if this file has a forecast hour greater than the max indicated in the 
-        # parm/config file.
-        in_fcst_range = whf.is_in_fcst_range(prod, fcsthr, parser)
+        # Usually check for forecast range, but only 0, 3 hr forecast/analysis data used
+   
+        # Check for HRRR, RAP, MRMS products. 
+        logging.info("Regridding and Downscaling for %s", product_data_name)
 
-        if in_fcst_range:
-            # Check for RAP or GFS data products.  If this file is
-            # a 0 hr fcst and is RAP or GFS, substitute each 0hr forecast
-            # with the file from the previous model run and the same valid
-            # time.  This is necessary because there are missing variables
-            # in the 0hr forecasts (e.g. precip rate for RAP and radiation
-            # in GFS).
-    
-            logging.info("Regridding and Downscaling for %s", product_data_name)
-            # Determine if this is a 0hr forecast for RAP data (GFS is also missing
-            # some variables for 0hr forecast, but GFS is not used for Short Range
-            # forcing). We will need to substitute this file for the downscaled
-            # file from a previous model run with the same valid time.  
-            # We only need to do this for downscaled files, as the Short Range 
-            # forcing files that are regridded always get downscaled and we don't want
-            # to do this for both the regridding and downscaling.
-            if fcsthr == 0 and prod == 'RAP':
-                logging.info("Regridding, ignoring f0 RAP files " )
-                regridded_file = whf.regrid_data(product_data_name, file, parser, True)
-                whf.downscale_data(product_data_name,regridded_file, parser, True, True)                
-            elif prod == 'MRMS':
-                regridded_file = whf.regrid_data(product_data_name, file, parser, False)
-                logging.debug("MRMS regridded file = %s", regridded_file)
-            else:
-                regridded_file = whf.regrid_data(product_data_name, file, parser, False)
-                whf.downscale_data(product_data_name,regridded_file, parser,True, False)                
-                
-        else:
-            # Skip processing this file, exiting...
-            logging.info("INFO [Anal_Assim_Forcing]- Skip processing, requested file is outside max fcst")
-    elif action_requested == 'layer':
-        logging.info("Layering requested for %s and %s", prod, prod2)
-        # Do some checking to make sure that there are two data products 
-        # and two files indicated.
-        if prod2 is None:
-            logger.error("ERROR [Anal_Assim_Forcing]: layering requires two products")
-        elif file2 is None:
-            logger.error("ERROR [Anal_Assim_Forcing]: layering requires two input files")
+        if fcsthr == 0 and prod == "HRRR":
+            downscale_dir = parser.get('downscaling', 'HRRR_downscale_output_dir_0hr')
+            regridded_file = whf.regrid_data(product_data_name,file,parser,False, \
+                             zero_process=True)
+            whf.downscale_data(product_data_name,regridded_file, parser,False, False, \
+                               zero_process=True)
+
+            # Move downscaled file to staging area where triggering will monitor
+            match = re.match(r'.*/([0-9]{10})/([0-9]{12}.LDASIN_DOMAIN1.nc)',regridded_file)
+            if match:
+                full_dir = downscale_dir + "/" + match.group(1)
+                full_finished_file = full_dir + "/" + match.group(2)
+                # File should have been created in downscale_data step.
+                whf.file_exists(full_finished_file)
+                whf.move_to_finished_area(parser, prod, full_finished_file, zero_move=True)
+        elif fcsthr == 0 and prod == "RAP":
+            downscale_dir = parser.get('downscaling', 'RAP_downscale_output_dir_0hr')
+            regridded_file = whf.regrid_data(product_data_name,file,parser,False, \
+                             zero_process=True)
+            whf.downscale_data(product_data_name,regridded_file, parser,False, False, \
+                               zero_process=True)
+            # Move downscaled file to staging area where triggering will monitor
+            match = re.match(r'.*/([0-9]{10})/([0-9]{12}.LDASIN_DOMAIN1.nc)',regridded_file)
+            if match:
+                full_dir = downscale_dir + "/" + match.group(1)
+                full_finished_file = full_dir + "/" + match.group(2)
+                # File should have been created in downscale_data step.
+                whf.file_exists(full_finished_file)
+                whf.move_to_finished_area(parser, prod, full_finished_file, zero_move=True) 
+        elif prod == "MRMS":
+            regridded_file = whf.regrid_data(product_data_name,file,parser,False)
+  
+            # Move regridded file to staging area where triggering will monitor
+            # First make sure file exists
+            whf.file_exists(regridded_file)
+            whf.move_to_finished_area(parser, prod, regridded_file, zero_move=False)
         else:
             # We have everything we need, request layering, since layering is the last step,
             # move/rename all finished data (MRMS included) to the final Anal_Assim directory.
