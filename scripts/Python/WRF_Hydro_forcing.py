@@ -893,17 +893,20 @@ def layer_data(parser, first_data, second_data, first_data_product, second_data_
     # Retrieve any necessary data from the parameter/config file.
     ncl_exe = parser.get('exe', 'ncl_exe')
     layering_exe = parser.get('exe','Analysis_Assimilation_layering')
-    downscaled_first_dir = parser.get('layering','analysis_assimilation_primary')
-    downscaled_second_dir = parser.get('layering','analysis_assimilation_secondary')
     forcing_config = forcing_type.lower()
     if forcing_config == 'anal_assim':
         layered_output_dir = parser.get('layering', 'analysis_assimilation_output')
+        downscaled_first_dir = parser.get('layering','analysis_assimilation_primary')
+        downscaled_second_dir = parser.get('layering','analysis_assimilation_secondary')
     elif forcing_config == 'short_range':
         layered_output_dir = parser.get('layering', 'short_range_output')
+        downscaled_first_dir = parser.get('layering','short_range_primary')
+        downscaled_second_dir = parser.get('layering','short_range_secondary')
     elif forcing_config == 'medium_range':
+        # No layering needed for Medium range
         layered_output_dir = parser.get('layering', 'medium_range_output')
     else :
-        #forcing_config == 'long_range'
+        # No layering needed for Long range
         layered_output_dir = parser.get('layering', 'long_range_output')
 
     # Create the destination directory in case it doesn't already exist.
@@ -1255,7 +1258,9 @@ def replace_fcst0hr(parser, file_to_replace, product):
         # In this directory, search for the fcst 0hr file with the same name.  If it 
         # exists, copy it over to the YYYYMMDDHH directory of the
         # fcst 0hr file in the downscaling output directory.  
-        base_dir = parser.get('downscaling','RAP_downscale_output_dir')
+
+        base_dir = parser.get('downscaling','RAP_finished_output_dir')
+
         full_path = base_dir + '/' + date + prev_model_time_str + "/" + \
                     file_only
         logging.info("INFO [replace_fcst0hr]: full path = %s", full_path)
@@ -1301,7 +1306,7 @@ def replace_fcst0hr(parser, file_to_replace, product):
             os.system(copy_cmd)
             return
         else:
-            # If we are here, we didn't find any file from a previous RAP model run...
+            # If we are here, we didn't find any file from a previous GFS model run...
             logging.error("ERROR: No previous model runs found, exiting...")
             return
           
@@ -1538,10 +1543,14 @@ def move_to_finished_area(parser, product, src, zero_move = False):
                                 RAP, or GFS
             
             src (string): full file path and filename of src
+<<<<<<< HEAD
             dest (string): base file path of destination
             zero_move (bool): Optional argument for handling 00hr 
                               fcst files. Only used by analysis and
                               assimilation configuration.
+=======
+
+>>>>>>> b2758705674f11fdf2ddccad9f62d699fbb37b1b
        Returns:
            None
     """
@@ -1573,6 +1582,10 @@ def move_to_finished_area(parser, product, src, zero_move = False):
         logging.info("moving %s", src)
         logging.info("...to %s", finished_dest)
         shutil.move(src, finished_dest) 
+        #cmd = "mv "+ src + " " + finished_dest
+        #logging.info(cmd)
+        #status = os.system(cmd)
+        #logging.info("Stataus = %d", status)
     else:
         logging.error("[move_to_finished_area]: can't match filename")
 
