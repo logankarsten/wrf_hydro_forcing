@@ -234,14 +234,6 @@ def anal_assim_layer(cycleYYYYMMDDHH,fhr,action):
     rapWgtPath = qpe_parm_dir + "/RAPD_wgt_m" + \
                  validDate.strftime("%m") + "_v7_wrf1km.grb2"
 
-    print cycleDate
-    print validDate
-    print fcstWindowDate
-    print hrrr0Path
-    print hrrr3Path
-    print rap0Path
-    print rap3Path
-    print mrmsPath
     # Sanity checking on parameter data
     whf.file_exists(hrrrBiasPath)
     whf.file_exists(hrrrWgtPath)
