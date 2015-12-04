@@ -48,8 +48,6 @@ ncarg_root = /opt/ncl
 # call func or procedures by preceding with two colons + 
 # the name of the shared object.
 
-#ncl_def_lib_dir = /d4/hydro-dm/IOC/realtime/code/
-
 ncl_def_lib_dir = /home/minnawin/IOC/ncl_shared_objs
 
 #-------------------------------------------------
@@ -63,11 +61,8 @@ ncl_def_lib_dir = /home/minnawin/IOC/ncl_shared_objs
 
 HRRR_data = /var/autofs/mnt/rapdmg2/data/grib/HRRR-wrfprs
 MRMS_data = /d2/hydro-dm/var/data/nsslMosaic/grib2/GaugeCorr_QPE/01H
-#NAM_data = /d4/hydro-dm/IOC//test/NAM218
-# NAM227 as directed by NCEP
 NAM_data = /d4/hydro-dm/IOC/data/nam227
 GFS_data = /var/autofs/mnt/rapdmg1/data/grib/GFS_0.25-pgrb2
-#RAP_data = /d4/hydro-dm/IOC/data/RAP1km
 RAP_data = /var/autofs/mnt/rapdmg1/data/grib/WRF-RR-CONUS-wrfprs
 GFS_data = /var/autofs/mnt/rapdmg1/data/grib/GFS_0.25-pgrb2/
 CFS_data = /d4/karsten/DFE/IOC_TESTING/long_range/raw_data/com/cfs/prod/cfs
@@ -80,8 +75,6 @@ CFS_num_ensemble = 4
 [fcsthr_max]
 # Last forecast hour for the specified 
 # input model data (HRRR, RAP, etc.) to be included in the forcing
-#RAP_fcsthr_max = 18
-#HRRR_fcsthr_max = 18
 RAP_fcsthr_max = 23
 HRRR_fcsthr_max = 23
 GFS_fcsthr_max = 240
@@ -101,25 +94,16 @@ GFS_hours_back = 1
 CFS_hours_back = 1
 MRMS_hours_back = 1
 
-short_range_fcst_max_wait_minutes = 20
-short_range_fcst_very_late_minutes = 40
+short_range_fcst_max_wait_minutes = 40
+short_range_fcst_very_late_minutes = 50
 
 #
-# State file for hrrr regrid triggering
+# State files for regrid triggering
 #
-hrrr_regrid_state_file = ./State.HrrrRegrid.txt
-#
-# State file for rap regrid triggering
-#
-rap_regrid_state_file = ./State.RapRegrid.txt
-
-gfs_regrid_state_file = ./State.GfsRegrid.txt
-
-mrms_regrid_state_file = ./State.MrmsRegrid.txt
-
-#
-# State file for long range regrid triggering
-#
+hrrr_regrid_state_file =       ./State.HrrrRegrid.txt
+rap_regrid_state_file =        ./State.RapRegrid.txt
+mrms_regrid_state_file =       ./State.MrmsRegrid.txt
+cfs_regrid_state_file =        ./State.CfsRegrid.txt
 long_range_regrid_state_file = ./State.LongRangeRegrid.txt
 
 #
@@ -144,11 +128,8 @@ CFS_bias_correct_mod = /d4/karsten/DFE/IOC_TESTING/long_range/programs/CFSv2_bia
 CFS_bias_correct_exe = /d4/karsten/DFE/IOC_TESTING/long_range/programs/CFSv2_bias_correct.ncl
 
 # Regridding
-#HRRR_regridding_exe = /d4/hydro-dm/IOC/code/HRRR-2-WRF_Hydro_ESMF_regrid.ncl
 HRRR_regridding_exe = ../NCL/HRRR-2-WRF_Hydro_ESMF_regrid.ncl
-#MRMS_regridding_exe = /d4/hydro-dm/IOC/code/MRMS-2-WRF_Hydro_ESMF_regrid.ncl
 MRMS_regridding_exe = ../NCL/MRMS-2-WRF_Hydro_ESMF_regrid.ncl
-#NAM_regridding_exe =  /d4/hydro-dm/realtime/code/NAM-2-WRF_Hydro_ESMF_regrid.ncl
 NAM_regridding_exe =  ../NCL/NAM-2-WRF_Hydro_ESMF_regrid.ncl
 GFS_regridding_exe = ../NCL/GFS2Hydro_forcing_ESMFregrid.ncl
 RAP_regridding_exe = ../NCL/RAP-2-WRF_Hydro_ESMF_regrid.ncl
@@ -177,8 +158,7 @@ Analysis_Assimilation_layering = ../NCL/combine.ncl
 
 #CFSv2-specific
 CFS_correspond = /d4/karsten/DFE/IOC_TESTING/long_range/params/nldas_param_cfsv2_subset_grid_correspondence.nc
-#CFS_tmp_dir = /d4/karsten/DFE/IOC_TESTING/long_range/tmp
-CFS_tmp_dir = /d4/hydro-dm/IOC/albo_test/long_range_tmp
+CFS_tmp_dir = /d4/hydro-dm/IOC/realtime/long_range_tmp
 CFS_bias_parm_dir = /d4/karsten/DFE/IOC_TESTING/long_range/params/bias_climo_param/cfsv2/climo 
 NLDAS_bias_parm_dir = /d4/karsten/DFE/IOC_TESTING/long_range/params/bias_climo_param/nldas2/climo
 
@@ -191,27 +171,24 @@ NLDAS_bias_parm_dir = /d4/karsten/DFE/IOC_TESTING/long_range/params/bias_climo_p
 #HRRR-specific
 HRRR_wgt_bilinear  = /d4/hydro-dm/IOC/weighting/HRRR1km/HRRR2HYDRO_d01_weight_bilinear.nc
 HRRR_dst_grid_name = /d4/hydro-dm/IOC/weighting/HRRR1km/geo_dst.nc
-HRRR_output_dir = /d4/hydro-dm/IOC/albo_test/regridded/HRRR
+HRRR_output_dir = /d4/hydro-dm/IOC/realtime/regridded/HRRR
 
 #MRMS-specific
 MRMS_wgt_bilinear =  /d4/hydro-dm/IOC/weighting/RADAR_GAUGE1km/RADAR2HYDRO_d01_weight_bilinear.nc
 MRMS_dst_grid_name = /d4/hydro-dm/IOC/weighting/RADAR_GAUGE1km/geo_dst.nc
-MRMS_output_dir = /d4/hydro-dm/IOC/albo_test/regridded/MRMS
-#MRMS_output_dir = /d6/forcing_test/regridded/MRMS
-MRMS_finished_output_dir = /d4/hydro-dm/IOC/albo_test/finished_downscaled/MRMS
-#MRMS_finished_output_dir = /d6/forcing_test/finished_downscaled/MRMS
+MRMS_output_dir = /d4/hydro-dm/IOC/realtime/regridded/MRMS
+MRMS_finished_output_dir = /d4/hydro-dm/IOC/realtime/finished_downscaled/MRMS
 
 #GFS-specific
 #For GFS_0.25 data
 GFS_wgt_bilinear = /d4/hydro-dm/IOC/weighting/GFS1km_25/GFS2HYDRO_d01_weight_bilinear.nc
 GFS_dst_grid_name = /d4/hydro-dm/IOC/weighting/GFS1km_25/geo_dst.nc
-GFS_output_dir = /d4/hydro-dm/IOC/albo_test/regridded/GFS
+GFS_output_dir = /d4/hydro-dm/IOC/realtime/regridded/GFS
 
 #RAP-specific
 RAP_wgt_bilinear = /d4/hydro-dm/IOC/weighting/RAP1km/RAP2HYDRO_d01_weight_bilinear.nc
 RAP_dst_grid_name = /d4/hydro-dm/IOC/weighting/RAP1km/geo_dst.nc
-RAP_output_dir = /d4/hydro-dm/IOC/albo_test/regridded/RAP
-#RAP_output_dir = /d6/forcing_test/regridded/RAP
+RAP_output_dir = /d4/hydro-dm/IOC/realtime/regridded/RAP
 
 #CFSv2-specific
 CFS_wgt_bilinear = /d4/karsten/DFE/IOC_TESTING/long_range/params/CFS2HYDRO_d01_weight_bilinear.nc
@@ -232,46 +209,40 @@ lapse_rate_file = /d4/hydro-dm/IOC/weighting/NARRlapse1km.nc
 # HRRR
 # Currently, this is NAM227, as required by NCEP
 # Directory where regridded HRRR data to BE DOWNSCALED is located
-HRRR_data_to_downscale = /d4/hydro-dm/IOC/albo_test/regridded/HRRR
+HRRR_data_to_downscale = /d4/hydro-dm/IOC/realtime/regridded/HRRR
 HRRR_hgt_data = /d4/hydro-dm/IOC/weighting/HRRR1km/HRRRhgt.nc
 HRRR_geo_data = /d4/hydro-dm/IOC/weighting/HRRR1km/geo_dst.nc
 # Directory where downscaled data should be saved
-HRRR_downscale_output_dir = /d4/hydro-dm/IOC/albo_test/downscaled/HRRR
-#HRRR_downscale_output_dir = /d6/forcing_test/downscaled/HRRR
-HRRR_finished_output_dir = /d4/hydro-dm/IOC/albo_test/finished_downscaled/HRRR
-#HRRR_finished_output_dir = /d6/forcing_test/finished_downscaled/HRRR
+HRRR_downscale_output_dir = /d4/hydro-dm/IOC/realtime/downscaled/HRRR
+HRRR_finished_output_dir = /d4/hydro-dm/IOC/realtime/finished_downscaled/HRRR
 
 
 # GFS 
 # Currently GFS 0.25 degree data
 # Directory where regridded GFS data to BE DOWNSCALED is located
-GFS_data_to_downscale = /d4/hydro-dm/IOC/albo_test/regridded/GFS
+GFS_data_to_downscale = /d4/hydro-dm/IOC/realtime/regridded/GFS
 GFS_hgt_data = /d4/hydro-dm/IOC/weighting/GFS1km_25/GFShgt.nc
 GFS_geo_data = /d4/hydro-dm/IOC/weighting/GFS1km_25/geo_dst.nc
 # Directory where downscaled data should be saved
-GFS_downscale_output_dir = /d4/hydro-dm/IOC/albo_test/downscaled/GFS
-#GFS_downscale_output_dir = /d6/forcing_test/downscaled/GFS
-GFS_finished_output_dir = /d4/hydro-dm/IOC/albo_test/finished_downscaled/GFS
-#GFS_finished_output_dir = /d6/forcing_test/finished_downscaled/GFS
+GFS_downscale_output_dir = /d4/hydro-dm/IOC/realtime/downscaled/GFS
+GFS_finished_output_dir = /d4/hydro-dm/IOC/realtime/finished_downscaled/GFS
 
 
 # RAP
 # Directory where regridded RAP data to BE DOWNSCALED is located
-RAP_data_to_downscale = /d4/hydro-dm/IOC/albo_test/regridded/RAP
+RAP_data_to_downscale = /d4/hydro-dm/IOC/realtime/regridded/RAP
 RAP_hgt_data = /d4/hydro-dm/IOC/weighting/RAP1km/RAPhgt.nc
 RAP_geo_data = /d4/hydro-dm/IOC/weighting/RAP1km/geo_dst.nc
 # Directory where downscaled data should be saved
-RAP_downscale_output_dir = /d4/hydro-dm/IOC/albo_test/downscaled/RAP
-#RAP_downscale_output_dir = /d6/forcing_test/downscaled/RAP
-RAP_finished_output_dir = /d4/hydro-dm/IOC/albo_test/finished_downscaled/RAP
-#RAP_finished_output_dir = /d6/forcing_test/finished_downscaled/RAP
+RAP_downscale_output_dir = /d4/hydro-dm/IOC/realtime/downscaled/RAP
+RAP_finished_output_dir = /d4/hydro-dm/IOC/realtime/finished_downscaled/RAP
 
 # CFS
 # Directories that contain distribution parameter files for CFS/NLDAS
 # In addition, output directory is specified here. 
 CFS_hgt_data = /d4/karsten/DFE/IOC_TESTING/long_range/params/cfsa_hgt1km.nc 
 #CFS_downscale_out_dir = /d4/karsten/DFE/IOC_TESTING/long_range/final_data/Long_Range
-CFS_downscale_out_dir =  /d4/hydro-dm/IOC/albo_test/Long_Range
+CFS_downscale_out_dir =  /d4/hydro-dm/IOC/realtime/Long_Range
 CFS_geo_data = /d4/karsten/DFE/IOC_TESTING/long_range/params/geo_em.d01.nc.conus_1km
 
 #-------------------------------------------------
@@ -285,28 +256,14 @@ CFS_geo_data = /d4/karsten/DFE/IOC_TESTING/long_range/params/geo_em.d01.nc.conus
 
 # HRRR and RAP used for Analysis and Assimilation
 # Forcing Configuration
-analysis_assimilation_primary = /d4/hydro-dm/IOC/albo_test/downscaled/HRRR
-analysis_assimilation_secondary = /d4/hydro-dm/IOC/albo_test/downscaled/RAP
-analysis_assimilation_tertiary = /d4/hydro-dm/IOC/albo_test/finished_output_dir/MRMS
+analysis_assimilation_primary = /d4/hydro-dm/IOC/realtime/finished_downscaled/HRRR
+analysis_assimilation_secondary = /d4/hydro-dm/IOC/realtime/finished_downscaled/RAP
+analysis_assimilation_tertiary = /d4/hydro-dm/IOC/realtime/finished_output_dir/MRMS
 
-#analysis_assimilation_primary = /d6/forcing_test/finished_downscaled/HRRR
-#analysis_assimilation_secondary = /d6/forcing_test/finished_downscaled/RAP
-#analysis_assimilation_tertiary = /d6/forcing_test/finished_output_dir/MRMS
+short_range_primary = /d4/hydro-dm/IOC/realtime/downscaled/HRRR
+short_range_secondary = /d4/hydro-dm/IOC/realtime/downscaled/RAP
 
-short_range_primary = /d4/hydro-dm/IOC/albo_test/downscaled/HRRR
-#short_range_primary = /d6/forcing_test/finished_downscaled/HRRR
-
-short_range_secondary = /d4/hydro-dm/IOC/albo_test/downscaled/RAP
-#short_range_secondary = /d6/forcing_test/finished_downscaled/RAP
-
-
-analysis_assimilation_output = /d4/hydro-dm/IOC/albo_test/Anal_Assim
-#analysis_assimilation_output = /d6/forcing_test/Anal_Assim
-
-short_range_output = /d4/hydro-dm/IOC/albo_test/Short_Range
-#short_range_output = /d6/forcing_test/Short_Range
-
-medium_range_output = /d4/hydro-dm/IOC/albo_test/Medium_Range
-#medium_range_output = /d6/forcing_test/Medium_Range
-
-long_range_output =     /d4/hydro_dm/IOC/albo_test/Long_Range
+analysis_assimilation_output = /d4/hydro-dm/IOC/realtime/Anal_Assim
+short_range_output = /d4/hydro-dm/IOC/realtime/Short_Range
+medium_range_output = /d4/hydro-dm/IOC/realtime/Medium_Range
+long_range_output =     /d4/hydro_dm/IOC/realtime/Long_Range

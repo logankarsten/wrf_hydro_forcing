@@ -110,6 +110,11 @@ def getImmediateSubdirectories(aDir):
       All subdirectories of the aDir
 
    """
+
+   # does the dir exist?
+   if (not os.path.exists(aDir)):
+       return []
+
    return [name for name in os.listdir(aDir)
            if os.path.isdir(os.path.join(aDir, name))]
 
@@ -146,11 +151,11 @@ def newestIssueTime(dir):
        The subdirectory with biggest issue time, or empty string
     """       
     names = getYyyymmddhhSubdirectories(dir)
-    names = sorted(names)
     if (not names):
         return ""
-    else:
-        return names[-1]
+
+    names = sorted(names)
+    return names[-1]
     
 #----------------------------------------------------------------------------
 def parmRead(fname):
