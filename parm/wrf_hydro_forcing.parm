@@ -71,9 +71,6 @@ GFS_data = /var/autofs/mnt/rapdmg1/data/grib/GFS_0.25-pgrb2
 #RAP_data = /d4/hydro-dm/IOC/data/RAP1km
 RAP_data = /var/autofs/mnt/rapdmg1/data/grib/WRF-RR-CONUS-wrfprs
 CFS_data = /d4/karsten/DFE/IOC_TESTING/long_range/raw_data/com/cfs/prod/cfs
-GFS_data = /var/autofs/mnt/rapdmg1/data/grib/GFS_0.25-pgrb2/
-CFS_data = /d4/karsten/DFE/IOC_TESTING/long_range/raw_data/com/cfs/prod/cfs
-CFS_num_ensemble = 4
 
 #-------------------------------------------------
 #   Forecast hour cutoff times
@@ -90,37 +87,6 @@ GFS_fcsthr_max = 240
 CFS_fcsthr_max = 726
 
 
-#-------------------------------------------------
-#  Triggering look back limits
-#-------------------------------------------------
-[triggering]
-#
-# Number of hours back from current issue time to keep state
-#
-HRRR_hours_back = 1
-RAP_hours_back = 1
-GFS_hours_back = 1
-CFS_hours_back = 1
-MRMS_hours_back = 1
-
-short_range_fcst_max_wait_minutes = 20
-short_range_fcst_very_late_minutes = 40
-
-#
-# State file for regrid triggering
-#
-regrid_state_file = ./State.regrid.txt
-
-#
-# State file for long range regrid triggering
-#
-long_range_regrid_state_file = ./State.LongRangeRegrid.txt
-
-#
-# State file for short range layering
-#
-short_range_layering_state_file = ./State.ShortRangeLayering.txt
-
 
 #-------------------------------------------------
 #    Paths to executables and other scripts
@@ -134,34 +100,38 @@ esmf_exe=/usr/local/esmf
 ncl_exe = /opt/ncl-6.3.0/bin/ncl
 
 # Bias correction
-CFS_bias_correct_mod = /d4/karsten/DFE/wrf_hydro_forcing/scripts/NCL/CFSv2_bias_correct_mod.ncl
-CFS_bias_correct_exe = /d4/karsten/DFE/wrf_hydro_forcing/scripts/NCL/CFSv2_bias_correct.ncl
+CFS_bias_correct_mod = /d4/karsten/DFE/IOC_TESTING/long_range/programs/CFSv2_bias_correct_mod.ncl
+CFS_bias_correct_exe = /d4/karsten/DFE/IOC_TESTING/long_range/programs/CFSv2_bias_correct.ncl
 
 # Regridding
 #HRRR_regridding_exe = /d4/hydro-dm/IOC/code/HRRR-2-WRF_Hydro_ESMF_regrid.ncl
 HRRR_regridding_exe = ../NCL/HRRR-2-WRF_Hydro_ESMF_regrid.ncl
+HRRR_regridding_exe_0hr = ../NCL/HRRR-2-WRF_Hydro_ESMF_regrid_0hr.ncl
 #MRMS_regridding_exe = /d4/hydro-dm/IOC/code/MRMS-2-WRF_Hydro_ESMF_regrid.ncl
 MRMS_regridding_exe = ../NCL/MRMS-2-WRF_Hydro_ESMF_regrid.ncl
 #NAM_regridding_exe =  /d4/hydro-dm/IOC/code/NAM-2-WRF_Hydro_ESMF_regrid.ncl
 NAM_regridding_exe =  ../NCL/NAM-2-WRF_Hydro_ESMF_regrid.ncl
 GFS_regridding_exe = ../NCL/GFS2Hydro_forcing_ESMFregrid.ncl
 RAP_regridding_exe = ../NCL/RAP-2-WRF_Hydro_ESMF_regrid.ncl
-CFS_regridding_exe = /d4/karsten/DFE/wrf_hydro_forcing/scripts/NCL/CFSv2_regrid_conus.ncl
+RAP_regridding_exe_0hr = ../NCL/RAP-2-WRF_Hydro_ESMF_regrid_0hr.ncl
+CFS_regridding_exe = /d4/karsten/DFE/IOC_TESTING/long_range/programs/CFSv2_regrid_conus.ncl
 
 # Downscaling
 # Use the same downscaling script for all products. The hgt file, geo file, and
 # input file (data to downscale) are the only input and these are all defined in # this config file.
 HRRR_downscaling_exe = ../NCL/All_WRF_Hydro_downscale.ncl
+HRRR_downscaling_exe_0hr = ../NCL/All_WRF_Hydro_downscale_0hr.ncl
 NAM_downscaling_exe = ../NCL/All_WRF_Hydro_downscale.ncl
 GFS_downscaling_exe = ../NCL/All_WRF_Hydro_downscale.ncl
 RAP_downscaling_exe = ../NCL/All_WRF_Hydro_downscale.ncl
-CFS_downscaling_exe = /d4/karsten/DFE/wrf_hydro_forcing/scripts/NCL/CFSv2_downscale_conus.ncl 
+RAP_downscaling_exe_0hr = ../NCL/All_WRF_Hydro_downscale_0hr.ncl
+CFS_downscaling_exe = ../NCL/CFSv2_downscale_conus.ncl 
 
 topo_adj_fortran_exe = /d4/hydro-dm/IOC/code/topo_adjf90.so
 shortwave_downscaling_exe = ../NCL/topo_adj.ncl
 
 # Layering and contingency
-Analysis_Assimilation_layering = ../NCL/combine.ncl
+# Logan Add/Modify Analysis_Assimilation_layering = ../NCL/layer_anal_assim.ncl
 
 #-------------------------------------------------
 #    Parameters needed to run bias correction
@@ -184,16 +154,14 @@ NLDAS_bias_parm_dir = /d4/karsten/DFE/IOC_TESTING/long_range/params/bias_climo_p
 #HRRR-specific
 HRRR_wgt_bilinear  = /d4/hydro-dm/IOC/weighting/HRRR1km/HRRR2HYDRO_d01_weight_bilinear.nc
 HRRR_dst_grid_name = /d4/hydro-dm/IOC/weighting/HRRR1km/geo_dst.nc
-#HRRR_output_dir = /d4/hydro-dm/IOC/regridded/HRRR
-HRRR_output_dir = /d6/forcing_test/regridded/HRRR
+# Logan Modify HRRR_output_dir = /d4/karsten/DFE/IOC_TESTING/anal_assim/HRRR_3hr_regrid
+# Logan Add HRRR_output_dir_0hr = /d4/karsten/DFE/IOC_TESTING/anal_assim/HRRR_0hr_regrid
 
 #MRMS-specific
 MRMS_wgt_bilinear =  /d4/hydro-dm/IOC/weighting/RADAR_GAUGE1km/RADAR2HYDRO_d01_weight_bilinear.nc
 MRMS_dst_grid_name = /d4/hydro-dm/IOC/weighting/RADAR_GAUGE1km/geo_dst.nc
-#MRMS_output_dir = /d4/hydro-dm/IOC/regridded/MRMS
-MRMS_output_dir = /d6/forcing_test/regridded/MRMS
-#MRMS_finished_output_dir = /d4/hydro-dm/IOC/downscaled/finished_downscaled/MRMS
-MRMS_finished_output_dir = /d6/forcing_test/finished_downscaled/MRMS
+# Logan Modify MRMS_output_dir = /d4/karsten/DFE/IOC_TESTING/anal_assim/MRMS_regrid
+# Logan Modify  MRMS_finished_output_dir = /d4/karsten/DFE/IOC_TESTING/anal_assim/MRMS_downscaled_staging
 
 #GFS-specific
 #For GFS_0.25 data
@@ -205,8 +173,8 @@ GFS_output_dir = /d6/forcing_test/regridded/GFS
 #RAP-specific
 RAP_wgt_bilinear = /d4/hydro-dm/IOC/weighting/RAP1km/RAP2HYDRO_d01_weight_bilinear.nc
 RAP_dst_grid_name = /d4/hydro-dm/IOC/weighting/RAP1km/geo_dst.nc
-#RAP_output_dir = /d4/hydro-dm/IOC/regridded/RAP
-RAP_output_dir = /d6/forcing_test/regridded/RAP
+# Logan Modify RAP_output_dir = /d4/karsten/DFE/IOC_TESTING/anal_assim/RAP_3hr_regrid
+# Logan Add RAP_output_dir_0hr = /d4/karsten/DFE/IOC_TESTING/anal_assim/RAP_0hr_regrid
 
 #CFSv2-specific
 CFS_wgt_bilinear = /d4/karsten/DFE/IOC_TESTING/long_range/params/CFS2HYDRO_d01_weight_bilinear.nc
@@ -231,11 +199,10 @@ HRRR_data_to_downscale = /d4/hydro-dm/IOC/regridded/HRRR
 HRRR_hgt_data = /d4/hydro-dm/IOC/weighting/HRRR1km/HRRRhgt.nc
 HRRR_geo_data = /d4/hydro-dm/IOC/weighting/HRRR1km/geo_dst.nc
 # Directory where downscaled data should be saved
-#HRRR_downscale_output_dir = /d4/hydro-dm/IOC/downscaled/HRRR
-HRRR_downscale_output_dir = /d6/forcing_test/downscaled/HRRR
-#HRRR_finished_output_dir = /d4/hydro-dm/IOC/finished_downscaled/HRRR
-HRRR_finished_output_dir = /d6/forcing_test/finished_downscaled/HRRR
-
+# Logan Modify HRRR_downscale_output_dir = /d4/karsten/DFE/IOC_TESTING/anal_assim/HRRR_3hr_downscaled
+# Logan Add HRRR_downscale_output_dir_0hr = /d4/karsten/DFE/IOC_TESTING/anal_assim/HRRR_0hr_downscaled
+# Logan Modify HRRR_finished_output_dir = /d4/karsten/DFE/IOC_TESTING/anal_assim/HRRR_downscaled_staging/fcst
+# Logan Add HRRR_finished_output_dir_0hr = /d4/karsten/DFE/IOC_TESTING/anal_assim/HRRR_downscaled_staging/0hr
 
 # GFS 
 # Currently GFS 0.25 degree data
@@ -256,10 +223,10 @@ RAP_data_to_downscale = /d4/hydro-dm/IOC/regridded/RAP
 RAP_hgt_data = /d4/hydro-dm/IOC/weighting/RAP1km/RAPhgt.nc
 RAP_geo_data = /d4/hydro-dm/IOC/weighting/RAP1km/geo_dst.nc
 # Directory where downscaled data should be saved
-#RAP_downscale_output_dir = /d4/hydro-dm/IOC/downscaled/RAP
-RAP_downscale_output_dir = /d6/forcing_test/downscaled/RAP
-#RAP_finished_output_dir = /d4/hydro-dm/IOC/finished_downscaled/RAP
-RAP_finished_output_dir = /d6/forcing_test/finished_downscaled/RAP
+# Logan Modify RAP_downscale_output_dir = /d4/karsten/DFE/IOC_TESTING/anal_assim/RAP_3hr_downscaled
+# Logan Add RAP_downscale_output_dir_0hr = /d4/karsten/DFE/IOC_TESTING/anal_assim/RAP_0hr_downscaled
+# Logan Modify RAP_finished_output_dir = /d4/karsten/DFE/IOC_TESTING/anal_assim/RAP_downscaled_staging/fcst 
+# Logan Add RAP_finished_output_dir_0hr = /d4/karsten/DFE/IOC_TESTING/anal_assim/RAP_downscaled_staging/0hr
 
 # CFS
 # Directories that contain distribution parameter files for CFS/NLDAS
@@ -294,12 +261,13 @@ short_range_secondary = /d6/forcing_test/finished_downscaled/RAP
 
 
 #analysis_assimilation_output = /d4/hydro-dm/IOC/Anal_Assim
-analysis_assimilation_output = /d6/forcing_test/Anal_Assim
+# Logan Modify analysis_assimilation_tmp = /d4/karsten/DFE/IOC_TESTING/anal_assim/tmp
+# Logan Add analysis_assimilation_output = /d4/karsten/DFE/IOC_TESTING/anal_assim/final_data/Anal_Assim 
+# Logan Add qpe_combine_parm_dir = /d4/karsten/DFE/IOC_TESTING/anal_assim/combine_params
 
 #short_range_output = /d4/hydro-dm/IOC/Short_Range
 short_range_output = /d6/forcing_test/Short_Range
 
-#medium_range_output = /d4/hydro-dm/IOC/Medium_Range
-medium_range_output = /d6/forcing_test/Medium_Range
+medium_range_output = /d6/forcing_test/Medium_Range/
 
 long_range_output = /d4/hydro_dm/IOC/Long_Range
