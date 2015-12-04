@@ -82,6 +82,10 @@ def getImmediateSubdirectories(aDir):
       All subdirectories of the aDir
 
    """
+
+   if (not os.path.exists(aDir)):
+      return []
+   
    return [name for name in os.listdir(aDir)
            if os.path.isdir(os.path.join(aDir, name))]
 

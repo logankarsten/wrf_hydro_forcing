@@ -109,7 +109,7 @@ def forcing(action, prod, file, prod2=None, file2=None):
                     file_only = match.group(2)
                     downscaled_dir = downscale_dir + "/" + ymd_dir
                     if not os.path.exists(downscaled_dir):
-                        mkdir_p(downscaled_dir)
+                        whf.mkdir_p(downscaled_dir)
                     downscaled_file = downscaled_dir + "/" + file_only
                     whf.move_to_finished_area(parser,"GFS", downscaled_file)
                     whf.rename_final_file(parser,"Medium_Range")
@@ -123,7 +123,7 @@ def forcing(action, prod, file, prod2=None, file2=None):
                     file_only = match.group(2)
                     downscaled_dir = downscale_dir + "/" + ymd_dir
                     if not os.path.exists(downscaled_dir):
-                        mkdir_p(downscaled_dir)
+                        whf.mkdir_p(downscaled_dir)
                     downscaled_file = downscaled_dir + "/" + file_only
                     whf.move_to_finished_area(parser,"GFS",downscaled_file)
                     whf.rename_final_files(parser,"Medium_Range")
