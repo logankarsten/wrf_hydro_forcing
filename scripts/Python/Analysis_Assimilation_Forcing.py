@@ -66,8 +66,6 @@ def forcing(action, prod, file):
     # here. In addition, MRMS data will be regridded, when available. 
     if action == 'regrid': 
         (date,modelrun,fcsthr) = whf.extract_file_info(file)
-<<<<<<< HEAD
-  
         # Usually check for forecast range, but only 0, 3 hr forecast/analysis data used
    
         # Check for HRRR, RAP, MRMS products. 
@@ -109,52 +107,6 @@ def forcing(action, prod, file):
             # First make sure file exists
             whf.file_exists(regridded_file)
             whf.move_to_finished_area(parser, prod, regridded_file, zero_move=False)
-=======
-        # Determine whether this current file lies within the forecast range
-        # for the data product (e.g. if processing RAP, use only the 0hr-18hr forecasts).
-        # Skip if this file has a forecast hour greater than the max indicated in the 
-        # parm/config file.
-        in_fcst_range = whf.is_in_fcst_range(prod, fcsthr, parser)
-
-        if in_fcst_range:
-            # Check for RAP or GFS data products.  If this file is
-            # a 0 hr fcst and is RAP or GFS, substitute each 0hr forecast
-            # with the file from the previous model run and the same valid
-            # time.  This is necessary because there are missing variables
-            # in the 0hr forecasts (e.g. precip rate for RAP and radiation
-            # in GFS).
-    
-            logging.info("Regridding and Downscaling for %s", product_data_name)
-            # Determine if this is a 0hr forecast for RAP data (GFS is also missing
-            # some variables for 0hr forecast, but GFS is not used for Short Range
-            # forcing). We will need to substitute this file for the downscaled
-            # file from a previous model run with the same valid time.  
-            # We only need to do this for downscaled files, as the Short Range 
-            # forcing files that are regridded always get downscaled and we don't want
-            # to do this for both the regridding and downscaling.
-            if fcsthr == 0 and prod == 'RAP':
-                logging.info("Regridding, ignoring f0 RAP files " )
-                regridded_file = whf.regrid_data(product_data_name, file, parser, True)
-                whf.downscale_data(product_data_name,regridded_file, parser, True, True)                
-            elif prod == 'MRMS':
-                regridded_file = whf.regrid_data(product_data_name, file, parser, False)
-                logging.debug("MRMS regridded file = %s", regridded_file)
-            else:
-                regridded_file = whf.regrid_data(product_data_name, file, parser, False)
-                whf.downscale_data(product_data_name,regridded_file, parser,True, False)                
-                
-        else:
-            # Skip processing this file, exiting...
-            logging.info("INFO [Anal_Assim_Forcing]- Skip processing, requested file is outside max fcst")
-    elif action_requested == 'layer':
-        logging.info("Layering requested for %s and %s", prod, prod2)
-        # Do some checking to make sure that there are two data products 
-        # and two files indicated.
-        if prod2 is None:
-            logger.error("ERROR [Anal_Assim_Forcing]: layering requires two products")
-        elif file2 is None:
-            logger.error("ERROR [Anal_Assim_Forcing]: layering requires two input files")
->>>>>>> b2758705674f11fdf2ddccad9f62d699fbb37b1b
         else:
             logging.error("Either invalid forecast hour or invalid product chosen")
             logging.error("Only 00hr forecast files, and RAP/HRRR/MRMS valid")
