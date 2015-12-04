@@ -860,17 +860,20 @@ def layer_data(parser, first_data, second_data, first_data_product, second_data_
     # Retrieve any necessary data from the parameter/config file.
     ncl_exe = parser.get('exe', 'ncl_exe')
     layering_exe = parser.get('exe','Analysis_Assimilation_layering')
-    downscaled_first_dir = parser.get('layering','analysis_assimilation_primary')
-    downscaled_second_dir = parser.get('layering','analysis_assimilation_secondary')
     forcing_config = forcing_type.lower()
     if forcing_config == 'anal_assim':
         layered_output_dir = parser.get('layering', 'analysis_assimilation_output')
+        downscaled_first_dir = parser.get('layering','analysis_assimilation_primary')
+        downscaled_second_dir = parser.get('layering','analysis_assimilation_secondary')
     elif forcing_config == 'short_range':
         layered_output_dir = parser.get('layering', 'short_range_output')
+        downscaled_first_dir = parser.get('layering','short_range_primary')
+        downscaled_second_dir = parser.get('layering','short_range_secondary')
     elif forcing_config == 'medium_range':
+        # No layering needed for Medium range
         layered_output_dir = parser.get('layering', 'medium_range_output')
     else :
-        #forcing_config == 'long_range'
+        # No layering needed for Long range
         layered_output_dir = parser.get('layering', 'long_range_output')
 
     # Create the destination directory in case it doesn't already exist.
@@ -1223,10 +1226,6 @@ def replace_fcst0hr(parser, file_to_replace, product):
         # exists, copy it over to the YYYYMMDDHH directory of the
         # fcst 0hr file in the downscaling output directory.  
 
-        # MINNA: the downscaled are moved to finished, so need to look there.
-        # I commented out a line and replaced it with the line after, seemed straightforward,
-        # signed, Dave A.
-        #base_dir = parser.get('downscaling','RAP_downscale_output_dir')
         base_dir = parser.get('downscaling','RAP_finished_output_dir')
 
         full_path = base_dir + '/' + date + prev_model_time_str + "/" + \
@@ -1249,12 +1248,6 @@ def replace_fcst0hr(parser, file_to_replace, product):
             return
           
     elif product == 'GFS':
-        # For MINNA:  This seems like it won't work because there is no data in
-        # the 'GFS_downscale_output_dir', nor in the 'GFS_finished_output_dir', perhaps
-        # it needs to look in the medium_range directory,  and do something a little different
-        # since there is no .nc on the files there as for copying it... I did NOT do any
-        # changes, just this comment..
-        
         base_dir = parser.get('downscaling','GFS_downscale_output_dir')
         # Get the previous directory corresponding to the previous
         # model/init run. GFS only has 0,6,12,and 18 Z model/init run times.
