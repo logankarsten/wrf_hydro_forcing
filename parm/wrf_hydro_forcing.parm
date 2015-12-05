@@ -167,7 +167,7 @@ topo_adj_fortran_exe = /d4/hydro-dm/IOC/code/topo_adjf90.so
 shortwave_downscaling_exe = ../NCL/topo_adj.ncl
 
 # Layering and contingency
-Analysis_Assimilation_layering = ../NCL/combine.ncl
+Analysis_Assimilation_layering = ../NCL/layer_anal_assim.ncl
 
 #-------------------------------------------------
 #    Parameters needed to run bias correction
@@ -191,15 +191,14 @@ NLDAS_bias_parm_dir = /d4/karsten/DFE/IOC_TESTING/long_range/params/bias_climo_p
 #HRRR-specific
 HRRR_wgt_bilinear  = /d4/hydro-dm/IOC/weighting/HRRR1km/HRRR2HYDRO_d01_weight_bilinear.nc
 HRRR_dst_grid_name = /d4/hydro-dm/IOC/weighting/HRRR1km/geo_dst.nc
-HRRR_output_dir = /d4/hydro-dm/IOC/albo_test/regridded/HRRR
+HRRR_output_dir = /d4/karsten/DFE/IOC_TESTING/anal_assim/HRRR_3hr_regrid
+HRRR_output_dir_0hr = /d4/karsten/DFE/IOC_TESTING/anal_assim/HRRR_0hr_regrid
 
 #MRMS-specific
 MRMS_wgt_bilinear =  /d4/hydro-dm/IOC/weighting/RADAR_GAUGE1km/RADAR2HYDRO_d01_weight_bilinear.nc
 MRMS_dst_grid_name = /d4/hydro-dm/IOC/weighting/RADAR_GAUGE1km/geo_dst.nc
-MRMS_output_dir = /d4/hydro-dm/IOC/albo_test/regridded/MRMS
-#MRMS_output_dir = /d6/forcing_test/regridded/MRMS
-MRMS_finished_output_dir = /d4/hydro-dm/IOC/albo_test/finished_downscaled/MRMS
-#MRMS_finished_output_dir = /d6/forcing_test/finished_downscaled/MRMS
+MRMS_output_dir = /d4/karsten/DFE/IOC_TESTING/anal_assim/MRMS_regrid
+MRMS_finished_output_dir = /d4/karsten/DFE/IOC_TESTING/anal_assim/MRMS_downscaled_staging
 
 #GFS-specific
 #For GFS_0.25 data
@@ -210,8 +209,8 @@ GFS_output_dir = /d4/hydro-dm/IOC/albo_test/regridded/GFS
 #RAP-specific
 RAP_wgt_bilinear = /d4/hydro-dm/IOC/weighting/RAP1km/RAP2HYDRO_d01_weight_bilinear.nc
 RAP_dst_grid_name = /d4/hydro-dm/IOC/weighting/RAP1km/geo_dst.nc
-RAP_output_dir = /d4/hydro-dm/IOC/albo_test/regridded/RAP
-#RAP_output_dir = /d6/forcing_test/regridded/RAP
+RAP_output_dir = /d4/karsten/DFE/IOC_TESTING/anal_assim/RAP_3hr_regrid
+RAP_output_dir_0hr = /d4/karsten/DFE/IOC_TESTING/anal_assim/RAP_0hr_regrid
 
 #CFSv2-specific
 CFS_wgt_bilinear = /d4/karsten/DFE/IOC_TESTING/long_range/params/CFS2HYDRO_d01_weight_bilinear.nc
@@ -236,11 +235,10 @@ HRRR_data_to_downscale = /d4/hydro-dm/IOC/albo_test/regridded/HRRR
 HRRR_hgt_data = /d4/hydro-dm/IOC/weighting/HRRR1km/HRRRhgt.nc
 HRRR_geo_data = /d4/hydro-dm/IOC/weighting/HRRR1km/geo_dst.nc
 # Directory where downscaled data should be saved
-HRRR_downscale_output_dir = /d4/hydro-dm/IOC/albo_test/downscaled/HRRR
-#HRRR_downscale_output_dir = /d6/forcing_test/downscaled/HRRR
-HRRR_finished_output_dir = /d4/hydro-dm/IOC/albo_test/finished_downscaled/HRRR
-#HRRR_finished_output_dir = /d6/forcing_test/finished_downscaled/HRRR
-
+HRRR_downscale_output_dir = /d4/karsten/DFE/IOC_TESTING/anal_assim/HRRR_3hr_downscaled
+HRRR_downscale_output_dir_0hr = /d4/karsten/DFE/IOC_TESTING/anal_assim/HRRR_0hr_downscaled
+HRRR_finished_output_dir = /d4/karsten/DFE/IOC_TESTING/anal_assim/HRRR_downscaled_staging/fcst
+HRRR_finished_output_dir_0hr = /d4/karsten/DFE/IOC_TESTING/anal_assim/HRRR_downscaled_staging/0hr
 
 # GFS 
 # Currently GFS 0.25 degree data
@@ -261,10 +259,10 @@ RAP_data_to_downscale = /d4/hydro-dm/IOC/albo_test/regridded/RAP
 RAP_hgt_data = /d4/hydro-dm/IOC/weighting/RAP1km/RAPhgt.nc
 RAP_geo_data = /d4/hydro-dm/IOC/weighting/RAP1km/geo_dst.nc
 # Directory where downscaled data should be saved
-RAP_downscale_output_dir = /d4/hydro-dm/IOC/albo_test/downscaled/RAP
-#RAP_downscale_output_dir = /d6/forcing_test/downscaled/RAP
-RAP_finished_output_dir = /d4/hydro-dm/IOC/albo_test/finished_downscaled/RAP
-#RAP_finished_output_dir = /d6/forcing_test/finished_downscaled/RAP
+RAP_downscale_output_dir = /d4/karsten/DFE/IOC_TESTING/anal_assim/RAP_3hr_downscaled
+RAP_downscale_output_dir_0hr = /d4/karsten/DFE/IOC_TESTING/anal_assim/RAP_0hr_downscaled
+RAP_finished_output_dir = /d4/karsten/DFE/IOC_TESTING/anal_assim/RAP_downscaled_staging/fcst 
+RAP_finished_output_dir_0hr = /d4/karsten/DFE/IOC_TESTING/anal_assim/RAP_downscaled_staging/0hr
 
 # CFS
 # Directories that contain distribution parameter files for CFS/NLDAS
@@ -300,8 +298,10 @@ short_range_secondary = /d4/hydro-dm/IOC/albo_test/downscaled/RAP
 #short_range_secondary = /d6/forcing_test/finished_downscaled/RAP
 
 
-analysis_assimilation_output = /d4/hydro-dm/IOC/albo_test/Anal_Assim
-#analysis_assimilation_output = /d6/forcing_test/Anal_Assim
+#analysis_assimilation_output = /d4/hydro-dm/IOC/Anal_Assim
+analysis_assimilation_tmp = /d4/karsten/DFE/IOC_TESTING/anal_assim/tmp
+analysis_assimilation_output = /d4/karsten/DFE/IOC_TESTING/anal_assim/final_data/Anal_Assim 
+qpe_combine_parm_dir = /d4/karsten/DFE/IOC_TESTING/anal_assim/combine_params
 
 short_range_output = /d4/hydro-dm/IOC/albo_test/Short_Range
 #short_range_output = /d6/forcing_test/Short_Range
