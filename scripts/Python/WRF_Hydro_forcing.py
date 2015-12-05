@@ -29,7 +29,8 @@ from ConfigParser import SafeConfigParser
 
 
 
-def regrid_data( product_name, file_to_regrid, parser, substitute_fcst = False ):
+def regrid_data( product_name, file_to_regrid, parser, substitute_fcst = False, \
+                 zero_process = False):
     """Provides a wrapper to the regridding scripts originally
     written in NCL.  For HRRR data regridding, the
     HRRR-2-WRF_Hydro_ESMF_forcing.ncl script is invoked.
@@ -51,6 +52,11 @@ def regrid_data( product_name, file_to_regrid, parser, substitute_fcst = False )
                                it will need to be replaced with
                                another file during the 
                                downscale_data() step.
+        zero_process (bool): Optional argument used in analysis and
+                             assimilation. It's used to indicate regridding
+                             of 00hr forecast files, which do not regrid
+                             fluxes and precipitation as they aren't in 
+                             the files. 
     Returns:
         regridded_output (string): The full filepath and filename
                                    of the regridded file.  If the data
@@ -72,8 +78,10 @@ def regrid_data( product_name, file_to_regrid, parser, substitute_fcst = False )
        wgt_file = parser.get('regridding', 'HRRR_wgt_bilinear')
        data_dir =  parser.get('data_dir', 'HRRR_data')
        regridding_exec = parser.get('exe', 'HRRR_regridding_exe')
+       regridding_exec_0hr = parser.get('exe','HRRR_regridding_exe_0hr')
        #Values needed for running the regridding script
        output_dir_root = parser.get('regridding','HRRR_output_dir')
+       output_dir_root_0hr = parser.get('regridding','HRRR_output_dir_0hr')
        dst_grid_name = parser.get('regridding','HRRR_dst_grid_name')
     elif product == 'MRMS':
        wgt_file = parser.get('regridding', 'MRMS_wgt_bilinear')
@@ -94,8 +102,10 @@ def regrid_data( product_name, file_to_regrid, parser, substitute_fcst = False )
        wgt_file = parser.get('regridding', 'RAP_wgt_bilinear')
        data_dir =  parser.get('data_dir', 'RAP_data')
        regridding_exec = parser.get('exe', 'RAP_regridding_exe')
+       regridding_exec_0hr = parser.get('exe','RAP_regridding_exe_0hr')
        #Values needed for running the regridding script
        output_dir_root = parser.get('regridding','RAP_output_dir')
+       output_dir_root_0hr = parser.get('regridding','RAP_output_dir_0hr')
        dst_grid_name = parser.get('regridding','RAP_dst_grid_name')
     elif product == 'CFSV2':
        wgt_file = parser.get('regridding','CFS_wgt_bilinear')
@@ -163,10 +173,10 @@ def regrid_data( product_name, file_to_regrid, parser, substitute_fcst = False )
             data_file_to_regrid= data_dir + "/" + date + "/" + file_to_regrid 
             srcfilename_param =  "'srcfilename=" + '"' + data_file_to_regrid +  \
                                      '"' + "' "
-            wgtFileName_in_param =  "'wgtFileName_in = " + '"' + wgt_file + \
+            wgtFileName_in_param =  "'wgtFileName_in=" + '"' + wgt_file + \
                                         '"' + "' "
             dstGridName_param =  "'dstGridName=" + '"' + dst_grid_name + '"' + "' "
-    
+   
             # Create the output filename following the 
             # naming convention for the WRF-Hydro model 
             (subdir_file_path,hydro_filename) = \
@@ -174,7 +184,11 @@ def regrid_data( product_name, file_to_regrid, parser, substitute_fcst = False )
        
             # Create the full path to the output directory
             # and assign it to the output directory parameter
-            output_file_dir = output_dir_root + "/" + subdir_file_path
+            if zero_process == True:
+                output_file_dir = output_dir_root_0hr + "/" + subdir_file_path
+            else: 
+                output_file_dir = output_dir_root + "/" + subdir_file_path
+ 
             mkdir_p(output_file_dir)
             outdir_param = "'outdir=" + '"' + output_file_dir + '"' + "' " 
             regridded_file = output_file_dir + "/" + hydro_filename
@@ -196,9 +210,13 @@ def regrid_data( product_name, file_to_regrid, parser, substitute_fcst = False )
             regrid_params = srcfilename_param + wgtFileName_in_param + \
                         dstGridName_param + outdir_param + \
                         outFile_param
-       
-        regrid_prod_cmd = ncl_exec + " -Q "  + regrid_params + " " + \
-                      regridding_exec
+      
+        if zero_process == True:
+            regrid_prod_cmd = ncl_exec + " -Q "  + regrid_params + " " + \
+                              regridding_exec_0hr
+        else:
+            regrid_prod_cmd = ncl_exec + " -Q "  + regrid_params + " " + \
+                              regridding_exec
     
         #logging.debug("regridding command: %s",regrid_prod_cmd)
 
@@ -208,7 +226,7 @@ def regrid_data( product_name, file_to_regrid, parser, substitute_fcst = False )
         end_NCL_regridding = time.time()
         elapsed_time_sec = end_NCL_regridding - start_NCL_regridding
         logging.info("Time(sec) to regrid file  %s" %  elapsed_time_sec)
-
+        
         if return_value != 0:
             logging.info('ERROR: The regridding of %s was unsuccessful, \
                           return value of %s', product,return_value)
@@ -377,7 +395,8 @@ def mkdir_p(dir):
 
 
 def downscale_data(product_name, file_to_downscale, parser, downscale_shortwave=False,
-                   substitute_fcst=False,out_path='./',verYYYYMMDDHH='1900010100'):
+                   substitute_fcst=False,out_path='./',verYYYYMMDDHH='1900010100', \
+                   zero_process = False):
     """Performs downscaling of data by calling the necessary
     NCL code (specific to the model/product).  There is an
     additional option to downscale the short wave radiation, SWDOWN.  
@@ -421,9 +440,14 @@ def downscale_data(product_name, file_to_downscale, parser, downscale_shortwave=
         verYYYYMMDDHH (string) : Optional string representing datetime
                                  of data being downscaled. Used for shortwave
                                  radiation downscaling calculations.
+        zero_process (bool): Optional argument used in analysis and
+                             assimilation. It's used to indicate regridding
+                             of 00hr forecast files, which do not regrid
+                             fluxes and precipitation as they aren't in
+                             the files.
                                   
     Returns:
-        0 for success, 1 for failure
+        None
 
         
     """
@@ -440,19 +464,26 @@ def downscale_data(product_name, file_to_downscale, parser, downscale_shortwave=
         hgt_data_file = parser.get('downscaling','HRRR_hgt_data')
         geo_data_file = parser.get('downscaling','HRRR_geo_data')
         downscale_output_dir = parser.get('downscaling', 'HRRR_downscale_output_dir')
+        downscale_output_dir_0hr = parser.get('downscaling', 'HRRR_downscale_output_dir_0hr')
         downscale_exe = parser.get('exe', 'HRRR_downscaling_exe')
+        downscale_exe_0hr = parser.get('exe', 'HRRR_downscaling_exe_0hr')
     elif product == 'GFS':
         data_to_downscale_dir = parser.get('downscaling','GFS_data_to_downscale')
         hgt_data_file = parser.get('downscaling','GFS_hgt_data')
         geo_data_file = parser.get('downscaling','GFS_geo_data')
-        downscale_output_dir = parser.get('downscaling', 'GFS_downscale_output_dir')
+        # GFS data is used only in Medium Range Forcing, the final destination
+        # will be in the Medium Range forcing configuration directory, whose information
+        # is located in the [layering] section of the param/config file.
+        downscale_output_dir = parser.get('layering', 'medium_range_output')
         downscale_exe = parser.get('exe', 'GFS_downscaling_exe')
     elif product == 'RAP':
         data_to_downscale_dir = parser.get('downscaling','RAP_data_to_downscale')
         hgt_data_file = parser.get('downscaling','RAP_hgt_data')
         geo_data_file = parser.get('downscaling','RAP_geo_data')
         downscale_output_dir = parser.get('downscaling', 'RAP_downscale_output_dir')
+        downscale_output_dir_0hr = parser.get('downscaling', 'RAP_downscale_output_dir_0hr')
         downscale_exe = parser.get('exe', 'RAP_downscaling_exe')
+        downscale_exe_0hr = parser.get('exe', 'RAP_downscaling_exe_0hr')
     elif product == 'CFSV2':
         out_dir = parser.get('downscaling','CFS_downscale_out_dir')
         hgt_data_file = parser.get('downscaling','CFS_hgt_data')
@@ -472,7 +503,7 @@ def downscale_data(product_name, file_to_downscale, parser, downscale_shortwave=
         # Find another downscaled file from the previous model/
         # init time with the same valid time as this file, then 
         # copy to this fcst 0hr file.
-        return replace_fcst0hr(parser, file_to_downscale,product)
+        replace_fcst0hr(parser, file_to_downscale,product)
 
     else:
         # Downscale as usual
@@ -500,9 +531,12 @@ def downscale_data(product_name, file_to_downscale, parser, downscale_shortwave=
             else:
                 logging.error("ERROR: regridded file's name: %s is an unexpected format",\
                                    file_to_downscale)
-                return 1
-   
-            full_downscaled_dir = downscale_output_dir + "/" + yr_month_day_init  
+                sys.exit() 
+  
+            if zero_process == True:
+                full_downscaled_dir = downscale_output_dir_0hr + "/" + yr_month_day_init
+            else: 
+                full_downscaled_dir = downscale_output_dir + "/" + yr_month_day_init  
             full_downscaled_file = full_downscaled_dir + "/" +  regridded_file
 
             # Create the full output directory for the downscaled data if it doesn't 
@@ -519,8 +553,11 @@ def downscale_data(product_name, file_to_downscale, parser, downscale_shortwave=
             lapse_file_param =  "'lapseFile=" + '"' + lapse_rate_file + '"' + "' "
             output_file_param = "'outFile=" + '"' + full_downscaled_file + '"' + "' "
             downscale_params =  input_file1_param + input_file2_param + \
-                      input_file3_param + lapse_file_param +  output_file_param 
-            downscale_cmd = ncl_exec + " -Q " + downscale_params + " " + downscale_exe
+                      input_file3_param + lapse_file_param +  output_file_param
+            if zero_process == True:
+                downscale_cmd = ncl_exec + " -Q " + downscale_params + " " + downscale_exe_0hr
+            else:  
+                downscale_cmd = ncl_exec + " -Q " + downscale_params + " " + downscale_exe
     
         # Downscale the shortwave radiation, if requested...
         # Key-value pairs for downscaling SWDOWN, shortwave radiation.
@@ -552,7 +589,7 @@ def downscale_data(product_name, file_to_downscale, parser, downscale_shortwave=
             if return_value != 0 or swdown_return_value != 0:
                 logging.info('ERROR: The downscaling of %s was unsuccessful, \
                              return value of %s', product,return_value)
-                return 1
+                sys.exit()
     
         else:
             # No additional downscaling of
@@ -573,9 +610,8 @@ def downscale_data(product_name, file_to_downscale, parser, downscale_shortwave=
                              return value of %s', product,return_value)
                 #TO DO: Determine the proper action to take when the NCL file 
                 #fails. For now, exit.
-                return 1
-            else:
-                return 0
+                return
+    
     
 
 
@@ -1244,26 +1280,26 @@ def replace_fcst0hr(parser, file_to_replace, product):
             return
         else:
             # If we are here, we didn't find any file from a previous RAP model run...
-            logging.error("ERROR: No previous model runs found, exiting...")
+            logging.error("ERROR: No previous RAP model runs found, exiting...")
             return
           
     elif product == 'GFS':
-        base_dir = parser.get('downscaling','GFS_downscale_output_dir')
+        base_dir = parser.get('layering','medium_range_output')
         # Get the previous directory corresponding to the previous
         # model/init run. GFS only has 0,6,12,and 18 Z model/init run times.
-        # Available forecasts are 0,3,6,9,12,15,a nd 18 hours.
+        # Available forecasts are 0,3,6,9,12,15, and 18 hours.
         prev_model = model_time - 6
-        if model_time < 0:
-            prev_model_time_str = 18   
+        if prev_model < 0:
+            prev_model_time_str = str(18)   
             date = get_past_or_future_date(curr_date, -1)
         else:
             date = curr_date
-        prev_model_time_str = (str(prev_model)).rjust(2,'0')
+            prev_model_time_str = (str(prev_model)).rjust(2,'0')
         full_path = base_dir + '/' + date + prev_model_time_str + "/" +\
                     file_only
         if os.path.isfile(full_path):
             # Make a copy
-            file_dir_fcst0hr = base_dir + "/" + date + (str(model_time)).rjust(2,'0') 
+            file_dir_fcst0hr = base_dir + "/" + curr_date + (str(model_time)).rjust(2,'0') 
             # Make the directory for the downscaled fcst 0hr 
             if not os.path.exists(file_dir_fcst0hr):
                 mkdir_p(file_dir_fcst0hr)
@@ -1274,7 +1310,7 @@ def replace_fcst0hr(parser, file_to_replace, product):
             return
         else:
             # If we are here, we didn't find any file from a previous GFS model run...
-            logging.error("ERROR: No previous model runs found, exiting...")
+            logging.error("ERROR: No previous GFS model runs found, exiting...")
             return
           
 
@@ -1494,7 +1530,7 @@ def get_layered_files(dir):
     return file_paths
 
 
-def move_to_finished_area(parser, product, src):
+def move_to_finished_area(parser, product, src, zero_move = False):
     """Move finished regridded (MRMS) or downscaled HRRR,
        RAP files to a "finished" area so they can
        be monitored by an external script which determines
@@ -1510,6 +1546,9 @@ def move_to_finished_area(parser, product, src):
                                 RAP, or GFS
             
             src (string): full file path and filename of src
+            zero_move (bool): Optional argument for handling 00hr 
+                              fcst files. Only used by analysis and
+                              assimilation configuration.
 
        Returns:
            None
@@ -1518,8 +1557,10 @@ def move_to_finished_area(parser, product, src):
         dest_dir = parser.get('regridding','MRMS_finished_output_dir')
     elif product == "RAP":
         dest_dir = parser.get('downscaling', 'RAP_finished_output_dir')
+        dest_dir_0hr = parser.get('downscaling','RAP_finished_output_dir_0hr')
     elif product == "HRRR":
         dest_dir = parser.get('downscaling', 'HRRR_finished_output_dir')
+        dest_dir_0hr = parser.get('downscaling','HRRR_finished_output_dir_0hr')
     elif product == "GFS":
         dest_dir = parser.get('downscaling', 'GFS_finished_output_dir')
     else:
@@ -1530,7 +1571,10 @@ def move_to_finished_area(parser, product, src):
     if match:
         ymd_dir = match.group(1)
         file_only = match.group(2)
-        finished_dir = dest_dir + "/" + ymd_dir
+        if zero_move == True:
+            finished_dir = dest_dir_0hr + "/" + ymd_dir
+        else:
+            finished_dir = dest_dir + "/" + ymd_dir
         if not os.path.exists(finished_dir):
             mkdir_p(finished_dir) 
         finished_dest = finished_dir + "/" + file_only
