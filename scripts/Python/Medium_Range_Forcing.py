@@ -100,7 +100,7 @@ def forcing(action, prod, file, prod2=None, file2=None):
             # forcing files that are regridded always get downscaled and we don't want
             # to do this for both the regridding and downscaling.
             if fcsthr == 0 and prod == 'GFS':
-                logging.info("Regridding (ignoring f0 RAP files) %s: ", file )
+                logging.info("Regridding (ignoring f0 GFS files) %s: ", file )
                 regridded_file = whf.regrid_data(product_data_name, file, parser, True)
                 whf.downscale_data(product_data_name,regridded_file, parser, True, True)                
                 match = re.match(r'.*/([0-9]{10})/([0-9]{12}.LDASIN_DOMAIN1.nc)',regridded_file)
@@ -111,8 +111,7 @@ def forcing(action, prod, file, prod2=None, file2=None):
                     if not os.path.exists(downscaled_dir):
                         whf.mkdir_p(downscaled_dir)
                     downscaled_file = downscaled_dir + "/" + file_only
-                    whf.move_to_finished_area(parser,"GFS", downscaled_file)
-                    whf.rename_final_file(parser,"Medium_Range")
+                    whf.rename_final_files(parser,"Medium_Range")
             else:
                 logging.info("Regridding %s: ", file )
                 regridded_file = whf.regrid_data(product_data_name, file, parser, False)
@@ -125,7 +124,6 @@ def forcing(action, prod, file, prod2=None, file2=None):
                     if not os.path.exists(downscaled_dir):
                         whf.mkdir_p(downscaled_dir)
                     downscaled_file = downscaled_dir + "/" + file_only
-                    whf.move_to_finished_area(parser,"GFS",downscaled_file)
                     whf.rename_final_files(parser,"Medium_Range")
                 
         else:
