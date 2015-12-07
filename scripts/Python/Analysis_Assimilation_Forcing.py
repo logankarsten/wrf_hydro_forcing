@@ -3,7 +3,9 @@ import logging
 import os
 from ConfigParser import SafeConfigParser
 import sys
+import datetime
 import getopt
+import re
 
 """Analysis_Assimilation_Forcing
 Performs regridding and downscaling, then bias
@@ -19,19 +21,13 @@ from where this script is executed.
 """
 
 
-
-def forcing(action, prod, file, prod2=None, file2=None):
+def forcing(action, prod, file):
     """Peforms the action on the given data
        product and corresponding input file.
 
        Args:
            action (string):  Supported actions are:
                              'regrid' - regrid and downscale
-                             'bias'   - bias correction 
-                                        (requires two 
-                                        products and two files)
-                             'layer'  - layer (requires two
-                                        products and two files)
            prod (string):  The first product [mandatory option]:
                             (MRMS, HRRR or RAP)
            file (string):  The file name (full path not necessary,
@@ -39,10 +35,6 @@ def forcing(action, prod, file, prod2=None, file2=None):
                             param file and the YYYMMDD portion of 
                             the file name.
 
-          prod2 (string):   The second product (RAP or HRRR), default
-                            is None. Required for layering.
-          file2 (string):   The second file name, required for 
-                            layering, default is None.
        Returns:
            None           Performs the indicated action on the
                           files based on the type of product and
@@ -55,23 +47,23 @@ def forcing(action, prod, file, prod2=None, file2=None):
 
     # Read the parameters from the config/param file.
     parser = SafeConfigParser()
-    parser.read('aa_wrf_hydro_forcing.parm')
+    #parser.read('aa_wrf_hydro_forcing.parm')
+    parser.read('/d4/karsten/DFE/tmp/wrf_hydro_forcing/parm/wrf_hydro_forcing.parm')
 
     # Set up logging, environments, etc.
     forcing_config_label = "Anal_Assim"
     logging = whf.initial_setup(parser,forcing_config_label)
 
-
-    # Extract the date, model run time, and forecast hour from the file name
-    # Use the fcsthr to process only the files that have a fcst hour less than
-    # the max fcst hr defined in the param/config file.
-    
-    
     # Convert the action to lower case 
     # and the product name to upper case
     # for consistent checking
     action_requested = action.lower()
     product_data_name = prod.upper()
+   
+    # For analysis and assimilation, only 0hr, 3hr forecast fields from HRRR/RAP
+    # are necessary. 3hr forecast files are already regridded and downscaled 
+    # from the short-range configuration, so only 0hr forecast files are regridded/downscaled
+    # here. In addition, MRMS data will be regridded, when available. 
     if action == 'regrid': 
         (date,modelrun,fcsthr) = whf.extract_file_info(file)
         # Usually check for forecast range, but only 0, 3 hr forecast/analysis data used
@@ -116,12 +108,45 @@ def forcing(action, prod, file, prod2=None, file2=None):
             whf.file_exists(regridded_file)
             whf.move_to_finished_area(parser, prod, regridded_file, zero_move=False)
         else:
-            # We have everything we need, request layering, since layering is the last step,
-            # move/rename all finished data (MRMS included) to the final Anal_Assim directory.
-            whf.layer_data(parser,prod,file, prod2,file2, 'Anal_Assim')
-            whf.rename_final_files(parser,'Anal_Assim')
-             
-            
+            logging.error("Either invalid forecast hour or invalid product chosen")
+            logging.error("Only 00hr forecast files, and RAP/HRRR/MRMS valid")
+            return(1)
+    else: # Invalid action selected
+        logging.error("ERROR [Anal_Assim_Forcing]- Invalid action selected")
+        return(1)
+
+def anal_assim_layer(cycleYYYYMMDDHH,fhr,action):
+    """ Analysis and Assimilation layering
+        Performs layering/combination of RAP/HRRR/MRMS
+        data for a particular analysis and assimilation
+        model cycle and forecast hour.
+
+        Args:
+            cycleYYYYMMDDHH (string): Analysis and assimilation
+                                      model cycle date.
+            fhr (string): Forecast hour of analysis and assimilation 
+                          model cycle. Possible values are -2, -1, 0.
+            action (string): Specifying which layering to do, given
+                             possible available model data. Possible 
+                             values are "RAP", "RAP_HRRR", and
+                             "RAP_HRRR_MRMS".
+        Returns: 
+            None: Performs specified layering to final input directory
+                  used for WRF-Hydro.
+    """
+
+    # Determine specific layering route to take
+    str_split = action.split("_")
+    process = len(str_split)
+
+    # Determine specific date/time information used for composing regridded
+    # file paths. 
+    yearCycle = int(cycleYYYYMMDDHH[0:4])
+    monthCycle = int(cycleYYYYMMDDHH[4:6])
+    dayCycle = int(cycleYYYYMMDDHH[6:8])
+    hourCycle = int(cycleYYYYMMDDHH[8:10])
+    fhr = int(fhr)
+ 
     dateCurrent = datetime.datetime.today()  
     cycleDate = datetime.datetime(year=yearCycle,month=monthCycle,day=dayCycle, \
                 hour=hourCycle)
@@ -131,7 +156,7 @@ def forcing(action, prod, file, prod2=None, file2=None):
   
     # Obtain analysis and assimiltation configuration parameters.
     parser = SafeConfigParser()
-    configFile = '/d4/karsten/DFE/wrf_hydro_forcing/parm/wrf_hydro_forcing.parm'
+    configFile = '/d4/karsten/DFE/tmp/wrf_hydro_forcing/parm/wrf_hydro_forcing.parm'
     parser.read(configFile)
     out_dir = parser.get('layering','analysis_assimilation_output')
     tmp_dir = parser.get('layering','analysis_assimilation_tmp')
@@ -277,7 +302,21 @@ def forcing(action, prod, file, prod2=None, file2=None):
         logging.error("Error in combinining NCL program")
         return(1)
    
+    # Double check to make sure file was created, delete temporary regridded file
+    whf.file_exists(LDASIN_path_tmp)
+    # Rename file to conform to WRF-Hydro expectations
+    cmd = "mv " + LDASIN_path_tmp + " " + LDASIN_path_final
+    status = os.system(cmd)
+    if status != 0:
+        logging.error("Failure to rename " + LDASIN_path_tmp)
+    whf.file_exists(LDASIN_path_final)
+    cmd = "rm -rf " + LDASIN_path_tmp 
+    status = os.system(cmd)
+    if status != 0:
+        logging.error("Failure to remove " + LDASIN_path_tmp)
+        return(1)
+    # Exit gracefully with an exit status of 0
+    return(0)
 
-#----------------------------------------------
 if __name__ == "__main__":
     forcing()
