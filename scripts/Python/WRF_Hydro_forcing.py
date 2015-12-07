@@ -1468,7 +1468,7 @@ def rename_final_files(parser, forcing_type):
     elif forcing_type == 'MEDIUM_RANGE':
         # Medium Range has GFS data only and no layering.  Use
         # the final downscaled directory.
-        medium_range_downscale_dir = parser.get('downscaling','GFS_finished_output_dir')
+        medium_range_downscale_dir = parser.get('layering','medium_range_output')
         medium_range_dir = parser.get('layering','medium_range_output')
         medium_range_files = get_layered_files(medium_range_downscale_dir)
         for file in medium_range_files:
@@ -1481,8 +1481,6 @@ def rename_final_files(parser, forcing_type):
                 destination = medium_range_dir + "/" + filename_only
                 if not os.path.exists(destination_dir):
                     mkdir_p(destination_dir)
-                logging.info("moving file: %s", file)
-                logging.info("final destination: %s", destination)
                 os.rename(file, destination)
             else:
                logging.WARNING("[rename_final_files]:filename is of unexpected format :%s", file)
