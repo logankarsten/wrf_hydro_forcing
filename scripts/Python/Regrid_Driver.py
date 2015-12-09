@@ -85,11 +85,28 @@ def regrid(fname, fileType):
    logging.info("REGRIDDING %s DATA, file=%s", fileType, fname)
    if (fileType == 'HRRR'):
        srf.forcing('regrid', 'HRRR', fname[9:])
+       # special case, if it is a 0 hour forecast, do double regrid
+       f = df.DataFile(fname[0:8], fname[9:], 'HRRR')
+       if (f._ok):
+          if (f._time._forecastHour == 0):
+             logging.debug("SPECIAL 0 hour case %s", fname[9:0])
+             aaf.forcing('regrid', 'HRRR', fname[9:])
+       else:
+          logging.error("Regrid error checking for 0 hour data")
    elif (fileType == 'RAP'):
        srf.forcing('regrid', 'RAP', fname[9:])
+       # special case, if it is a 0 hour forecast, do double regrid
+       f = df.DataFile(fname[0:8], fname[9:], 'RAP')
+       if (f._ok):
+          if (f._time._forecastHour == 0):
+             logging.debug("SPECIAL 0 hour case %s", fname[9:0])
+             aaf.forcing('regrid', 'RAP', fname[9:])
+       else:
+          logging.error("Regrid error checking for 0 hour data")
    elif (fileType == 'GFS'):
        mrf.forcing('regrid', 'GFS', fname[9:])
    elif (fileType == 'MRMS'):
+       print fname[9:]
        aaf.forcing('regrid', 'MRMS', fname[9:])
    else:
        logging.error("Unknown file type %s", fileType)
@@ -408,8 +425,14 @@ def main(argv):
        print 'ERROR unknown file type command arg ', fileType
        return 1
 
+    # User must pass the config file into the main driver.
+    configFile = argv[1]
+    if not os.path.exists(configFile):
+        print 'ERROR forcing engine config file not found.'
+        return 1
+    
     # read in fixed main params
-    parms = parmRead("wrf_hydro_forcing.parm", fileType)
+    parms = parmRead(configFile, fileType)
     parms.debugPrint()
 
     #if there is not a state file, create one now using newest

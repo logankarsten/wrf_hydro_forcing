@@ -53,8 +53,7 @@ def forcing(argv):
 
     # Obtain CFSv2 forcing engine parameters.
     parser = SafeConfigParser()
-    configFile = 'wrf_hydro_forcing.parm'
-    parser.read(configFile)
+    parser.read('/d4/karsten/DFE/wrf_hydro_forcing/parm/wrf_hydro_forcing.parm')
     logging_level = parser.get('log_level', 'forcing_engine_log_level')
     out_dir = parser.get('downscaling','CFS_downscale_out_dir') 
     tmp_dir = parser.get('bias_correction','CFS_tmp_dir')
@@ -86,7 +85,6 @@ def forcing(argv):
     log_path = out_path + "/" + dateCycleYYYYMMDDHH.strftime('%Y%m%d%H') + \
                "_" + dateFcstYYYYMMDDHH.strftime('%Y%m%d%H') + \
                "_" + dateCurrent.strftime('%Y%m%d%H%M%S') + '_Long_Range.log' 
-    print log_path
 
     # Open log file
     if logging_level == 'DEBUG':
@@ -148,8 +146,8 @@ def forcing(argv):
                             dateCycleYYYYMMDDHH.strftime('%Y%m%d%H') + "_" + \
                                 dateTempYYYYMMDDHH.strftime('%Y%m%d%H') + \
                                 "_regridded.M" + em_str.zfill(2) + ".nc"
-            LDASIN_path_tmp = tmp_dir + "/" + dateTempYYYYMMDDHH.strftime('%Y%m%d%H') + ".LDASIN_DOMAIN1.nc"
-            LDASIN_path_final = out_path + "/" + dateTempYYYYMMDDHH.strftime('%Y%m%d%H') + ".LDASIN_DOMAIN1"
+            LDASIN_path_tmp = tmp_dir + "/" + dateTempYYYYMMDDHH.strftime('%Y%m%d%H') + "00.LDASIN_DOMAIN1.nc"
+            LDASIN_path_final = out_path + "/" + dateTempYYYYMMDDHH.strftime('%Y%m%d%H') + "00.LDASIN_DOMAIN1"
             whf.downscale_data("CFSv2",fileRegridded,parser, out_path=LDASIN_path_tmp, \
                                verYYYYMMDDHH=dateTempYYYYMMDDHH)
             # Double check to make sure file was created, delete temporary regridded file

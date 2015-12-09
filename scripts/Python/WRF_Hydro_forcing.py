@@ -895,16 +895,15 @@ def layer_data(parser, first_data, second_data, first_data_product, second_data_
     """
     # Retrieve any necessary data from the parameter/config file.
     ncl_exe = parser.get('exe', 'ncl_exe')
-    layering_exe = parser.get('exe','Analysis_Assimilation_layering')
     forcing_config = forcing_type.lower()
     if forcing_config == 'anal_assim':
         layered_output_dir = parser.get('layering', 'analysis_assimilation_output')
-        downscaled_first_dir = parser.get('layering','analysis_assimilation_primary')
-        downscaled_second_dir = parser.get('layering','analysis_assimilation_secondary')
+        layering_exe = parser.get('exe','Analysis_Assimilation_layering')
     elif forcing_config == 'short_range':
         layered_output_dir = parser.get('layering', 'short_range_output')
         downscaled_first_dir = parser.get('layering','short_range_primary')
         downscaled_second_dir = parser.get('layering','short_range_secondary')
+        layering_exe = parser.get('exe','Short_Range_layering')
     elif forcing_config == 'medium_range':
         # No layering needed for Medium range
         layered_output_dir = parser.get('layering', 'medium_range_output')
@@ -1400,7 +1399,7 @@ def rename_final_files(parser, forcing_type):
     """    
 
     parser = SafeConfigParser()
-    parser.read('wrf_hydro_forcing.parm')
+    parser.read('/d4/karsten/DFE/wrf_hydro_forcing/parm/wrf_hydro_forcing.parm')
 
 
     forcing_type = forcing_type.upper()
