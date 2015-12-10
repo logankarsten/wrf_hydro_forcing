@@ -474,7 +474,7 @@ def downscale_data(product_name, file_to_downscale, parser, downscale_shortwave=
         # GFS data is used only in Medium Range Forcing, the final destination
         # will be in the Medium Range forcing configuration directory, whose information
         # is located in the [layering] section of the param/config file.
-        downscale_output_dir = parser.get('layering', 'medium_range_output')
+        downscale_output_dir = parser.get('downscaling', 'GFS_downscale_output_dir')
         downscale_exe = parser.get('exe', 'GFS_downscaling_exe')
     elif product == 'RAP':
         data_to_downscale_dir = parser.get('downscaling','RAP_data_to_downscale')
@@ -485,7 +485,6 @@ def downscale_data(product_name, file_to_downscale, parser, downscale_shortwave=
         downscale_exe = parser.get('exe', 'RAP_downscaling_exe')
         downscale_exe_0hr = parser.get('exe', 'RAP_downscaling_exe_0hr')
     elif product == 'CFSV2':
-        out_dir = parser.get('downscaling','CFS_downscale_out_dir')
         hgt_data_file = parser.get('downscaling','CFS_hgt_data')
         geo_data_file = parser.get('downscaling','CFS_geo_data')
         downscale_exe = parser.get('exe','CFS_downscaling_exe')
@@ -589,7 +588,24 @@ def downscale_data(product_name, file_to_downscale, parser, downscale_shortwave=
             if return_value != 0 or swdown_return_value != 0:
                 logging.info('ERROR: The downscaling of %s was unsuccessful, \
                              return value of %s', product,return_value)
+                # Remove regridded file and downscaled file 
+                cmd = 'rm -rf ' + file_to_downscale
+                status = os.system(cmd)
+                if status != 0:
+                  logging.error('ERROR: Failed to remove ' + file_to_downscale)
+                # If output file was generated, remove it as it's corrupted/incomplete
+                if os.path.exists(full_downscaled_file):
+                    cmd = 'rm -rf ' + full_downscaled_file 
+                    status = os.system(cmd)
+                    if status != 0:
+                      logging.error('ERROR: Failed to remove ' + full_downscaled_file)
                 sys.exit()
+            else: # Remove regridded file as it's no longer needed
+                cmd = 'rm -rf ' + file_to_downscale
+                status = os.system(cmd)
+                if status != 0:
+                  logging.error('ERROR: Failed to remove ' + file_to_downscale)
+                  return(1) 
     
         else:
             # No additional downscaling of
@@ -608,10 +624,24 @@ def downscale_data(product_name, file_to_downscale, parser, downscale_shortwave=
             if return_value != 0:
                 logging.info('ERROR: The downscaling of %s was unsuccessful, \
                              return value of %s', product,return_value)
-                #TO DO: Determine the proper action to take when the NCL file 
-                #fails. For now, exit.
-                return
-    
+                # Remove regridded file and downscaled SW file
+                cmd = 'rm -rf ' + file_to_downscale
+                status = os.system(cmd)
+                if status != 0:
+                  logging.error('ERROR: Failed to remove ' + file_to_downscale)
+                # If output file was generated, remove it as it's corrupted/incomplete
+                if os.path.exists(full_downscaled_file):
+                    cmd = 'rm -rf ' + full_downscaled_file
+                    status = os.system(cmd)
+                    if status != 0:
+                      logging.error('ERROR: Failed to remove ' + full_downscaled_file)
+                return(1) 
+            else: # Remove regridded file as it's no longer needed
+                cmd = 'rm -rf ' + file_to_downscale
+                status = os.system(cmd)
+                if status != 0:
+                  logging.error('ERROR: Failed to remove ' + file_to_downscale)
+                  return(1) 
     
 
 
@@ -851,7 +881,7 @@ def bias_correction(product_name,file_in,cycleYYYYMMDDHH,fcstYYYYMMDDHH,
         start_NCL_bias = time.time()
         return_value = os.system(ncl_cmd)
         if return_value != 0:
-            logging.error('Bias correction returned an exit status of ' + return_value)
+            logging.error('Bias correction returned an exit status of ' + str(return_value))
             sys.exit(1)
         end_NCL_bias = time.time()
         elapsed_time_sec = end_NCL_bias - start_NCL_bias
@@ -895,16 +925,15 @@ def layer_data(parser, first_data, second_data, first_data_product, second_data_
     """
     # Retrieve any necessary data from the parameter/config file.
     ncl_exe = parser.get('exe', 'ncl_exe')
-    layering_exe = parser.get('exe','Analysis_Assimilation_layering')
     forcing_config = forcing_type.lower()
     if forcing_config == 'anal_assim':
         layered_output_dir = parser.get('layering', 'analysis_assimilation_output')
-        downscaled_first_dir = parser.get('layering','analysis_assimilation_primary')
-        downscaled_second_dir = parser.get('layering','analysis_assimilation_secondary')
+        layering_exe = parser.get('exe','Analysis_Assimilation_layering')
     elif forcing_config == 'short_range':
         layered_output_dir = parser.get('layering', 'short_range_output')
         downscaled_first_dir = parser.get('layering','short_range_primary')
         downscaled_second_dir = parser.get('layering','short_range_secondary')
+        layering_exe = parser.get('exe','Short_Range_layering')
     elif forcing_config == 'medium_range':
         # No layering needed for Medium range
         layered_output_dir = parser.get('layering', 'medium_range_output')
@@ -1367,7 +1396,7 @@ def file_exists(file):
     # Using ispath instead of isfile to account for symbolic links
     if not os.path.exists(file):
         logging.error('File: ' + file + ' not found.')
-        sys.exit(1) 
+        return(1) 
 
     
 def rename_final_files(parser, forcing_type):
@@ -1400,7 +1429,7 @@ def rename_final_files(parser, forcing_type):
     """    
 
     parser = SafeConfigParser()
-    parser.read('wrf_hydro_forcing.parm')
+    parser.read('/d4/karsten/DFE/wrf_hydro_forcing/parm/wrf_hydro_forcing.parm')
 
 
     forcing_type = forcing_type.upper()

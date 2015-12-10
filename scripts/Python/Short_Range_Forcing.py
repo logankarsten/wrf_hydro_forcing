@@ -54,7 +54,7 @@ def forcing(action, prod, file, prod2=None, file2=None):
 
     # Read the parameters from the config/param file.
     parser = SafeConfigParser()
-    parser.read('wrf_hydro_forcing.parm')
+    parser.read('/d4/karsten/DFE/wrf_hydro_forcing/parm/wrf_hydro_forcing.parm')
 
     # Set up logging, environments, etc.
     forcing_config_label = "Short_Range"
@@ -132,6 +132,13 @@ def forcing(action, prod, file, prod2=None, file2=None):
                         return 
                 else:
                     logging.error("FAIL dould not downscale data for hour 0 RAP")
+                # Remove empty 0hr regridded file if it still exists
+                if os.path.exists(regridded_file):
+                    cmd = 'rm -rf ' + regridded_file
+                    status = os.system(cmd)
+                    if status != 0:
+                        logging.error("ERROR: Failure to remove empty file: " + regridded_file)
+                        return
 
             else:
                 regridded_file = whf.regrid_data(product_data_name, file, parser, False)

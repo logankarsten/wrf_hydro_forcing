@@ -429,7 +429,7 @@ class DataFiles:
       else:
          # The last directory will be newest, look there for our newest
          return self._newestDataFileInDir(dirs[-1])
-
+   
    def _allDataFiles(self):
       """Return all data files on disk, in order
 
@@ -478,7 +478,7 @@ class DataFiles:
 
       # get all files
       fileNames = getFileNames(self._topDir + "/" + ymdDir)
-
+      
       # sorting succes depends on a nice file naming scheme!!!
       fileNames = sorted(fileNames)
 

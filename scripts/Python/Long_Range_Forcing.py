@@ -53,10 +53,9 @@ def forcing(argv):
 
     # Obtain CFSv2 forcing engine parameters.
     parser = SafeConfigParser()
-    configFile = 'wrf_hydro_forcing.parm'
-    parser.read(configFile)
+    parser.read('/d4/karsten/DFE/wrf_hydro_forcing/parm/wrf_hydro_forcing.parm')
     logging_level = parser.get('log_level', 'forcing_engine_log_level')
-    out_dir = parser.get('downscaling','CFS_downscale_out_dir') 
+    out_dir = parser.get('layering','long_range_output') 
     tmp_dir = parser.get('bias_correction','CFS_tmp_dir')
 
     # Define CFSv2 cycle date and valid time based on file name.
@@ -71,7 +70,12 @@ def forcing(argv):
                           hour=cycleHH)
     dateFcstYYYYMMDDHH = dateCycleYYYYMMDDHH + \
                          datetime.timedelta(seconds=fcsthr*3600)
- 
+
+    # Determine if this is a 0hr forecast file or not.
+    if dateFcstYYYYMMDDHH == dateCycleYYYYMMDDHH:
+        fFlag = 1 
+    else:
+        fFlag = 0 
     # Establish final output directories to hold 'LDASIN' files used for
     # WRF-Hydro long-range forecasting. If the directory does not exist,
     # create it.
@@ -86,7 +90,6 @@ def forcing(argv):
     log_path = out_path + "/" + dateCycleYYYYMMDDHH.strftime('%Y%m%d%H') + \
                "_" + dateFcstYYYYMMDDHH.strftime('%Y%m%d%H') + \
                "_" + dateCurrent.strftime('%Y%m%d%H%M%S') + '_Long_Range.log' 
-    print log_path
 
     # Open log file
     if logging_level == 'DEBUG':
@@ -99,7 +102,6 @@ def forcing(argv):
         set_level = logging.ERROR
     else:
         set_level = logging.CRITICAL
-    print set_level
     logging.basicConfig(format='%(asctime)s %(message)s',
                         filename=log_path, level=set_level)
 
@@ -116,7 +118,13 @@ def forcing(argv):
         # Second, regrid to the conus IOC domain
         # Loop through each hour in a six-hour CFSv2 forecast time step, compose temporary filename 
         # generated from bias-correction and call the regridding to go to the conus domain.
-        for hour in range(1, 7):
+        if fFlag == 1:
+            begCt = 6 
+            endCt = 7
+        else:
+            begCt = 1
+            endCt = 7
+        for hour in range(begCt,endCt):
   	    dateTempYYYYMMDDHH = dateFcstYYYYMMDDHH - datetime.timedelta(seconds=(6-hour)*3600)
                
             fileBiasCorrected = tmp_dir + "/CFSv2_bias_corrected_TMP_" + \
@@ -138,7 +146,7 @@ def forcing(argv):
         # Third, perform topography downscaling to generate final
         # Loop through each hour in a six-hour CFSv2 forecast time step, compose temporary filename
         # generated from regridding and call the downscaling function.
-        for hour in range(1,7):
+        for hour in range(begCt,endCt):
             dateTempYYYYMMDDHH = dateFcstYYYYMMDDHH - datetime.timedelta(seconds=(6-hour)*3600)
 
             logging.info("Downscaling CFSv2 for cycle: " +
@@ -148,8 +156,8 @@ def forcing(argv):
                             dateCycleYYYYMMDDHH.strftime('%Y%m%d%H') + "_" + \
                                 dateTempYYYYMMDDHH.strftime('%Y%m%d%H') + \
                                 "_regridded.M" + em_str.zfill(2) + ".nc"
-            LDASIN_path_tmp = tmp_dir + "/" + dateTempYYYYMMDDHH.strftime('%Y%m%d%H') + ".LDASIN_DOMAIN1.nc"
-            LDASIN_path_final = out_path + "/" + dateTempYYYYMMDDHH.strftime('%Y%m%d%H') + ".LDASIN_DOMAIN1"
+            LDASIN_path_tmp = tmp_dir + "/" + dateTempYYYYMMDDHH.strftime('%Y%m%d%H') + "00.LDASIN_DOMAIN1.nc"
+            LDASIN_path_final = out_path + "/" + dateTempYYYYMMDDHH.strftime('%Y%m%d%H') + "00.LDASIN_DOMAIN1"
             whf.downscale_data("CFSv2",fileRegridded,parser, out_path=LDASIN_path_tmp, \
                                verYYYYMMDDHH=dateTempYYYYMMDDHH)
             # Double check to make sure file was created, delete temporary regridded file

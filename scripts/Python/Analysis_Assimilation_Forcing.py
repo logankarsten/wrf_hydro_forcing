@@ -47,8 +47,7 @@ def forcing(action, prod, file):
 
     # Read the parameters from the config/param file.
     parser = SafeConfigParser()
-    #parser.read('aa_wrf_hydro_forcing.parm')
-    parser.read('/d4/karsten/DFE/tmp/wrf_hydro_forcing/parm/wrf_hydro_forcing.parm')
+    parser.read('/d4/karsten/DFE/wrf_hydro_forcing/parm/wrf_hydro_forcing.parm')
 
     # Set up logging, environments, etc.
     forcing_config_label = "Anal_Assim"
@@ -102,7 +101,7 @@ def forcing(action, prod, file):
                 whf.move_to_finished_area(parser, prod, full_finished_file, zero_move=True) 
         elif prod == "MRMS":
             regridded_file = whf.regrid_data(product_data_name,file,parser,False)
-  
+
             # Move regridded file to staging area where triggering will monitor
             # First make sure file exists
             whf.file_exists(regridded_file)
@@ -156,8 +155,7 @@ def anal_assim_layer(cycleYYYYMMDDHH,fhr,action):
   
     # Obtain analysis and assimiltation configuration parameters.
     parser = SafeConfigParser()
-    configFile = '/d4/karsten/DFE/tmp/wrf_hydro_forcing/parm/wrf_hydro_forcing.parm'
-    parser.read(configFile)
+    parser.read('/d4/karsten/DFE/wrf_hydro_forcing/parm/wrf_hydro_forcing.parm')
     out_dir = parser.get('layering','analysis_assimilation_output')
     tmp_dir = parser.get('layering','analysis_assimilation_tmp')
     qpe_parm_dir = parser.get('layering','qpe_combine_parm_dir')
@@ -276,7 +274,6 @@ def anal_assim_layer(cycleYYYYMMDDHH,fhr,action):
         logging.error("Invalid input action selected")
         return(1)
 
-    print process
     hrrrB_param = "'hrrrBFile=" + '"' + hrrrBiasPath + '"' + "' "
     mrmsB_param = "'mrmsBFile=" + '"' + mrmsBiasPath + '"' + "' "
     rapB_param = "'rapBFile=" + '"' + rapBiasPath + '"' + "' "
