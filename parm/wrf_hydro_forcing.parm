@@ -247,7 +247,6 @@ RAP_finished_output_dir_0hr = /d4/karsten/DFE/IOC_TESTING/realtime/downscaled/RA
 # Directories that contain distribution parameter files for CFS/NLDAS
 # In addition, output directory is specified here. 
 CFS_hgt_data = /d4/karsten/DFE/IOC_TESTING/realtime/params/downscaling/cfsa_hgt1km.nc 
-CFS_downscale_out_dir = /d4/karsten/DFE/IOC_TESTING/realtime/downscaled/CFSV2 
 CFS_geo_data = /d4/karsten/DFE/IOC_TESTING/realtime/params/regridding/geo_dst.nc  
 
 #-------------------------------------------------

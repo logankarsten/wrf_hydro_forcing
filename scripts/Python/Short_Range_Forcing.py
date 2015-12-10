@@ -132,6 +132,13 @@ def forcing(action, prod, file, prod2=None, file2=None):
                         return 
                 else:
                     logging.error("FAIL dould not downscale data for hour 0 RAP")
+                # Remove empty 0hr regridded file if it still exists
+                if os.path.exists(regridded_file):
+                    cmd = 'rm -rf ' + regridded_file
+                    status = os.system(cmd)
+                    if status != 0:
+                    loggine.error("ERROR: Failure to remove empty file: " + regridded_file)
+                    return
 
             else:
                 regridded_file = whf.regrid_data(product_data_name, file, parser, False)

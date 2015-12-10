@@ -397,8 +397,14 @@ def createStateFile(parms):
 #----------------------------------------------------------------------------
 def main(argv):
 
+    # User must pass the config file into the main driver.
+    configFile = argv[0]
+    if not os.path.exists(configFile):
+        print 'ERROR forcing engine config file not found.'
+        return 1
+
     # read in fixed main params
-    parms = parmRead("wrf_hydro_forcing.parm")
+    parms = parmRead(configFile)
     parms.debugPrint()
 
     #if there is not a state file, create one now using newest

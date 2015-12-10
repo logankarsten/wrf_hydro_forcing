@@ -106,7 +106,6 @@ def regrid(fname, fileType):
    elif (fileType == 'GFS'):
        mrf.forcing('regrid', 'GFS', fname[9:])
    elif (fileType == 'MRMS'):
-       print fname[9:]
        aaf.forcing('regrid', 'MRMS', fname[9:])
    else:
        logging.error("Unknown file type %s", fileType)
