@@ -110,6 +110,11 @@ def getImmediateSubdirectories(aDir):
       All subdirectories of the aDir
 
    """
+
+   # does the dir exist?
+   if (not os.path.exists(aDir)):
+       return []
+
    return [name for name in os.listdir(aDir)
            if os.path.isdir(os.path.join(aDir, name))]
 
@@ -146,11 +151,11 @@ def newestIssueTime(dir):
        The subdirectory with biggest issue time, or empty string
     """       
     names = getYyyymmddhhSubdirectories(dir)
-    names = sorted(names)
     if (not names):
         return ""
-    else:
-        return names[-1]
+
+    names = sorted(names)
+    return names[-1]
     
 #----------------------------------------------------------------------------
 def parmRead(fname):
@@ -505,7 +510,7 @@ class ForecastStatus:
         if (self._hrrr == 0 and self._rap == 1):
             ntime = datetime.datetime.utcnow()
             diff = ntime - self._clockTime
-            idiff = diff.total_seconds() 
+            idiff = diff.total_seconds()
             if (idiff > parms._maxWaitSeconds):
                 logging.debug("timeout..Should layer, dt=%d", idiff)
                 self.passthroughRap(parms)
@@ -901,8 +906,13 @@ class State:
 #----------------------------------------------------------------------------
 def main(argv):
 
+    # User must pass the config file into the main driver.
+    configFile = argv[0]
+    if not os.path.exists(configFile):
+        print 'ERROR forcing engine config file not found.'
+        return 1
     # read in fixed main params
-    parms = parmRead("wrf_hydro_forcing.parm")
+    parms = parmRead(configFile)
 
     # query each directory to get newest thing, and update overall newest
     logging.debug("Looking in %s and %s", parms._hrrrDir, parms._rapDir)

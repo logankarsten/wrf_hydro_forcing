@@ -73,7 +73,7 @@ load "$NCARG_ROOT/lib/ncarg/nclscripts/esmf/ESMF_regridding.ncl"
 begin
 
   ; Load bias correction module file containing correction/combine routines
-  load "/d4/karsten/DFE/IOC_TESTING/long_range/programs/CFSv2_bias_correct_mod.ncl"
+  load "/d4/karsten/DFE/wrf_hydro_forcing/scripts/NCL/CFSv2_bias_correct_mod.ncl"
   ;loadscript(modFile)
 
   ; Determine if this is a initial time step or not.
@@ -356,7 +356,12 @@ begin
 
   init_time = cd_inv_calendar(yearPrev, monthPrev, dayPrev, hrPrev, 00, 00, \
                               "hours since 1900-1-1 00:00:0.0",0)
-  do n = 1,6 ; Loop through each six hours
+  if (fFlag .eq. 1) then
+    numHr = 1 
+  else
+    numHr = 6
+  end if
+  do n = 1,numHr ; Loop through each six hours
     ; Assign local temporary adjusted output arrays
     cfs_adjusted_2T_hour = cfs_adjusted_2T(n-1,:,:)
     cfs_adjusted_Q_hour = cfs_adjusted_Q(n-1,:,:)
@@ -367,7 +372,11 @@ begin
     cfs_adjusted_PRES_hour = cfs_adjusted_PRES(n-1,:,:)
     cfs_adjusted_PCP_hour = cfs_adjusted_PCP(n-1,:,:)
     
-    valid_time = init_time + n
+    if (fFlag .eq. 1) then 
+      valid_time = init_time 
+    else
+      valid_time = init_time + n
+    end if
     valid_time@units = "hours since 1900-1-1 00:00:0.0"
     fcst_time = cd_calendar(valid_time,0)
 
