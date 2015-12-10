@@ -92,8 +92,8 @@ GFS_hours_back = 12
 CFS_hours_back = 24 
 MRMS_hours_back = 5 
 
-short_range_fcst_max_wait_minutes = 20
-short_range_fcst_very_late_minutes = 40
+short_range_fcst_max_wait_minutes = 40
+short_range_fcst_very_late_minutes = 50
 
 #
 # State files for regrid triggering
@@ -264,7 +264,7 @@ short_range_secondary = /d4/karsten/DFE/IOC_TESTING/realtime/downscaled/RAP/fina
 
 
 analysis_assimilation_tmp = /d4/karsten/DFE/IOC_TESTING/realtime/downscaled/tmp 
-analysis_assimilation_output = /d4/karsten/DFE/IOC_TESTING/realtime/final/final_data/Anal_Assim 
+analysis_assimilation_output = /d4/karsten/DFE/IOC_TESTING/realtime/final/Anal_Assim 
 qpe_combine_parm_dir = /d4/karsten/DFE/IOC_TESTING/realtime/params/layering/combine_params
 
 short_range_output = /d4/karsten/DFE/IOC_TESTING/realtime/final/Short_Range

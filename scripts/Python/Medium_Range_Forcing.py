@@ -106,7 +106,7 @@ def forcing(action, prod, file, prod2=None, file2=None):
                 return(1)
                 whf.downscale_data(product_data_name,regridded_file, parser, True, True)                
                 match = re.match(r'.*/([0-9]{10})/([0-9]{12}.LDASIN_DOMAIN1.nc)',regridded_file)
-                match2 = re.match(r'.*/([0-9]{10})/([0-9]{12}.LDASIN_DOMAIN1).*',regridded_file)
+                #match2 = re.match(r'.*/([0-9]{10})/([0-9]{12}.LDASIN_DOMAIN1).*',regridded_file)
                 if match:
                     ymd_dir = match.group(1)
                     file_only = match.group(2)
@@ -114,23 +114,24 @@ def forcing(action, prod, file, prod2=None, file2=None):
                     downscaled_file = downscaled_dir + "/" + file_only
                     # Check to make sure downscaled file was created
                     whf.file_exists(downscaled_file)
-                    if match2:
-                        newFile = match2.group(2)
-                        finalDirYYYYMMDD = final_dir + "/" + ymd_dir
-                        if not os.path.exists(finalDirYYYYMMDD):
-                            whf.mkdir_p(finalDirYYYYMMDD)
-                        finalFile = finalDirYYYYMMDD + "/" + newFile
-                        cmd = "mv " + downscaled_file + " " + finalFile
-                        status = os.system(cmd)
-                        if status != 0:
-                            logging.error("ERROR: Failed to move " + downscaled_file + " to " + finalFile)
+                    whf.rename_final_files(parser,"Medium_Range")
+                    #if match2:
+                    #    newFile = match2.group(2)
+                    #    finalDirYYYYMMDD = final_dir + "/" + ymd_dir
+                    #    if not os.path.exists(finalDirYYYYMMDD):
+                    #        whf.mkdir_p(finalDirYYYYMMDD)
+                    #    finalFile = finalDirYYYYMMDD + "/" + newFile
+                    #    cmd = "mv " + downscaled_file + " " + finalFile
+                    #    status = os.system(cmd)
+                    #    if status != 0:
+                    #        logging.error("ERROR: Failed to move " + downscaled_file + " to " + finalFile)
                 # Remove empty 0hr regridded file if it still exists
                 if os.path.exists(regridded_file):
                     cmd = 'rm -rf ' + regridded_file
                     status = os.system(cmd)
                     if status != 0:
-                    loggine.error("ERROR: Failure to remove empty file: " + regridded_file)
-                    return
+                        logging.error("ERROR: Failure to remove empty file: " + regridded_file)
+                        return
             else:
                 logging.info("Regridding %s: ", file )
                 regridded_file = whf.regrid_data(product_data_name, file, parser, False)
@@ -144,16 +145,17 @@ def forcing(action, prod, file, prod2=None, file2=None):
                     downscaled_file = downscaled_dir + "/" + file_only
                     # Check to make sure downscaled file was created
                     whf.file_exists(downscaled_file)
-                    if match2:
-                        newFile = match2.group(2)
-                        finalDirYYYYMMDD = final_dir + "/" + ymd_dir
-                        if not os.path.exists(finalDirYYYYMMDD):
-                            whf.mkdir_p(finalDirYYYYMMDD)
-                        finalFile = finalDirYYYYMMDD + "/" + newFile
-                        cmd = "mv " + downscaled_file + " " + finalFile
-                        status = os.system(cmd)
-                        if status != 0:
-                            logging.error("ERROR: Failed to move " + downscaled_file + " to " + finalFile) 
+                    whf.rename_final_files(parser,"Medium_Range")
+                    #if match2:
+                    #    newFile = match2.group(2)
+                    #    finalDirYYYYMMDD = final_dir + "/" + ymd_dir
+                    #    if not os.path.exists(finalDirYYYYMMDD):
+                    #        whf.mkdir_p(finalDirYYYYMMDD)
+                    #    finalFile = finalDirYYYYMMDD + "/" + newFile
+                    #    cmd = "mv " + downscaled_file + " " + finalFile
+                    #    status = os.system(cmd)
+                    #    if status != 0:
+                    #        logging.error("ERROR: Failed to move " + downscaled_file + " to " + finalFile) 
         else:
             # Skip processing this file, exiting...
             logging.info("INFO [Medium_Range_Forcing]- Skip processing, requested file is outside max fcst")

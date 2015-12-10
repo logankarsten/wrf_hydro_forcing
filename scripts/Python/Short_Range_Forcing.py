@@ -137,8 +137,8 @@ def forcing(action, prod, file, prod2=None, file2=None):
                     cmd = 'rm -rf ' + regridded_file
                     status = os.system(cmd)
                     if status != 0:
-                    loggine.error("ERROR: Failure to remove empty file: " + regridded_file)
-                    return
+                        logging.error("ERROR: Failure to remove empty file: " + regridded_file)
+                        return
 
             else:
                 regridded_file = whf.regrid_data(product_data_name, file, parser, False)
