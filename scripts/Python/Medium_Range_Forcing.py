@@ -159,11 +159,9 @@ def forcing(action, prod, file, prod2=None, file2=None):
         else:
             # Skip processing this file, exiting...
             logging.info("INFO [Medium_Range_Forcing]- Skip processing, requested file is outside max fcst")
-    elif action_requested == 'layer':
-        logging.info("Layering requested for medium range")
-    elif action_requested == 'bias':
-        logging.info("Bias correction requested for %s", file)
-        logging.info("Bias correction not yet suppoted for Medium Range Forcing")
+    else:
+        logging.info("INFO [Medium_Range_Forcing]- Unsupported action requested. Only regridding (and downscaling) performed for Medium Range")
+
             
 
 
