@@ -312,7 +312,7 @@ def anal_assim_layer(cycleYYYYMMDDHH,fhr,action):
     if status != 0:
         logging.error("Failure to remove " + LDASIN_path_tmp)
         return(1)
-    # Exit gracefully with an exit status of 0
+    # Exit gracefully with an exit status of 0. Will need to refine.
     return(0)
 
 if __name__ == "__main__":
