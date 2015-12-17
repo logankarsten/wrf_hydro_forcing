@@ -807,7 +807,7 @@ class State:
         if (not self._layered):
             tnow = datetime.datetime.utcnow()
             diff = tnow - self._clockTime
-            idiff = diff.total_seconds()
+            idiff = (diff.microseconds + (diff.seconds + diff.days*24*3600)*10**6)/10**6
             if (idiff > parms._veryLateSeconds):
                 logging.warning("WARNING: Inputs for layering timeout Issue:%s",
                                 self._issue.strftime("%Y%m%d%H"))
