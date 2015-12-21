@@ -51,6 +51,11 @@ def forcing(argv):
 
     logging.debug("file_in = %s", file_in)
 
+    # Set the NCL_DEF_LIB_DIR to indicate where ALL shared objects
+    # reside.
+    ncl_def_lib_dir = parser.get('default_env_vars','ncl_def_lib_dir')
+    ncl_def_lib_dir = os.environ["NCL_DEF_LIB_DIR"] = ncl_def_lib_dir
+
     # Obtain CFSv2 forcing engine parameters.
     parser = SafeConfigParser()
     parser.read('/d4/karsten/DFE/wrf_hydro_forcing/parm/wrf_hydro_forcing.parm')
