@@ -10,14 +10,13 @@ same directory from where this script is executed.
 
 import os
 import sys
-import logging
 import datetime
 import time
 from ConfigParser import SafeConfigParser
 import Analysis_Assimilation_Forcing as aaf
+import WhfLog
 
-
-def layer(parms, itime, step, which):
+def layer(parms, itime, step, which, config):
     """ Perform layering
 
     NOTE: here is where returns status will be added and used
@@ -28,17 +27,18 @@ def layer(parms, itime, step, which):
         parameters
 
     """        
-    logging.debug("LAYERING: %s  %d %s", itime.strftime("%Y%m%d%H"),
+
+    WhfLog.debug("LAYERING: %s  %d %s", itime.strftime("%Y%m%d%H"),
                   step, which)
-    aaf.anal_assim_layer(itime.strftime('%Y%m%d%H'), '-%01d'%(step), which)
-    logging.debug("DONE LAYERING: %s  %d %s", itime.strftime("%Y%m%d%H"),
+    aaf.anal_assim_layer(itime.strftime('%Y%m%d%H'), '-%01d'%(step), which, config)
+    WhfLog.debug("DONE LAYERING: %s  %d %s", itime.strftime("%Y%m%d%H"),
                   step, which)
 
     #path = self._issue.strftime("%Y%m%d%H") + "/"
     #path += self._valid.strftime("%Y%m%d%H%M") + ".LDASIN_DOMAIN1.nc"
-    #logging.info("LAYERING %s ", path)
+    #WhfLog.info("LAYERING %s ", path)
     #srf.forcing('layer', 'HRRR', path, 'RAP', path)
-    #logging.info("DONE LAYERING file=%s", path)
+    #WhfLog.info("DONE LAYERING file=%s", path)
 
 #----------------------------------------------------------------------------
 def stepStaticName(index):
@@ -214,7 +214,7 @@ def forecastExists(dir, issueTime, fcstHour):
         names = getFileNames(path)
         for n in names:
             if (n == fname):
-                logging.debug("Found %s in %s",  fname, path)
+                WhfLog.debug("Found %s in %s",  fname, path)
                 return 1
     return 0
 
@@ -242,7 +242,7 @@ def obsExists(dir, issueTime):
         names = getFileNames(path)
         for n in names:
             if (n == fname):
-                logging.debug("Found %s in %s",  fname, path)
+                WhfLog.debug("Found %s in %s",  fname, path)
                 return 1
     return 0
 
@@ -262,23 +262,10 @@ def parmRead(fname):
     
     parser = SafeConfigParser()
     parser.read(fname)
-    logging_level = parser.get('log_level', 'forcing_engine_log_level')
-    # Set the logging level based on what was defined in the parm/config file
-    if logging_level == 'DEBUG':
-        set_level = logging.DEBUG
-    elif logging_level == 'INFO':
-        set_level = logging.INFO
-    elif logging_level == 'WARNING':
-        set_level = logging.WARNING
-    elif logging_level == 'ERROR':
-        set_level = logging.ERROR
-    else:
-        set_level = logging.CRITICAL
+
 
     forcing_config_label = "AnalysisAssimLayeringDriver"
-    logging_filename =  forcing_config_label + ".log" 
-    logging.basicConfig(format='%(asctime)s %(message)s',
-                        filename=logging_filename, level=set_level)
+    WhfLog.init(parser, forcing_config_label, 'AA', 'Layer', 'RAP/HRRR/MRMS')
 
     hrrrDir = parser.get('downscaling', 'HRRR_finished_output_dir')
     hrrr0hrDir = parser.get('downscaling', 'HRRR_finished_output_dir_0hr') # placeholder
@@ -355,17 +342,17 @@ class Parms:
     def debugPrint(self):
         """ logging debug of content
         """
-        logging.debug("Parms: HRRR_data = %s", self._hrrrDir)
-        logging.debug("Parms: HRRR_0_data = %s", self._hrrr0hrDir)
-        logging.debug("Parms: RAP_data = %s", self._rapDir)
-        logging.debug("Parms: RAP_0_data = %s", self._rap0hrDir)
-        logging.debug("Parms: MRMSdata = %s", self._mrmsDir)
-        logging.debug("Parms: Layer_data = %s", self._layerDir)
-        logging.debug("Parms: MaxFcstHour = %d", self._maxFcstHour)
-        logging.debug("Parms: HoursBack = %d", self._hoursBack)
-        logging.debug("Parms: maxWaitSeconds = %d", self._maxWaitSeconds)
-        logging.debug("Parms: veryLateSeconds = %d", self._veryLateSeconds)
-        logging.debug("Parms: StateFile = %s", self._stateFile)
+        WhfLog.debug("Parms: HRRR_data = %s", self._hrrrDir)
+        WhfLog.debug("Parms: HRRR_0_data = %s", self._hrrr0hrDir)
+        WhfLog.debug("Parms: RAP_data = %s", self._rapDir)
+        WhfLog.debug("Parms: RAP_0_data = %s", self._rap0hrDir)
+        WhfLog.debug("Parms: MRMSdata = %s", self._mrmsDir)
+        WhfLog.debug("Parms: Layer_data = %s", self._layerDir)
+        WhfLog.debug("Parms: MaxFcstHour = %d", self._maxFcstHour)
+        WhfLog.debug("Parms: HoursBack = %d", self._hoursBack)
+        WhfLog.debug("Parms: maxWaitSeconds = %d", self._maxWaitSeconds)
+        WhfLog.debug("Parms: veryLateSeconds = %d", self._veryLateSeconds)
+        WhfLog.debug("Parms: StateFile = %s", self._stateFile)
 
 
 #----------------------------------------------------------------------------
@@ -426,10 +413,10 @@ class ForecastStep:
     def debugPrint(self):
         """ logging debug of content
         """
-        logging.debug("FcstStep: empty=%d", self._empty)
+        WhfLog.debug("FcstStep: empty=%d", self._empty)
         if (self._empty):
             return
-        logging.debug("FcstStep[%d] hrrr0:%d hrrr3:%d rap0:%d rap3:%d mrms:%d lay:%d",
+        WhfLog.debug("FcstStep[%d] hrrr0:%d hrrr3:%d rap0:%d rap3:%d mrms:%d lay:%d",
                       self._step, self._hrrr0, self._hrrr3, self._rap0,
                       self._rap3, self._mrms, self._layered)
 
@@ -523,7 +510,7 @@ class ForecastStep:
             self._mrms = obsExists(parms._mrmsDir, time0)
 
 
-    def layerIfReady(self, parms, itime):
+    def layerIfReady(self, parms, config, itime):
         """  Perform layering if state is fully ready
 
         Parameters
@@ -543,11 +530,12 @@ class ForecastStep:
         if (self._hrrr0 == 1 and self._rap0 == 1 and
             self._hrrr3 == 1 and self._rap3 == 1 and self._mrms == 1):
             self._layered = 1
-            layer(parms, itime, self._step, "RAP_HRRR_MRMS")
+            WhfLog.setData('RAP/HRRR/MRMS')
+            layer(parms, itime, self._step, "RAP_HRRR_MRMS", config)
             return 0
         return 0
     
-    def forceLayer(self, parms, itime):
+    def forceLayer(self, parms, config, itime):
         """  Perform layering if state is partially ready enough
 
         Parameters
@@ -568,15 +556,20 @@ class ForecastStep:
             if (self._hrrr0 == 1 and self._hrrr3 == 1):
                 self._layered = 1
                 if (self._mrms == 1):
-                    layer(parms, itime, self._step, "RAP_HRRR_MRMS")
+                    WhfLog.setData('RAP/HRRR/MRMS')
+                    layer(parms, itime, self._step, "RAP_HRRR_MRMS", config)
                 else:
-                    layer(parms, itime, self._step, "RAP_HRRR")
+                    WhfLog.setData('RAP/HRRR')
+                    layer(parms, itime, self._step, "RAP_HRRR", config)
+                    WhfLog.setData('RAP/HRRR/MRMS')
             else:
                 self._layered = 1
-                layer(parms, itime, self._step, "RAP")
+                WhfLog.setData('RAP')
+                layer(parms, itime, self._step, "RAP", config)
+                WhfLog.setData('RAP/HRRR/MRMS')
         else:
             self._layered = 1
-            logging.warning("WARNING, no layering of %s, step=-%d",
+            WhfLog.warning("WARNING, no layering of %s, step=-%d",
                             itime.strftime("%Y%m%d%h"), self._step)
     
 #----------------------------------------------------------------------------
@@ -640,10 +633,10 @@ class State:
     def debugPrint(self):
         """ logging debug of content
         """
-        logging.debug("Fcst: empty=%d first=%d", self._empty, self._first)
+        WhfLog.debug("Fcst: empty=%d first=%d", self._empty, self._first)
         if (self._empty):
             return
-        logging.debug("Fcst: I:%s step[0]:%s step[1]:%s step[2]:%s layered:%d clockTime=%s",
+        WhfLog.debug("Fcst: I:%s step[0]:%s step[1]:%s step[2]:%s layered:%d clockTime=%s",
                       self._issue.strftime("%Y%m%d%H"),
                       self._step[0].debugPrintString(),
                       self._step[1].debugPrintString(),
@@ -764,15 +757,15 @@ class State:
             return (itime > self._issue)
     
 
-    def setCurrentModelAvailability(self, parms):
+    def setCurrentModelAvailability(self, parms, config):
         """ Change availability status when appropriate by looking at disk
 
         Parameters
         ----------
         parms : Parms
             parameters
-        model : Model
-            overall status for this model run, used for clock time
+        config : str
+            Config file name
 
         Returns
         -------
@@ -783,7 +776,7 @@ class State:
             # no need to do more, already layered
             return
         if (self._empty):
-            logging.error("Empty when not expected")
+            WhfLog.error("Empty when not expected")
             return
         
         # make note if going from nothing to something
@@ -794,24 +787,24 @@ class State:
 
 
         #if (nothing):
-            #logging.debug("Nothing, so trying to get stuff")
+            #WhfLog.debug("Nothing, so trying to get stuff")
 
         # first time only, try the -1 and -2 steps, force with what we have
         if (self._first):
-            self._step[2].forceLayer(parms, self._issue)
-            self._step[1].forceLayer(parms, self._issue)
+            self._step[2].forceLayer(parms, config, self._issue)
+            self._step[1].forceLayer(parms, config, self._issue)
             self._first = 0
             
-        self._step[0].layerIfReady(parms, self._issue)
+        self._step[0].layerIfReady(parms, config, self._issue)
         self._layered = self._step[0]._layered
         if (not self._layered):
             tnow = datetime.datetime.utcnow()
             diff = tnow - self._clockTime
             idiff = (diff.microseconds + (diff.seconds + diff.days*24*3600)*10**6)/10**6
             if (idiff > parms._veryLateSeconds):
-                logging.warning("WARNING: Inputs for layering timeout Issue:%s",
+                WhfLog.warning("WARNING: Inputs for layering timeout Issue:%s",
                                 self._issue.strftime("%Y%m%d%H"))
-                self._step[0].forceLayer(parms, self._issue)
+                self._step[0].forceLayer(parms, config, self._issue)
                 self._layered = 1
                 
 #----------------------------------------------------------------------------
@@ -868,18 +861,18 @@ def main(argv):
         
 
     if (not newestT):
-        logging.debug("No data")
+        WhfLog.debug("No data")
         return 0
 
     # if there is not a state file, create one now using newest
     if (not os.path.exists(parms._stateFile)):
         state = State()
-        logging.info("Initializing")
+        WhfLog.info("Initializing")
         state.initialize(parms, newestT)
         state.write(parms._stateFile)
 
     # Normal processing situation
-    logging.debug("Look for Layering....")
+    WhfLog.debug("Look for Layering....")
     
     # read in state
     state2 = State()
@@ -891,11 +884,11 @@ def main(argv):
     
     # check for new issue time
     if (state2.isNewModelIssueTime(newestT)):
-        logging.info("Re-Initializing state, new model issue time %s", newestT)
+        WhfLog.info("Re-Initializing state, new model issue time %s", newestT)
         state2.initialize(parms, newestT)
 
     # update availability
-    state2.setCurrentModelAvailability(parms)
+    state2.setCurrentModelAvailability(parms, configFile)
 
     # write out final state
     state2.write(parms._stateFile)

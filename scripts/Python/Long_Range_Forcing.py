@@ -1,5 +1,5 @@
 import WRF_Hydro_forcing as whf
-import logging
+import WhfLog
 import os
 import sys
 import datetime
@@ -49,17 +49,17 @@ def forcing(argv):
         elif opt in ("-i", "--ifile"):
             file_in = arg
 
-    logging.debug("file_in = %s", file_in)
+    WhfLog.debug("file_in = %s", file_in)
+
+    # Obtain CFSv2 forcing engine parameters.
+    parser = SafeConfigParser()
+    parser.read('../../parm/wrf_hydro_forcing.parm')
 
     # Set the NCL_DEF_LIB_DIR to indicate where ALL shared objects
     # reside.
     ncl_def_lib_dir = parser.get('default_env_vars','ncl_def_lib_dir')
     ncl_def_lib_dir = os.environ["NCL_DEF_LIB_DIR"] = ncl_def_lib_dir
 
-    # Obtain CFSv2 forcing engine parameters.
-    parser = SafeConfigParser()
-    parser.read('/d4/karsten/DFE/wrf_hydro_forcing/parm/wrf_hydro_forcing.parm')
-    logging_level = parser.get('log_level', 'forcing_engine_log_level')
     out_dir = parser.get('layering','long_range_output') 
     tmp_dir = parser.get('bias_correction','CFS_tmp_dir')
 
@@ -92,30 +92,17 @@ def forcing(argv):
     # Establish log file unique to model cycle, time, and current time
     # This will make it possible to diagnose potential issues that 
     # arise with data forcing engine. 
-    log_path = out_path + "/" + dateCycleYYYYMMDDHH.strftime('%Y%m%d%H') + \
-               "_" + dateFcstYYYYMMDDHH.strftime('%Y%m%d%H') + \
-               "_" + dateCurrent.strftime('%Y%m%d%H%M%S') + '_Long_Range.log' 
+    #log_path = out_path + "/" + dateCycleYYYYMMDDHH.strftime('%Y%m%d%H') + \
+    #           "_" + dateFcstYYYYMMDDHH.strftime('%Y%m%d%H') + \
+    #           "_" + dateCurrent.strftime('%Y%m%d%H%M%S') + '_Long_Range.log' 
 
-    # Open log file
-    if logging_level == 'DEBUG':
-        set_level = logging.DEBUG
-    elif logging_level == 'INFO':
-        set_level = logging.INFO
-    elif logging_level == 'WARNING':
-        set_level = logging.WARNING
-    elif logging_level == 'ERROR':
-        set_level = logging.ERROR
-    else:
-        set_level = logging.CRITICAL
-    logging.basicConfig(format='%(asctime)s %(message)s',
-                        filename=log_path, level=set_level)
 
     in_fcst_range = whf.is_in_fcst_range("CFSv2",fcsthr,parser)
 
     if in_fcst_range:
         # First, bias-correct CFSv2 data and generate hourly files 
         # from six-hour forecast
-        logging.info("Bias correcting for CFSv2 cycle: " + \
+        WhfLog.info("Bias correcting for CFSv2 cycle: " + \
                      dateCycleYYYYMMDDHH.strftime('%Y%m%d%H') + \
                      " CFSv2 forecast time: " + dateFcstYYYYMMDDHH.strftime('%Y%m%d%H'))
         whf.bias_correction('CFSv2',file_in,dateCycleYYYYMMDDHH,
@@ -136,7 +123,7 @@ def forcing(argv):
                                 dateCycleYYYYMMDDHH.strftime('%Y%m%d%H') + "_" + \
                                 dateTempYYYYMMDDHH.strftime('%Y%m%d%H') + ".M" + \
                                 em_str.zfill(2) + ".nc"
-            logging.info("Regridding CFSv2 to conus domain for cycle: " + \
+            WhfLog.info("Regridding CFSv2 to conus domain for cycle: " + \
                          dateCycleYYYYMMDDHH.strftime('%Y%m%d%H') + \
                          " forecast time: " + dateTempYYYYMMDDHH.strftime('%Y%m%d%H'))
             fileRegridded = whf.regrid_data("CFSv2",fileBiasCorrected,parser)
@@ -145,7 +132,7 @@ def forcing(argv):
             cmd = "rm -rf " + fileBiasCorrected
             status = os.system(cmd)
             if status != 0:
-                logging.error("Failure to remove " + fileBiasCorrected)
+                WhfLog.error("Failure to remove " + fileBiasCorrected)
 
   
         # Third, perform topography downscaling to generate final
@@ -154,7 +141,7 @@ def forcing(argv):
         for hour in range(begCt,endCt):
             dateTempYYYYMMDDHH = dateFcstYYYYMMDDHH - datetime.timedelta(seconds=(6-hour)*3600)
 
-            logging.info("Downscaling CFSv2 for cycle: " +
+            WhfLog.info("Downscaling CFSv2 for cycle: " +
                          dateCycleYYYYMMDDHH.strftime('%Y%m%d%H') +
                          " forecast time: " + dateTempYYYYMMDDHH.strftime('%Y%m%d%H'))
             fileRegridded = tmp_dir + "/CFSv2_bias_corrected_TMP_" + \
@@ -171,18 +158,18 @@ def forcing(argv):
             cmd = "mv " + LDASIN_path_tmp + " " + LDASIN_path_final
             status = os.system(cmd)
             if status != 0:
-                logging.error("Failure to rename " + LDASIN_path_tmp)
+                WhfLog.error("Failure to rename " + LDASIN_path_tmp)
             whf.file_exists(LDASIN_path_final)
             cmd = "rm -rf " + fileRegridded
             status = os.system(cmd)
             if status != 0:
-                logging.error("Failure to remove " + fileRegridded)
+                WhfLog.error("Failure to remove " + fileRegridded)
         
         # Exit gracefully with an exit status of 0
         sys.exit(0)
     else:
         # Skip processing this file. Exit gracefully with a 0 exit status.
-        logging.info('Requested file is outside max fcst for CFSv2')
+        WhfLog.info('Requested file is outside max fcst for CFSv2')
         sys.exit(0)
 
 if __name__ == "__main__":

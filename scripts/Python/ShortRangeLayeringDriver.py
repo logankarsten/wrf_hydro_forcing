@@ -10,11 +10,12 @@ same directory from where this script is executed.
 
 import os
 import sys
-import logging
+import WhfLog
 import datetime
 import time
 from ConfigParser import SafeConfigParser
 import Short_Range_Forcing as srf
+import WhfLog
 
 #----------------------------------------------------------------------------
 def isYyyymmddhh(name):
@@ -170,26 +171,12 @@ def parmRead(fname):
     Parms
         The parameters that were read in
     """
-    
+
     parser = SafeConfigParser()
     parser.read(fname)
-    logging_level = parser.get('log_level', 'forcing_engine_log_level')
-    # Set the logging level based on what was defined in the parm/config file
-    if logging_level == 'DEBUG':
-        set_level = logging.DEBUG
-    elif logging_level == 'INFO':
-        set_level = logging.INFO
-    elif logging_level == 'WARNING':
-        set_level = logging.WARNING
-    elif logging_level == 'ERROR':
-        set_level = logging.ERROR
-    else:
-        set_level = logging.CRITICAL
 
     forcing_config_label = "ShortRangeLayeringDriver"
-    logging_filename =  forcing_config_label + ".log" 
-    logging.basicConfig(format='%(asctime)s %(message)s',
-                        filename=logging_filename, level=set_level)
+    WhfLog.init(parser, forcing_config_label, 'Short', 'Layer', 'RAP/HRRR')
 
     hrrrDir = parser.get('downscaling', 'HRRR_finished_output_dir')
     #mrmsDir = parser.get('data_dir', 'MRMS_data')
@@ -268,16 +255,16 @@ class Parms:
 
 
     def debugPrint(self):
-        """ logging debug of content
+        """ WhfLog debug of content
         """
-        logging.debug("Parms: HRRR_data = %s", self._hrrrDir)
-        logging.debug("Parms: RAP_data = %s", self._rapDir)
-        logging.debug("Parms: Layer_data = %s", self._layerDir)
-        logging.debug("Parms: MaxFcstHour = %d", self._maxFcstHour)
-        logging.debug("Parms: HoursBack = %d", self._hoursBack)
-        logging.debug("Parms: maxWaitSeconds = %d", self._maxWaitSeconds)
-        logging.debug("Parms: veryLateSeconds = %d", self._veryLateSeconds)
-        logging.debug("Parms: StateFile = %s", self._stateFile)
+        WhfLog.debug("Parms: HRRR_data = %s", self._hrrrDir)
+        WhfLog.debug("Parms: RAP_data = %s", self._rapDir)
+        WhfLog.debug("Parms: Layer_data = %s", self._layerDir)
+        WhfLog.debug("Parms: MaxFcstHour = %d", self._maxFcstHour)
+        WhfLog.debug("Parms: HoursBack = %d", self._hoursBack)
+        WhfLog.debug("Parms: maxWaitSeconds = %d", self._maxWaitSeconds)
+        WhfLog.debug("Parms: veryLateSeconds = %d", self._veryLateSeconds)
+        WhfLog.debug("Parms: StateFile = %s", self._stateFile)
 
 
 #----------------------------------------------------------------------------
@@ -333,12 +320,12 @@ class ForecastStatus:
                                                      "%Y-%m-%d_%H:%M:%S")
 
     def debugPrint(self):
-        """ logging debug of content
+        """ WhfLog debug of content
         """
-        logging.debug("Fcst: empty=%d", self._empty)
+        WhfLog.debug("Fcst: empty=%d", self._empty)
         if (self._empty):
             return
-        logging.debug("Fcst: I:%s V:%s hrrr:%d rap:%d layered:%d clockTime=%s",
+        WhfLog.debug("Fcst: I:%s V:%s hrrr:%d rap:%d layered:%d clockTime=%s",
                       self._issue.strftime("%Y%m%d%H"),
                       self._valid.strftime("%Y%m%d%H"), self._hrrr, self._rap,
                       self._layered, 
@@ -435,7 +422,7 @@ class ForecastStatus:
         nothing = (self._hrrr == 0 and self._rap == 0)
 
         #if (nothing):
-            #logging.debug("Nothing, so trying to get stuff")
+            #WhfLog.debug("Nothing, so trying to get stuff")
         if (self._hrrr == 0):
             # update HRRR status
             self._hrrr = self.forecastExists(parms._hrrrDir)
@@ -444,7 +431,7 @@ class ForecastStatus:
             self._rap = self.forecastExists(parms._rapDir)
         if (nothing and (self._hrrr == 1 or self._rap == 1)):
             # went from nothing to something, so start the clock
-            logging.debug("Starting clock now, hrrr=%d, rap=%d", self._hrrr,
+            WhfLog.debug("Starting clock now, hrrr=%d, rap=%d", self._hrrr,
                           self._rap)
             self._clockTime = datetime.datetime.utcnow()
         else:
@@ -455,7 +442,7 @@ class ForecastStatus:
                 diff = tnow - model._clockTime 
                 idiff = diff.total_seconds()
                 if (idiff > parms._veryLateSeconds):
-                    logging.warning("Inputs for short range layering are very late Issue:%s Valid:%s",
+                    WhfLog.warning("Inputs for short range layering are very late Issue:%s Valid:%s",
                                   self._issue.strftime("%Y%m%d%H"),
                                   self._valid.strftime("%Y%m%d%H"))
     def forecastExists(self, dir):
@@ -479,7 +466,7 @@ class ForecastStatus:
             names = getFileNames(path)
             for n in names:
                 if (n == fname):
-                    logging.debug("Found %s in %s",  fname, path)
+                    WhfLog.debug("Found %s in %s",  fname, path)
                     return 1
             return 0
         else:
@@ -512,7 +499,7 @@ class ForecastStatus:
             diff = ntime - self._clockTime
             idiff = diff.total_seconds()
             if (idiff > parms._maxWaitSeconds):
-                logging.debug("timeout..Should layer, dt=%d", idiff)
+                WhfLog.debug("timeout..Should layer, dt=%d", idiff)
                 self.passthroughRap(parms)
                 self._layered = 1
                 return 1
@@ -531,9 +518,9 @@ class ForecastStatus:
         """        
         path = self._issue.strftime("%Y%m%d%H") + "/"
         path += self._valid.strftime("%Y%m%d%H%M") + ".LDASIN_DOMAIN1.nc"
-        logging.info("LAYERING %s ", path)
+        WhfLog.info("LAYERING %s ", path)
         srf.forcing('layer', 'HRRR', path, 'RAP', path)
-        logging.info("DONE LAYERING file=%s", path)
+        WhfLog.info("DONE LAYERING file=%s", path)
 
     def passthroughRap(self, parms):
         """ Perform pass through of RAP data as if it were layered
@@ -553,7 +540,8 @@ class ForecastStatus:
         fname = self._valid.strftime("%Y%m%d%H%M") + ".LDASIN_DOMAIN1.nc"
         fnameOut = self._valid.strftime("%Y%m%d%H%M") + ".LDASIN_DOMAIN1"
         path += fname
-        logging.info("LAYERING (Passthrough) %s ", path)
+        WhfLog.setData('RAP')
+        WhfLog.info("LAYERING (Passthrough) %s ", path)
 
         # if not there, create the directory to put the file into
         fullPath = parms._layerDir + "/"
@@ -562,7 +550,7 @@ class ForecastStatus:
             os.makedirs(fullPath)
 
         if not os.path.isdir(fullPath):
-            logging.error("%s is not a directory", fullPath)
+            WhfLog.error("%s is not a directory", fullPath)
         else:
             # create copy command and do it
             cmd = "cp " + parms._rapDir
@@ -570,10 +558,11 @@ class ForecastStatus:
             cmd += " " + fullPath
             cmd += "/"
             cmd += fnameOut
-            logging.info(cmd)
+            WhfLog.info(cmd)
             os.system(cmd)
 
-        logging.info("LAYERING (Passthrough) %s complete", path)
+        WhfLog.info("LAYERING (Passthrough) %s complete", path)
+        WhfLog.setData('RAP/HRRR')
             
             
 #----------------------------------------------------------------------------
@@ -612,12 +601,12 @@ class Model:
             self._clockTime = datetime.datetime.strptime(configString[11:],
                                                     "%Y-%m-%d_%H:%M:%S")
     def debugPrint(self):
-        """ Logging debug of content
+        """ WhfLog debug of content
         """
-        logging.debug("Model: empty=%d", self._empty)
+        WhfLog.debug("Model: empty=%d", self._empty)
         if (self._empty):
             return
-        logging.debug("Model: Issue=%s  clockTime=%s",
+        WhfLog.debug("Model: Issue=%s  clockTime=%s",
                       self._issue.strftime("%Y%m%d%H"),
                       self._clockTime.strftime("%Y-%m-%d_%H:%M:%S"))
         
@@ -756,7 +745,7 @@ class State:
         return (self._empty == 1)
     
     def debugPrint(self):
-        """ logging debug of content
+        """ WhfLog debug of content
         """
         for m in self._model:
             m.debugPrint()
@@ -889,7 +878,7 @@ class State:
                      # need to pass that model in to check for 'very late'
                      f.setCurrentModelAvailability(parms, m)
             if (didSet == 0):
-                logging.error("No matching model for forecast")
+                WhfLog.error("No matching model for forecast")
                 
     def layerIfReady(self, parms):
         """ Perform layering for all forecasts that indicate it should be done
@@ -915,27 +904,27 @@ def main(argv):
     parms = parmRead(configFile)
 
     # query each directory to get newest thing, and update overall newest
-    logging.debug("Looking in %s and %s", parms._hrrrDir, parms._rapDir)
+    WhfLog.debug("Looking in %s and %s", parms._hrrrDir, parms._rapDir)
     newestT = newestIssueTime(parms._hrrrDir)
     newestT2 = newestIssueTime(parms._rapDir)
     if (not newestT) and (not newestT2):
-        logging.debug("NO INPUT DATA available")
+        WhfLog.debug("NO INPUT DATA available")
         return 0
     
     if (newestT2 > newestT):
         newestT = newestT2
-    logging.debug("Newest issue time = %s", newestT)
+    WhfLog.debug("Newest issue time = %s", newestT)
 
     # if there is not a state file, create one now using newest
     if (not os.path.exists(parms._stateFile)):
         state = State()
-        logging.info("Initializing")
+        WhfLog.info("Initializing")
         state.initialSetup(parms)
         state.initialize(parms, newestT)
         state.write(parms._stateFile)
 
     # Normal processing situation
-    logging.debug("Look for Layering....")
+    WhfLog.debug("Look for Layering....")
     
     # read in state
     state2 = State()
@@ -946,7 +935,7 @@ def main(argv):
     
     # check for new issue time
     if (state2.isNewModelIssueTime(newestT)):
-        logging.info("Re-Initializing state, new model issue time %s", newestT)
+        WhfLog.info("Re-Initializing state, new model issue time %s", newestT)
         state2.initialize(parms, newestT)
 
     # update availability
