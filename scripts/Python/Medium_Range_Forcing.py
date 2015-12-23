@@ -1,5 +1,5 @@
 import WRF_Hydro_forcing as whf
-import logging
+import WhfLog
 import os
 import sys
 from ConfigParser import SafeConfigParser
@@ -54,11 +54,11 @@ def forcing(action, prod, file, prod2=None, file2=None):
 
     # Read the parameters from the config/param file.
     parser = SafeConfigParser()
-    parser.read('/d4/karsten/DFE/wrf_hydro_forcing/parm/wrf_hydro_forcing.parm')
+    parser.read('../../parm//wrf_hydro_forcing.parm')
 
     # Set up logging, environments, etc.
     forcing_config_label = 'Medium_Range'
-    logging = whf.initial_setup(parser,forcing_config_label)
+    whf.initial_setup(parser,forcing_config_label)
 
 
     # Extract the date, model run time, and forecast hour from the file name
@@ -91,7 +91,7 @@ def forcing(action, prod, file, prod2=None, file2=None):
             # in the 0hr forecasts (e.g. precip rate for RAP and radiation
             # in GFS).
  
-            logging.info("Regridding and Downscaling for %s", product_data_name)
+            WhfLog.info("Regridding and Downscaling for %s", product_data_name)
             # Determine if this is a 0hr forecast for RAP data (GFS is also missing
             # some variables for 0hr forecast, but GFS is not used for Medium Range
             # forcing). We will need to substitute this file for the downscaled
@@ -100,7 +100,7 @@ def forcing(action, prod, file, prod2=None, file2=None):
             # forcing files that are regridded always get downscaled and we don't want
             # to do this for both the regridding and downscaling.
             if fcsthr == 0 and prod == 'GFS':
-                logging.info("Regridding (ignoring f0 GFS files) %s: ", file )
+                WhfLog.info("Regridding (ignoring f0 GFS files) %s: ", file )
                 regridded_file = whf.regrid_data(product_data_name, file, parser, True)
                 print regridded_file
                 return(1)
@@ -124,16 +124,16 @@ def forcing(action, prod, file, prod2=None, file2=None):
                     #    cmd = "mv " + downscaled_file + " " + finalFile
                     #    status = os.system(cmd)
                     #    if status != 0:
-                    #        logging.error("ERROR: Failed to move " + downscaled_file + " to " + finalFile)
+                    #        WhfLog.error("Failed to move " + downscaled_file + " to " + finalFile)
                 # Remove empty 0hr regridded file if it still exists
                 if os.path.exists(regridded_file):
                     cmd = 'rm -rf ' + regridded_file
                     status = os.system(cmd)
                     if status != 0:
-                        logging.error("ERROR: Failure to remove empty file: " + regridded_file)
+                        WhfLog.error("Failure to remove empty file: " + regridded_file)
                         return
             else:
-                logging.info("Regridding %s: ", file )
+                WhfLog.info("Regridding %s: ", file )
                 regridded_file = whf.regrid_data(product_data_name, file, parser, False)
                 whf.downscale_data(product_data_name,regridded_file, parser,True, False)                
                 match = re.match(r'.*/([0-9]{10})/([0-9]{12}.LDASIN_DOMAIN1.nc)',regridded_file)
@@ -155,12 +155,12 @@ def forcing(action, prod, file, prod2=None, file2=None):
                     #    cmd = "mv " + downscaled_file + " " + finalFile
                     #    status = os.system(cmd)
                     #    if status != 0:
-                    #        logging.error("ERROR: Failed to move " + downscaled_file + " to " + finalFile) 
+                    #        WhfLog.error("Failed to move " + downscaled_file + " to " + finalFile) 
         else:
             # Skip processing this file, exiting...
-            logging.info("INFO [Medium_Range_Forcing]- Skip processing, requested file is outside max fcst")
+            WhfLog.info("Skip processing, requested file is outside max fcst")
     else:
-        logging.info("INFO [Medium_Range_Forcing]- Unsupported action requested. Only regridding (and downscaling) performed for Medium Range")
+        WhfLog.info("Unsupported action requested. Only regridding (and downscaling) performed for Medium Range")
 
             
 

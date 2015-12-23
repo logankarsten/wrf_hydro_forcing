@@ -11,7 +11,7 @@
 
 
 #--------------------------------------------------
-# Logging levels
+# Logging levels and location
 #--------------------------------------------------
 
 [log_level]
@@ -25,8 +25,9 @@
 #            code is still working as expected.
 #   ERROR - more serious problem, code cannot perform its task
 #   CRITICAL -  serious error, the code may not be able to continue running
-forcing_engine_log_level=DEBUG
 
+forcing_engine_log_level=DEBUG
+forcing_engine_log_dir = /d4/hydro-dm/IOC/log
 
 #--------------------------------------------------
 # Default environment variables
@@ -159,7 +160,7 @@ Short_Range_layering = ../NCL/combine.ncl
 
 #CFSv2-specific
 CFS_correspond = /d4/karsten/DFE/IOC_TESTING/realtime/params/bias_correction/nldas_param_cfsv2_subset_grid_correspondence.nc
-CFS_tmp_dir = /d4/karsten/DFE/IOC_TESTING/realtime/bias_correction/CFSv2_tmp 
+CFS_tmp_dir = /d4/hydro-dm/IOC/realtime/bias_correction/CFSv2_tmp 
 CFS_bias_parm_dir = /d4/karsten/DFE/IOC_TESTING/realtime/params/bias_correction/cfs_climo 
 NLDAS_bias_parm_dir = /d4/karsten/DFE/IOC_TESTING/realtime/params/bias_correction/nldas_climo 
 
@@ -172,26 +173,26 @@ NLDAS_bias_parm_dir = /d4/karsten/DFE/IOC_TESTING/realtime/params/bias_correctio
 #HRRR-specific
 HRRR_wgt_bilinear  = /d4/karsten/DFE/IOC_TESTING/realtime/params/regridding/HRRR2HYDRO_d01_weight_bilinear.nc
 HRRR_dst_grid_name = /d4/karsten/DFE/IOC_TESTING/realtime/params/regridding/geo_dst.nc
-HRRR_output_dir = /d4/karsten/DFE/IOC_TESTING/realtime/regridded/HRRR 
-HRRR_output_dir_0hr = /d4/karsten/DFE/IOC_TESTING/realtime/regridded/HRRR_0hr 
+HRRR_output_dir = /d4/hydro-dm/IOC/realtime/regridded/HRRR 
+HRRR_output_dir_0hr = /d4/hydro-dm/IOC/realtime/regridded/HRRR_0hr 
 
 #MRMS-specific
 MRMS_wgt_bilinear =  /d4/karsten/DFE/IOC_TESTING/realtime/params/regridding/RADAR2HYDRO_d01_weight_bilinear.nc
 MRMS_dst_grid_name = /d4/karsten/DFE/IOC_TESTING/realtime/params/regridding/geo_dst.nc 
-MRMS_output_dir = /d4/karsten/DFE/IOC_TESTING/realtime/regridded/MRMS 
-MRMS_finished_output_dir = /d4/karsten/DFE/IOC_TESTING/realtime/downscaled/MRMS/final 
+MRMS_output_dir = /d4/hydro-dm/IOC/realtime/regridded/MRMS 
+MRMS_finished_output_dir = /d4/hydro-dm/IOC/realtime/downscaled/MRMS/final 
 
 #GFS-specific
 #For GFS_0.25 data
 GFS_wgt_bilinear = /d4/karsten/DFE/IOC_TESTING/realtime/params/regridding/GFS2HYDRO_d01_weight_bilinear.nc
 GFS_dst_grid_name = /d4/karsten/DFE/IOC_TESTING/realtime/params/regridding/geo_dst.nc 
-GFS_output_dir = /d4/karsten/DFE/IOC_TESTING/realtime/regridded/GFS 
+GFS_output_dir = /d4/hydro-dm/IOC/realtime/regridded/GFS 
 
 #RAP-specific
 RAP_wgt_bilinear = /d4/karsten/DFE/IOC_TESTING/realtime/params/regridding/RAP2HYDRO_d01_weight_bilinear.nc
 RAP_dst_grid_name = /d4/karsten/DFE/IOC_TESTING/realtime/params/regridding/geo_dst.nc 
-RAP_output_dir = /d4/karsten/DFE/IOC_TESTING/realtime/regridded/RAP 
-RAP_output_dir_0hr = /d4/karsten/DFE/IOC_TESTING/realtime/regridded/RAP_0hr 
+RAP_output_dir = /d4/hydro-dm/IOC/realtime/regridded/RAP 
+RAP_output_dir_0hr = /d4/hydro-dm/IOC/realtime/regridded/RAP_0hr 
 
 #CFSv2-specific
 CFS_wgt_bilinear = /d4/karsten/DFE/IOC_TESTING/realtime/params/regridding/CFS2HYDRO_d01_weight_bilinear.nc
@@ -212,36 +213,36 @@ lapse_rate_file = /d4/karsten/DFE/IOC_TESTING/realtime/params/downscaling/NARRla
 # HRRR
 # Currently, this is NAM227, as required by NCEP
 # Directory where regridded HRRR data to BE DOWNSCALED is located
-HRRR_data_to_downscale = /d4/karsten/DFE/IOC_TESTING/realtime/regridded/HRRR  
+HRRR_data_to_downscale = /d4/hydro-dm/IOC/realtime/regridded/HRRR  
 HRRR_hgt_data = /d4/karsten/DFE/IOC_TESTING/realtime/params/downscaling/HRRRhgt.nc
 HRRR_geo_data = /d4/karsten/DFE/IOC_TESTING/realtime/params/regridding/geo_dst.nc 
 # Directory where downscaled data should be saved
-HRRR_downscale_output_dir = /d4/karsten/DFE/IOC_TESTING/realtime/downscaled/HRRR/staging 
-HRRR_downscale_output_dir_0hr = /d4/karsten/DFE/IOC_TESTING/realtime/downscaled/HRRR_0hr/staging 
-HRRR_finished_output_dir = /d4/karsten/DFE/IOC_TESTING/realtime/downscaled/HRRR/final
-HRRR_finished_output_dir_0hr = /d4/karsten/DFE/IOC_TESTING/realtime/downscaled/HRRR_0hr/final
+HRRR_downscale_output_dir = /d4/hydro-dm/IOC/realtime/downscaled/HRRR/staging 
+HRRR_downscale_output_dir_0hr = /d4/hydro-dm/IOC/realtime/downscaled/HRRR_0hr/staging 
+HRRR_finished_output_dir = /d4/hydro-dm/IOC/realtime/downscaled/HRRR/final
+HRRR_finished_output_dir_0hr = /d4/hydro-dm/IOC/realtime/downscaled/HRRR_0hr/final
 
 # GFS 
 # Currently GFS 0.25 degree data
 # Directory where regridded GFS data to BE DOWNSCALED is located
-GFS_data_to_downscale = /d4/karsten/DFE/IOC_TESTING/realtime/regridded/GFS  
+GFS_data_to_downscale = /d4/hydro-dm/IOC/realtime/regridded/GFS  
 GFS_hgt_data = /d4/karsten/DFE/IOC_TESTING/realtime/params/downscaling/GFShgt.nc
 GFS_geo_data = /d4/karsten/DFE/IOC_TESTING/realtime/params/regridding/geo_dst.nc 
 # Directory where downscaled data should be saved
-GFS_downscale_output_dir = /d4/karsten/DFE/IOC_TESTING/realtime/downscaled/GFS/staging 
-GFS_finished_output_dir = /d4/karsten/DFE/IOC_TESTING/realtime/downscaled/GFS/final
+GFS_downscale_output_dir = /d4/hydro-dm/IOC/realtime/downscaled/GFS/staging 
+GFS_finished_output_dir = /d4/hydro-dm/IOC/realtime/downscaled/GFS/final
 
 
 # RAP
 # Directory where regridded RAP data to BE DOWNSCALED is located
-RAP_data_to_downscale = /d4/karsten/DFE/IOC_TESTING/realtime/regridded/RAP 
+RAP_data_to_downscale = /d4/hydro-dm/IOC/realtime/regridded/RAP 
 RAP_hgt_data = /d4/karsten/DFE/IOC_TESTING/realtime/params/downscaling/RAPhgt.nc
 RAP_geo_data = /d4/karsten/DFE/IOC_TESTING/realtime/params/regridding/geo_dst.nc 
 # Directory where downscaled data should be saved
-RAP_downscale_output_dir = /d4/karsten/DFE/IOC_TESTING/realtime/downscaled/RAP/staging 
-RAP_downscale_output_dir_0hr = /d4/karsten/DFE/IOC_TESTING/realtime/downscaled/RAP_0hr/staging
-RAP_finished_output_dir = /d4/karsten/DFE/IOC_TESTING/realtime/downscaled/RAP/final 
-RAP_finished_output_dir_0hr = /d4/karsten/DFE/IOC_TESTING/realtime/downscaled/RAP_0hr/final
+RAP_downscale_output_dir = /d4/hydro-dm/IOC/realtime/downscaled/RAP/staging 
+RAP_downscale_output_dir_0hr = /d4/hydro-dm/IOC/realtime/downscaled/RAP_0hr/staging
+RAP_finished_output_dir = /d4/hydro-dm/IOC/realtime/downscaled/RAP/final 
+RAP_finished_output_dir_0hr = /d4/hydro-dm/IOC/realtime/downscaled/RAP_0hr/final
 
 # CFS
 # Directories that contain distribution parameter files for CFS/NLDAS
@@ -258,17 +259,17 @@ CFS_geo_data = /d4/karsten/DFE/IOC_TESTING/realtime/params/regridding/geo_dst.nc
 #-------------------------------------------------
 [layering]
 
-short_range_primary = /d4/karsten/DFE/IOC_TESTING/realtime/downscaled/HRRR/final 
+short_range_primary = /d4/hydro-dm/IOC/realtime/downscaled/HRRR/final 
 
-short_range_secondary = /d4/karsten/DFE/IOC_TESTING/realtime/downscaled/RAP/final 
+short_range_secondary = /d4/hydro-dm/IOC/realtime/downscaled/RAP/final 
 
 
-analysis_assimilation_tmp = /d4/karsten/DFE/IOC_TESTING/realtime/downscaled/tmp 
-analysis_assimilation_output = /d4/karsten/DFE/IOC_TESTING/realtime/final/Anal_Assim 
+analysis_assimilation_tmp = /d4/hydro-dm/IOC/realtime/downscaled/tmp 
+analysis_assimilation_output = /d4/hydro-dm/IOC/realtime/final/Anal_Assim 
 qpe_combine_parm_dir = /d4/karsten/DFE/IOC_TESTING/realtime/params/layering/combine_params
 
-short_range_output = /d4/karsten/DFE/IOC_TESTING/realtime/final/Short_Range
+short_range_output = /d4/hydro-dm/IOC/realtime/final/Short_Range
 
-medium_range_output = /d4/karsten/DFE/IOC_TESTING/realtime/final/Medium_Range
+medium_range_output = /d4/hydro-dm/IOC/realtime/final/Medium_Range
 
-long_range_output =  /d4/karsten/DFE/IOC_TESTING/realtime/final/Long_Range
+long_range_output =  /d4/hydro-dm/IOC/realtime/final/Long_Range

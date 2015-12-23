@@ -1,5 +1,5 @@
 import WRF_Hydro_forcing as whf
-import logging
+import WhfLog
 import os
 import sys
 import re
@@ -54,11 +54,11 @@ def forcing(action, prod, file, prod2=None, file2=None):
 
     # Read the parameters from the config/param file.
     parser = SafeConfigParser()
-    parser.read('/d4/karsten/DFE/wrf_hydro_forcing/parm/wrf_hydro_forcing.parm')
+    parser.read('../../parm//wrf_hydro_forcing.parm')
 
     # Set up logging, environments, etc.
     forcing_config_label = "Short_Range"
-    logging = whf.initial_setup(parser,forcing_config_label)
+    whf.initial_setup(parser,forcing_config_label)
 
 
     # Extract the date, model run time, and forecast hour from the file name
@@ -101,7 +101,7 @@ def forcing(action, prod, file, prod2=None, file2=None):
             # in the 0hr forecasts (e.g. precip rate for RAP and radiation
             # in GFS).
     
-            logging.info("Regridding and Downscaling for %s", product_data_name)
+            WhfLog.info("Regridding and Downscaling for %s", product_data_name)
             # Determine if this is a 0hr forecast for RAP data (GFS is also missing
             # some variables for 0hr forecast, but GFS is not used for Short Range
             # forcing). We will need to substitute this file for the downscaled
@@ -110,7 +110,7 @@ def forcing(action, prod, file, prod2=None, file2=None):
             # forcing files that are regridded always get downscaled and we don't want
             # to do this for both the regridding and downscaling.
             if fcsthr == 0 and prod == 'RAP':
-                logging.info("Regridding, ignoring f0 RAP files " )
+                WhfLog.info("Regridding, ignoring f0 RAP files " )
                 regridded_file = whf.regrid_data(product_data_name, file, parser, True)
 
                 # Downscaling...
@@ -128,16 +128,16 @@ def forcing(action, prod, file, prod2=None, file2=None):
                             input_file = input_dir + "/" + match.group(2)
                             whf.move_to_finished_area(parser, prod, input_file) 
                     else:
-                        logging.error("FAIL- cannot move finished file: %s", regridded_file) 
+                        WhfLog.error("FAIL- cannot move finished file: %s", regridded_file) 
                         return 
                 else:
-                    logging.error("FAIL dould not downscale data for hour 0 RAP")
+                    WhfLog.error("FAIL dould not downscale data for hour 0 RAP")
                 # Remove empty 0hr regridded file if it still exists
                 if os.path.exists(regridded_file):
                     cmd = 'rm -rf ' + regridded_file
                     status = os.system(cmd)
                     if status != 0:
-                        logging.error("ERROR: Failure to remove empty file: " + regridded_file)
+                        WhfLog.error("Failure to remove empty file: " + regridded_file)
                         return
 
             else:
@@ -153,20 +153,20 @@ def forcing(action, prod, file, prod2=None, file2=None):
                     full_input_file = input_dir + "/" + match.group(2)
                     full_finished_file = full_dir + "/" + match.group(2)
                     if not os.path.exists(full_dir):
-                        logging.info("finished dir doesn't exist, creating it now...")
+                        WhfLog.info("finished dir doesn't exist, creating it now...")
                         whf.mkdir_p(full_dir)
-                    logging.info("Moving now, source = %s", full_input_file)
+                    WhfLog.info("Moving now, source = %s", full_input_file)
                     whf.move_to_finished_area(parser, prod, full_input_file)
                     #whf.move_to_finished_area(parser, prod, full_finished_file)
                 else:
-                    logging.error("FAIL- cannot move finished file: %s", full_finished_file) 
+                    WhfLog.error("FAIL- cannot move finished file: %s", full_finished_file) 
                     return
 
         else:
             # Skip processing this file, exiting...
-            logging.info("INFO [Short_Range_Forcing]- Skip processing, requested file is outside max fcst")
+            WhfLog.info("Skip processing, requested file is outside max fcst")
     elif action_requested == 'layer':
-        logging.info("Layering requested for %s and %s", prod, prod2)
+        WhfLog.info("Layering requested for %s and %s", prod, prod2)
         # Do some checking to make sure that there are two data products 
         # and two files indicated.
         if prod2 is None:
@@ -181,8 +181,8 @@ def forcing(action, prod, file, prod2=None, file2=None):
             whf.rename_final_files(parser,'Short_Range')
              
     elif action_requested == 'bias':
-        logging.info("Bias correction requested for %s", file)
-        logging.info("Bias correction not suppoted for Short Range Forcing")
+        WhfLog.info("Bias correction requested for %s", file)
+        WhfLog.info("Bias correction not suppoted for Short Range Forcing")
             
 
 

@@ -15,6 +15,7 @@ import datetime
 import time
 from ConfigParser import SafeConfigParser
 import DataFiles as df
+import WhfLog
 import Short_Range_Forcing as srf
 import Analysis_Assimilation_Forcing as aaf
 import Medium_Range_Forcing as mrf
@@ -39,23 +40,21 @@ def parmRead(fname, fileType):
     
    parser = SafeConfigParser()
    parser.read(fname)
-   logging_level = parser.get('log_level', 'forcing_engine_log_level')
-   # Set the logging level based on what was defined in the parm/config file
-   if logging_level == 'DEBUG':
-      set_level = logging.DEBUG
-   elif logging_level == 'INFO':
-      set_level = logging.INFO
-   elif logging_level == 'WARNING':
-      set_level = logging.WARNING
-   elif logging_level == 'ERROR':
-      set_level = logging.ERROR
-   else:
-      set_level = logging.CRITICAL
 
-   forcing_config_label = "RegridDriver" + fileType
-   logging_filename =  forcing_config_label + ".log" 
-   logging.basicConfig(format='%(asctime)s %(message)s',
-                       filename=logging_filename, level=set_level)
+   forcing_config_label = "Regrid" + fileType
+
+   if (fileType == 'HRRR'):
+      configType = 'Short'
+   elif (fileType == 'RAP'):
+      configType = 'Short'
+   elif (fileType == 'GFS'):
+      configType = 'Medium'
+   elif (fileType == 'MRMS'):
+      configType = 'AA'
+   else:
+      configType = '???'
+
+   WhfLog.init(parser, forcing_config_label, configType, 'Regrid', fileType)
 
    dataDir = parser.get('data_dir', fileType + '_data')
    maxFcstHour = int(parser.get('fcsthr_max', fileType + '_fcsthr_max'))
@@ -66,7 +65,7 @@ def parmRead(fname, fileType):
    return parms
 
 #----------------------------------------------------------------------------
-def regrid(fname, fileType):
+def regrid(fname, fileType, configFile):
    """Invoke HRRR regridding/downscaling (see Short_Range_Forcing.py)
        
    Parameters
@@ -75,6 +74,8 @@ def regrid(fname, fileType):
       name of file to regrid and downscale, with yyyymmdd parent dir
    fileType: str
       HRRR, RAP, ... string
+   configFile : str
+      configuration file with all settings
 
    Returns
    -------
@@ -82,35 +83,39 @@ def regrid(fname, fileType):
 
    """
 
-   logging.info("REGRIDDING %s DATA, file=%s", fileType, fname)
+   WhfLog.info("REGRIDDING %s DATA, file=%s", fileType, fname)
    if (fileType == 'HRRR'):
        srf.forcing('regrid', 'HRRR', fname[9:])
        # special case, if it is a 0 hour forecast, do double regrid
        f = df.DataFile(fname[0:8], fname[9:], 'HRRR')
        if (f._ok):
           if (f._time._forecastHour == 0):
-             logging.debug("SPECIAL 0 hour case %s", fname[9:0])
-             aaf.forcing('regrid', 'HRRR', fname[9:])
+             WhfLog.setConfigType('AA')
+             WhfLog.debug("SPECIAL 0 hour case %s", fname[9:0])
+             aaf.forcing('regrid', 'HRRR', fname[9:], configFile)
+             WhfLog.setConfigType('Short')
        else:
-          logging.error("Regrid error checking for 0 hour data")
+          WhfLog.error("Regrid error checking for 0 hour data")
    elif (fileType == 'RAP'):
        srf.forcing('regrid', 'RAP', fname[9:])
        # special case, if it is a 0 hour forecast, do double regrid
        f = df.DataFile(fname[0:8], fname[9:], 'RAP')
        if (f._ok):
           if (f._time._forecastHour == 0):
-             logging.debug("SPECIAL 0 hour case %s", fname[9:0])
-             aaf.forcing('regrid', 'RAP', fname[9:])
+             WhfLog.setConfigType('AA')
+             WhfLog.debug("SPECIAL 0 hour case %s", fname[9:0])
+             aaf.forcing('regrid', 'RAP', fname[9:], configFile)
+             WhfLog.setConfigType('Short')
        else:
-          logging.error("Regrid error checking for 0 hour data")
+          WhfLog.error("Regrid error checking for 0 hour data")
    elif (fileType == 'GFS'):
        mrf.forcing('regrid', 'GFS', fname[9:])
    elif (fileType == 'MRMS'):
-       aaf.forcing('regrid', 'MRMS', fname[9:])
+       aaf.forcing('regrid', 'MRMS', fname[9:], configFile)
    else:
-       logging.error("Unknown file type %s", fileType)
+       WhfLog.error("Unknown file type %s", fileType)
 
-   logging.info("DONE REGRIDDING %s DATA, file=%s", fileType, fname)
+   WhfLog.info("DONE REGRIDDING %s DATA, file=%s", fileType, fname)
     
 #----------------------------------------------------------------------------
 class Parms:
@@ -143,9 +148,9 @@ class Parms:
    def debugPrint(self):
       """ Debug logging of content
       """
-      logging.debug("Parms: data = %s", self._dataDir)
-      logging.debug("Parms: MaxFcstHour = %d", self._maxFcstHour)
-      logging.debug("Parms: StateFile = %s", self._stateFile)
+      WhfLog.debug("Parms: data = %s", self._dataDir)
+      WhfLog.debug("Parms: MaxFcstHour = %d", self._maxFcstHour)
+      WhfLog.debug("Parms: StateFile = %s", self._stateFile)
 
 
 #----------------------------------------------------------------------------
@@ -234,7 +239,7 @@ class State:
       """ logging debug of contents
       """
       for f in self._data:
-         logging.debug("State:%s", f)
+         WhfLog.debug("State:%s", f)
         
    def update(self, time, hoursBack, fileType):
       """Update typed state so that input time is newest one
@@ -310,25 +315,25 @@ class State:
          return ret
 
       if (self.isEmpty()):
-         logging.debug("Adding to empty list")
+         WhfLog.debug("Adding to empty list")
       else:
          sname = self.newest()
          if (not sname):
-            logging.error("Expected file, got none")
+            WhfLog.error("Expected file, got none")
             return ret
          if (fnames[-1] > sname):
-            logging.debug("Newer time encountered")
+            WhfLog.debug("Newer time encountered")
             # see if issue time has increased and if so, purge old stuff
             # create DataFile objects
             df0 = df.DataFile(sname[0:8], sname[9:], fileType)
             df1 = df.DataFile(fnames[-1][0:8], fnames[-1][9:], fileType)
             if (df0._ok and df1._ok):
                if (df0._time.inputIsNewerIssueHour(df1._time)):
-                  logging.debug("%s Issue hour has increased, purge now",
+                  WhfLog.debug("%s Issue hour has increased, purge now",
                                 fileType)
                   self.update(df1._time, hoursBack, fileType)
             else:
-               logging.error("Constructing DataFile objects")
+               WhfLog.error("Constructing DataFile objects")
 
       for f in fnames:
          if (self.addFileIfNew(f)):
@@ -391,7 +396,7 @@ def createStateFile(parms, fileType):
    Writes out the state file after creating it
    """
 
-   logging.info("Initializing")
+   WhfLog.info("Initializing")
 
 
    # query each directory and get newest model run file for each, then
@@ -432,7 +437,7 @@ def main(argv):
     
     # read in fixed main params
     parms = parmRead(configFile, fileType)
-    parms.debugPrint()
+    #parms.debugPrint()
 
     #if there is not a state file, create one now using newest
     if (not os.path.exists(parms._stateFile)):
@@ -440,7 +445,7 @@ def main(argv):
         createStateFile(parms, fileType)
         
     # begin normal processing situation
-    logging.debug("....Check for new input data to regid")
+    WhfLog.debug("....Check for new input data to regid")
     
     # read in state
     state = State(parms._stateFile, fileType)
@@ -458,7 +463,7 @@ def main(argv):
     # Regrid 'em
     toProcess = state.updateWithNew(data, parms._hoursBack, fileType)
     for f in toProcess:
-        regrid(f, fileType)
+        regrid(f, fileType, configFile)
 
     # write out state and exit
     #state.debugPrint()

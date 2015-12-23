@@ -1,5 +1,5 @@
 import WRF_Hydro_forcing as whf
-import logging
+import WhfLog
 import os
 from ConfigParser import SafeConfigParser
 import sys
@@ -21,7 +21,7 @@ from where this script is executed.
 """
 
 
-def forcing(action, prod, file):
+def forcing(action, prod, file, config):
     """Peforms the action on the given data
        product and corresponding input file.
 
@@ -34,6 +34,7 @@ def forcing(action, prod, file):
                             this is derived from the Python config/
                             param file and the YYYMMDD portion of 
                             the file name.
+           config (string) : Config file name
 
        Returns:
            None           Performs the indicated action on the
@@ -47,11 +48,11 @@ def forcing(action, prod, file):
 
     # Read the parameters from the config/param file.
     parser = SafeConfigParser()
-    parser.read('/d4/karsten/DFE/wrf_hydro_forcing/parm/wrf_hydro_forcing.parm')
+    parser.read(config)
 
     # Set up logging, environments, etc.
     forcing_config_label = "Anal_Assim"
-    logging = whf.initial_setup(parser,forcing_config_label)
+    whf.initial_setup(parser,forcing_config_label)
 
     # Convert the action to lower case 
     # and the product name to upper case
@@ -68,7 +69,7 @@ def forcing(action, prod, file):
         # Usually check for forecast range, but only 0, 3 hr forecast/analysis data used
    
         # Check for HRRR, RAP, MRMS products. 
-        logging.info("Regridding and Downscaling for %s", product_data_name)
+        WhfLog.info("Regridding and Downscaling for %s", product_data_name)
 
         if fcsthr == 0 and prod == "HRRR":
             downscale_dir = parser.get('downscaling', 'HRRR_downscale_output_dir_0hr')
@@ -107,14 +108,14 @@ def forcing(action, prod, file):
             whf.file_exists(regridded_file)
             whf.move_to_finished_area(parser, prod, regridded_file, zero_move=False)
         else:
-            logging.error("Either invalid forecast hour or invalid product chosen")
-            logging.error("Only 00hr forecast files, and RAP/HRRR/MRMS valid")
+            WhfLog.error("Either invalid forecast hour or invalid product chosen")
+            WhfLog.error("Only 00hr forecast files, and RAP/HRRR/MRMS valid")
             return(1)
     else: # Invalid action selected
-        logging.error("ERROR [Anal_Assim_Forcing]- Invalid action selected")
+        WhfLog.error("ERROR [Anal_Assim_Forcing]- Invalid action selected")
         return(1)
 
-def anal_assim_layer(cycleYYYYMMDDHH,fhr,action):
+def anal_assim_layer(cycleYYYYMMDDHH,fhr,action,config):
     """ Analysis and Assimilation layering
         Performs layering/combination of RAP/HRRR/MRMS
         data for a particular analysis and assimilation
@@ -129,6 +130,7 @@ def anal_assim_layer(cycleYYYYMMDDHH,fhr,action):
                              possible available model data. Possible 
                              values are "RAP", "RAP_HRRR", and
                              "RAP_HRRR_MRMS".
+            config (string) : Config file name
         Returns: 
             None: Performs specified layering to final input directory
                   used for WRF-Hydro.
@@ -155,7 +157,7 @@ def anal_assim_layer(cycleYYYYMMDDHH,fhr,action):
   
     # Obtain analysis and assimiltation configuration parameters.
     parser = SafeConfigParser()
-    parser.read('/d4/karsten/DFE/wrf_hydro_forcing/parm/wrf_hydro_forcing.parm')
+    parser.read(config)
     out_dir = parser.get('layering','analysis_assimilation_output')
     tmp_dir = parser.get('layering','analysis_assimilation_tmp')
     qpe_parm_dir = parser.get('layering','qpe_combine_parm_dir')
@@ -184,29 +186,6 @@ def anal_assim_layer(cycleYYYYMMDDHH,fhr,action):
     out_path = out_dir + "/" + cycleDate.strftime("%Y%m%d%H")
 
     whf.mkdir_p(out_path)
-
-    # Establish log file unique to model cycle, time, and current time
-    # This will make it possible to diagnose potential issues that
-    # arise with data forcing engine.
-    log_path = out_path + "/" + cycleDate.strftime('%Y%m%d%H') + \
-               "_" + validDate.strftime('%Y%m%d%H') + \
-               "_" + dateCurrent.strftime('%Y%m%d%H%M%S') + '_Anal_Assim.log'
-    logging_level = parser.get('log_level', 'forcing_engine_log_level') 
-
-    # Open log file
-    if logging_level == 'DEBUG':
-        set_level = logging.DEBUG
-    elif logging_level == 'INFO':
-        set_level = logging.INFO
-    elif logging_level == 'WARNING':
-        set_level = logging.WARNING
-    elif logging_level == 'ERROR':
-        set_level = logging.ERROR
-    else:
-        set_level = logging.CRITICAL
-
-    logging.basicConfig(format='%(asctime)s %(message)s',
-                        filename=log_path, level=set_level)
 
     # Compose necessary file paths  
     hrrr0Path = hrrr_ds_dir_0hr + "/" + validDate.strftime("%Y%m%d%H") + \
@@ -245,14 +224,14 @@ def anal_assim_layer(cycleYYYYMMDDHH,fhr,action):
     LDASIN_path_final = out_path + "/" + validDate.strftime('%Y%m%d%H') + "00.LDASIN_DOMAIN1"
     # Perform layering/combining depending on processing path.
     if process == 1:    # RAP only
-        logging.info("Layering and Combining RAP only for cycle date: " + \
+        WhfLog.info("Layering and Combining RAP only for cycle date: " + \
                      cycleDate.strftime("%Y%m%d%H") + " valid date: " + \
                      validDate.strftime("%Y%m%d%H"))
         # Check for existence of input files
         whf.file_exists(rap0Path)
         whf.file_exists(rap3Path)
     elif process == 2:  # HRRR and RAP only 
-        logging.info("Layering and Combining RAP and HRRR for cycle date: " + \
+        WhfLog.info("Layering and Combining RAP and HRRR for cycle date: " + \
                      cycleDate.strftime("%Y%m%d%H") + " valid date: " + \
                      validDate.strftime("%Y%m%d%H"))
         # Check for existence of input files
@@ -261,7 +240,7 @@ def anal_assim_layer(cycleYYYYMMDDHH,fhr,action):
         whf.file_exists(hrrr0Path)
         whf.file_exists(hrrr3Path)
     elif process == 3:  # HRRR, RAP, and MRMS
-        logging.info("Layering and Combining RAP/HRRR/MRMS for cycle date: " + \
+        WhfLog.info("Layering and Combining RAP/HRRR/MRMS for cycle date: " + \
                      cycleDate.strftime("%Y%m%d%H") + " valid date: " + \
                      validDate.strftime("%Y%m%d%H"))
         # Check for existence of input files
@@ -271,7 +250,7 @@ def anal_assim_layer(cycleYYYYMMDDHH,fhr,action):
         whf.file_exists(hrrr3Path)
         whf.file_exists(mrmsPath)
     else:  # Error out
-        logging.error("Invalid input action selected")
+        WhfLog.error("Invalid input action selected")
         return(1)
 
     hrrrB_param = "'hrrrBFile=" + '"' + hrrrBiasPath + '"' + "' "
@@ -296,7 +275,7 @@ def anal_assim_layer(cycleYYYYMMDDHH,fhr,action):
     status = os.system(cmd)
 
     if status != 0:
-        logging.error("Error in combinining NCL program")
+        WhfLog.error("Error in combinining NCL program")
         return(1)
    
     # Double check to make sure file was created, delete temporary regridded file
@@ -305,12 +284,12 @@ def anal_assim_layer(cycleYYYYMMDDHH,fhr,action):
     cmd = "mv " + LDASIN_path_tmp + " " + LDASIN_path_final
     status = os.system(cmd)
     if status != 0:
-        logging.error("Failure to rename " + LDASIN_path_tmp)
+        WhfLog.error("Failure to rename " + LDASIN_path_tmp)
     whf.file_exists(LDASIN_path_final)
     cmd = "rm -rf " + LDASIN_path_tmp 
     status = os.system(cmd)
     if status != 0:
-        logging.error("Failure to remove " + LDASIN_path_tmp)
+        WhfLog.error("Failure to remove " + LDASIN_path_tmp)
         return(1)
     # Exit gracefully with an exit status of 0. Will need to refine.
     return(0)

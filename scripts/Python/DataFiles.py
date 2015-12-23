@@ -3,14 +3,35 @@ Handles individual and grouped data files.
 """
 
 import os
-#import sys
 import logging
 import datetime
-#import time
-#from ConfigParser import SafeConfigParser
-#import Short_Range_Forcing as srf
-#import Analysis_Assimilation_Forcing as aaf
-#import Medium_Range_Forcing as mrf
+import errno
+import WhfLog
+
+#----------------------------------------------------------------------------
+def makeDirIfNeeded(path):
+   """ Input is a to be a directory, make it if it does not exist.
+
+   Parameters
+   ----------
+   path : str
+      full path
+
+   Returns
+   -------
+   bool
+      True if directory exists, or was created, false if error
+   """
+
+   try:
+      os.makedirs(path)
+      return 1
+   except OSError as exception:
+      if exception.errno != errno.EEXIST:
+         WhfLog.error("ERROR creating %s", path)
+         return 0
+      else:
+         return 1
 
 #----------------------------------------------------------------------------
 def isYyyymmdd(name):
@@ -137,9 +158,9 @@ def filterWithinNHours(files, type, ftime, N):
          if (ithFtime.withinNHours(ftime, N)):
             ret.append(f)
          else:
-            logging.error("Creating data file object")
+            WhfLog.error("Did not append %s", f)
 
-   logging.debug("filtering within %d hours, input length %d output %d",
+   WhfLog.debug("filtering within %d hours, input length %d output %d",
                  N, len(files), len(ret))
    return ret
         
@@ -196,7 +217,7 @@ class DataFile:
          self._parseNonMrmsFile(fileName)
 
    def debugPrint(self, name):
-      """logging.debug call with description of this data
+      """WhfLog.debug call with description of this data
 
       Parameters
       ----------
@@ -208,7 +229,7 @@ class DataFile:
          none
 
       """
-      logging.debug("%s[%s]=%s, %s, %s", name, self._yyyymmddDir,
+      WhfLog.debug("%s[%s]=%s, %s, %s", name, self._yyyymmddDir,
                     self._name, self._fileType,
                     self._time.debugString())
                       
@@ -371,7 +392,7 @@ class DataFiles:
       # get the newest DataFile
       newestF = self._newestDataFile()
       if (newestF._ok == 0):
-         logging.debug("setNewestFiles:No data in %s", self._topDir)
+         WhfLog.debug("setNewestFiles:No data in %s", self._topDir)
          return 0
 
       # create a new ForecastTime that is hoursBack 
@@ -424,7 +445,7 @@ class DataFiles:
       dirs = sorted(dirs)
       if not dirs:
          # nothing there
-         logging.debug("_newestDatFile:No data in %s", self._topDir)
+         WhfLog.debug("_newestDatFile:No data in %s", self._topDir)
          return DataFile()
       else:
          # The last directory will be newest, look there for our newest
@@ -452,7 +473,7 @@ class DataFiles:
 
       if not dirs:
          # nothing there
-         logging.debug("_allDataFiles: No data in %s", self._topDir)
+         WhfLog.debug("_allDataFiles: No data in %s", self._topDir)
          return []
       else:
          # make one big array
@@ -599,7 +620,7 @@ class ForecastTime:
    def debugPrint(self):
       """ logging debug of content
       """
-      logging.debug("%s,i[%s],f[%s]", self._fcstTime, self._issueHour,
+      WhfLog.debug("%s,i[%s],f[%s]", self._fcstTime, self._issueHour,
                      self._forecastHour)
 
    def debugString(self):
@@ -648,7 +669,7 @@ class ForecastTime:
          Forecast with issue time hoursBack earlier than local, forecastHour=0
       """          
       if (self.isEmpty()):
-         logging.debug("ERROR empty input to olderIssueHour")
+         WhfLog.debug("ERROR empty input to olderIssueHour")
       else:
          timeBack = self.ymdh() - datetime.timedelta(hours=hoursBack)
          self._fcstTime = datetime.datetime(timeBack.year, timeBack.month,
@@ -722,7 +743,7 @@ class ForecastTime:
          diff = (timeIn - timeLoc).total_seconds()
          maxSeconds = N*3600
          if (diff < 0):
-            logging.error("Unexpected data newer than newest")
+            WhfLog.error("Unexpected data newer than newest")
             return 0
          else:
             return (diff <= maxSeconds)

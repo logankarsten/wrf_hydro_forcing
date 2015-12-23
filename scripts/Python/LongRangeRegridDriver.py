@@ -10,9 +10,9 @@ same directory from where this script is executed.
 
 import os
 import sys
-import logging
 import datetime
 import time
+import WhfLog
 import DataFiles as df
 import Long_Range_Forcing as lrf
 from ConfigParser import SafeConfigParser
@@ -32,27 +32,12 @@ def parmRead(fname):
       values as pulled from the file
 
    """
-    
    parser = SafeConfigParser()
    parser.read(fname)
-   logging_level = parser.get('log_level', 'forcing_engine_log_level')
-   # Set the logging level based on what was defined in the parm/config file
-   if logging_level == 'DEBUG':
-      set_level = logging.DEBUG
-   elif logging_level == 'INFO':
-      set_level = logging.INFO
-   elif logging_level == 'WARNING':
-      set_level = logging.WARNING
-   elif logging_level == 'ERROR':
-      set_level = logging.ERROR
-   else:
-      set_level = logging.CRITICAL
 
    forcing_config_label = "LongRangeRegridDriver"
-   logging_filename =  forcing_config_label + ".log" 
-   logging.basicConfig(format='%(asctime)s %(message)s',
-                       filename=logging_filename, level=set_level)
-
+   WhfLog.init(parser, forcing_config_label, 'Long', 'Regrid', 'CFS')
+    
    cfsDir = parser.get('data_dir', 'CFS_data')
    cfsNumEnsemble = int(parser.get('data_dir', 'CFS_num_ensemble'))
    maxFcstHourCfs = int(parser.get('fcsthr_max', 'CFS_fcsthr_max'))
@@ -77,12 +62,12 @@ def regridCFS(cfsFname):
    None
 
    """
-   logging.info("REGRIDDING CFS DATA, file=%s", cfsFname)
+   WhfLog.info("REGRIDDING CFS DATA, file=%s", cfsFname)
    cmd = "python Long_Range_Forcing.py -i "
    cmd += cfsFname
-   logging.info("command: %s", cmd)
+   WhfLog.info("command: %s", cmd)
    ret = os.system(cmd)
-   logging.info("DONE REGRIDDING CFS DATA, file=%s, return status=%d", cfsFname, ret)
+   WhfLog.info("DONE REGRIDDING CFS DATA, file=%s, return status=%d", cfsFname, ret)
 
 
 #----------------------------------------------------------------------------
@@ -120,10 +105,10 @@ class Parms:
    def debugPrint(self):
       """ Debug logging of content
       """
-      logging.debug("Parms: CFS_data = %s", self._cfsDir)
-      logging.debug("Parms: CFS_num_ensembles = %d", self._cfsNumEnsemble)
-      logging.debug("Parms: MaxFcstHourCfs = %d", self._maxFcstHourCfs)
-      logging.debug("Parms: StateFile = %s", self._stateFile)
+      WhfLog.debug("Parms: CFS_data = %s", self._cfsDir)
+      WhfLog.debug("Parms: CFS_num_ensembles = %d", self._cfsNumEnsemble)
+      WhfLog.debug("Parms: MaxFcstHourCfs = %d", self._maxFcstHourCfs)
+      WhfLog.debug("Parms: StateFile = %s", self._stateFile)
 
 
 #----------------------------------------------------------------------------
@@ -209,7 +194,7 @@ class State:
       """ logging debug of contents
       """
       for f in self._cfs:
-         logging.debug("State:CFS:%s", f)
+         WhfLog.debug("State:CFS:%s", f)
         
    def update(self, time, hoursBack):
       """Update state so that input time is newest one
@@ -287,24 +272,24 @@ class State:
          return ret
 
       if (self.isEmpty()):
-         logging.debug("Adding to empty %s list")
+         WhfLog.debug("Adding to empty %s list")
       else:
          sname = self.newest()
          if (not sname):
-            logging.error("Expected file, got none")
+            WhfLog.error("Expected file, got none")
             return ret
          if (fnames[-1] > sname):
-            logging.debug("Newer time encountered")
+            WhfLog.debug("Newer time encountered")
             # see if issue time has increased and if so, purge old stuff
             # create DataFile objects
             df0 = df.DataFile(sname[0:8], sname[9:], 'CFS')
             df1 = df.DataFile(fnames[-1][0:8], fnames[-1][9:], 'CFS')
             if (df0._ok and df1._ok):
                if (df0._time.inputIsNewerIssueHour(df1._time)):
-                  logging.debug("Issue hour has increased, purge now")
+                  WhfLog.debug("Issue hour has increased, purge now")
                   self.update(df1._time, hoursBack)
             else:
-               logging.error("Constructing DataFile objects")
+               WhfLog.error("Constructing DataFile objects")
 
       for f in fnames:
          if (self.addFileIfNew(f)):
@@ -364,7 +349,7 @@ def createStateFile(parms):
    Writes out the state file after creating it
    """
 
-   logging.info("Initializing")
+   WhfLog.info("Initializing")
 
 
    # query directory and get newest model run file, then
@@ -413,7 +398,7 @@ def main(argv):
         createStateFile(parms)
         
     # begin normal processing situation
-    logging.debug("....Check for new input data to regid")
+    WhfLog.debug("....Check for new input data to regid")
     
     # read in state
     state = State(parms._stateFile)
