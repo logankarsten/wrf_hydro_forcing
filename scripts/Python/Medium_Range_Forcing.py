@@ -135,6 +135,9 @@ def forcing(action, prod, file, prod2=None, file2=None):
             else:
                 WhfLog.info("Regridding %s: ", file )
                 regridded_file = whf.regrid_data(product_data_name, file, parser, False)
+                if not regridded_file:
+                    WhfLog.error("Regridding failed")
+                    return
                 whf.downscale_data(product_data_name,regridded_file, parser,True, False)                
                 match = re.match(r'.*/([0-9]{10})/([0-9]{12}.LDASIN_DOMAIN1.nc)',regridded_file)
                 match2 = re.match(r'.*/([0-9]{10})/([0-9]{12}.LDASIN_DOMAIN1).*',regridded_file)

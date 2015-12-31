@@ -1,4 +1,5 @@
 import WRF_Hydro_forcing as whf
+import DataFiles as df
 import WhfLog
 import os
 from ConfigParser import SafeConfigParser
@@ -168,6 +169,10 @@ def anal_assim_layer(cycleYYYYMMDDHH,fhr,action,config):
     mrms_ds_dir = parser.get('regridding','MRMS_finished_output_dir')
     layer_exe = parser.get('exe','Analysis_Assimilation_layering')
     ncl_exec = parser.get('exe', 'ncl_exe')
+
+    # in case it is first time, create the output dirs
+    df.makeDirIfNeeded(out_dir)
+    df.makeDirIfNeeded(tmp_dir)
 
     # Sanity checking
     whf.dir_exists(out_dir)

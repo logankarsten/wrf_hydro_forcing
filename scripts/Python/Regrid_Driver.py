@@ -445,7 +445,7 @@ def main(argv):
         createStateFile(parms, fileType)
         
     # begin normal processing situation
-    WhfLog.debug("....Check for new input data to regid")
+    #WhfLog.debug("....Check for new input data to regid")
     
     # read in state
     state = State(parms._stateFile, fileType)
