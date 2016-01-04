@@ -158,7 +158,7 @@ def filterWithinNHours(files, type, ftime, N):
          if (ithFtime.withinNHours(ftime, N)):
             ret.append(f)
          else:
-            WhfLog.error("Did not append %s", f)
+            WhfLog.debug("Did not append file, too old compared to %s  file=%s", ftime.debugString(), f)
 
    WhfLog.debug("filtering within %d hours, input length %d output %d",
                  N, len(files), len(ret))

@@ -1,13 +1,13 @@
 """WhfLog
-Handles log file creation
+Handles log file creation and use
 """
 
 import os
 import datetime
 import logging
+import sys
 import DataFiles as df
 from ConfigParser import SafeConfigParser
-#from inspect import getframeinfo, stack
 import inspect
 
 # global var always length 7  'Short   ', 'Medium ', 'Long   ', 'AA     '
@@ -22,6 +22,24 @@ WhfActionLen = 7
 WhfData = '              '
 WhfDataLen = 14
 
+def setup_logger(logger_name, log_file, level=logging.INFO):
+    """  Set named logger to a particular level and log file name
+
+    Parameters
+    ----------
+    logger_name : str
+       Name of logger
+    log_file : str
+       Name of log file
+    level
+       INFO, DEBUG, ...
+    """
+    l = logging.getLogger(logger_name)
+    formatter = logging.Formatter('%(asctime)s : %(message)s')
+    fileHandler = logging.FileHandler(log_file, mode='a')
+    fileHandler.setFormatter(formatter)
+    l.setLevel(level)
+    l.addHandler(fileHandler)
 
 def init(parser, logFileName, configType, action, data):
     """Initialize log file using configFile content, and a log file name
@@ -32,6 +50,12 @@ def init(parser, logFileName, configType, action, data):
         parser that has parsed the file on entry
     logFileName : str
         Name of the log file, without a .log suffix
+    configType : str
+        Short, Medium, Long, AA
+    action : str
+        Regrid, Layer
+    data : str
+        HRRR, RAP, MRMS, GFS, CFS
     """
 
     logging_level = parser.get('log_level', 'forcing_engine_log_level')
@@ -46,6 +70,8 @@ def init(parser, logFileName, configType, action, data):
         set_level = logging.ERROR
     else:
         set_level = logging.CRITICAL
+
+    # log files written to configured place with yyyymmdd subdirectory
     logging_path = parser.get('log_level', 'forcing_engine_log_dir')
     df.makeDirIfNeeded(logging_path)
     logging_path += "/"
@@ -53,12 +79,13 @@ def init(parser, logFileName, configType, action, data):
     logging_path += now.strftime("%Y%m%d")
     df.makeDirIfNeeded(logging_path)
 
+    # we have two log files, one for python, one for ncl
     logging_filename =  logging_path + "/" + logFileName + ".log" 
-#    logging.basicConfig(format='%(asctime)s %(levelname)s [[%(filename)s:%(lineno)d],%(funcName)s]   %(message)s',
-#                        filename=logging_filename, level=set_level)
-    logging.basicConfig(format='%(asctime)s  %(message)s',
-                        filename=logging_filename, level=set_level)
-
+    ncl_logging_filename =  logging_path + "/" + logFileName + ".ncl.log" 
+    setup_logger('main',  logging_filename, set_level)
+    setup_logger('ncl',  ncl_logging_filename, set_level)
+    
+    # set the global var's to inputs, padded to correct length (so logging lines up nice)
     global WhfConfigType
     WhfConfigType = configType
     WhfConfigType = WhfConfigType.ljust(WhfConfigTypeLen)
@@ -72,52 +99,142 @@ def init(parser, logFileName, configType, action, data):
     WhfData = WhfData.ljust(WhfDataLen)
     
 def setConfigType(ctype):
+    """  Set config type to input, padded to correct length
+    Parameters
+    ----------
+    ctype : str
+       Short, Medium, Long, AA
+    """
     global WhfConfigType
     WhfConfigType = ctype
     WhfConfigType = WhfConfigType.ljust(WhfConfigTypeLen)
 
 def setData(data):
+    """  Set data type to input, padded to correct length
+    Parameters
+    ----------
+    data : str
+       HRRR, RAP, MRMS, etc
+    """
     global WhfData
     WhfData = data
     WhfData = WhfData.ljust(WhfDataLen)
 
-def debug(fmt, *argv):
-    lineno = inspect.stack()[1][2]
-    funcname = inspect.stack()[1][3]
-    filename = os.path.basename(inspect.stack()[1][1])
+def createFormatString(status, fmt, level):
+    """  Create and return a standard format string, with input format string appeneded
+    Parameters
+    ----------
+    status : str
+       'OK', 'ERROR', 'WARNING', 'CRITICAL'
+    fmt : str
+       Format string
+    level : int
+       1 if calling function is 1 deep compared to what you want to get line/function/file,
+       2 if calling function is 2 deep
+    Returns
+    -------
+    str : The format string
+    """
+
+    # Get location of caller ([level+1]'th thing on stack)
+    lineno = inspect.stack()[level+1][2]
+    funcname = inspect.stack()[level+1][3]
+    filename = os.path.basename(inspect.stack()[level+1][1])
+    # a standard output format:
     linestr = '%d' % (lineno)
-    formatStr = 'OK      ' + WhfConfigType + WhfAction + WhfData + " [" + filename + ":" + linestr + "," + funcname + "] " + fmt
-    logging.debug(formatStr, *argv)
+    fStatus = status;
+    fStatus = fStatus.ljust(8)
+    formatStr = fStatus + WhfConfigType + WhfAction + WhfData + " [" + filename + ":" + linestr + "," + funcname + "] " + fmt
+    return formatStr
+
+def debug(fmt, *argv):
+    """ Log a debug message
+    Parameters
+    ----------
+    fmt : str
+       Format string
+    argv
+       Arguments
+    """
+    formatStr = createFormatString('OK', fmt, 1)
+    log = logging.getLogger('main')
+    log.debug(formatStr, *argv)
+    
+def debug_ncl(fmt, *argv):
+    """ Log a debug message to the NCL log file
+    Parameters
+    ----------
+    fmt : str
+       Format string
+    argv
+       Arguments
+    """
+    formatStr = createFormatString('OK', fmt, 2)
+    log = logging.getLogger('ncl')
+    log.debug(formatStr, *argv)
     
 def info(fmt, *argv):
-    lineno = inspect.stack()[1][2]
-    funcname = inspect.stack()[1][3]
-    filename = os.path.basename(inspect.stack()[1][1])
-    linestr = '%d' % (lineno)
-    formatStr = 'OK      ' + WhfConfigType + WhfAction + WhfData + " [" + filename + ":" + linestr + "," + funcname + "] " + fmt
-    logging.info(formatStr, *argv)
+    """ Log an info message
+    Parameters
+    ----------
+    fmt : str
+       Format string
+    argv
+       Arguments
+    """
+    formatStr = createFormatString('OK', fmt, 1)
+    log = logging.getLogger('main')
+    log.info(formatStr, *argv)
     
 def warning(fmt, *argv):
-    lineno = inspect.stack()[1][2]
-    funcname = inspect.stack()[1][3]
-    filename = os.path.basename(inspect.stack()[1][1])
-    linestr = '%d' % (lineno)
-    formatStr = 'WARNING ' + WhfConfigType + WhfAction + WhfData + " [" + filename + ":" + linestr + "," + funcname + "] " + fmt
-    logging.warning(formatStr, *argv)
+    """ Log a warning message
+    Parameters
+    ----------
+    fmt : str
+       Format string
+    argv
+       Arguments
+    """
+    formatStr = createFormatString('WARNING', fmt, 1)
+    log = logging.getLogger('main')
+    log.warning(formatStr, *argv)
     
 def error(fmt, *argv):
-    lineno = inspect.stack()[1][2]
-    funcname = inspect.stack()[1][3]
-    filename = os.path.basename(inspect.stack()[1][1])
-    linestr = '%d' % (lineno)
-    formatStr = 'ERROR   ' + WhfConfigType + WhfAction + WhfData + " [" + filename + ":" + linestr + "," + funcname + "] " + fmt
-    logging.error(formatStr, *argv)
+    """ Log an error message
+    Parameters
+    ----------
+    fmt : str
+       Format string
+    argv
+       Arguments
+    """
+    formatStr = createFormatString('ERROR', fmt, 1)
+    log = logging.getLogger('main')
+    log.error(formatStr, *argv)
+    
+def error_ncl(fmt, *argv):
+    """ Log an error message to the NCL log file
+    Parameters
+    ----------
+    fmt : str
+       Format string
+    argv
+       Arguments
+    """
+    formatStr = createFormatString('ERROR', fmt, 2)
+    log = logging.getLogger('ncl')
+    log.error(formatStr, *argv)
     
 def critical(fmt, *argv):
-    lineno = inspect.stack()[1][2]
-    funcname = inspect.stack()[1][3]
-    filename = os.path.basename(inspect.stack()[1][1])
-    linestr = '%d' % (lineno)
-    formatStr = 'CRITICL ' + WhfConfigType + WhfAction + WhfData + " [" + filename + ":" + linestr + "," + funcname + "] " + fmt
-    logging.critical(formatStr, *argv)
+    """ Log a critical message
+    Parameters
+    ----------
+    fmt : str
+       Format string
+    argv
+       Arguments
+    """
+    formatStr = createFormatString('CRITICL', fmt, 1)
+    log = logging.getLogger('main')
+    log.critical(formatStr, *argv)
     

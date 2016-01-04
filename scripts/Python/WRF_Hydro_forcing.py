@@ -10,6 +10,7 @@ import shutil
 import sys
 from ConfigParser import SafeConfigParser
 import DataFiles as df
+import NCL_script_run as ncl
 
 
 
@@ -223,7 +224,7 @@ def regrid_data( product_name, file_to_regrid, parser, substitute_fcst = False, 
 
         # Measure how long it takes to run the NCL script for regridding.
         start_NCL_regridding = time.time()
-        return_value = os.system(regrid_prod_cmd)
+        return_value = ncl.run(regrid_prod_cmd)
         end_NCL_regridding = time.time()
         elapsed_time_sec = end_NCL_regridding - start_NCL_regridding
         WhfLog.info("Time(sec) to regrid file  %s" %  elapsed_time_sec)
@@ -232,9 +233,8 @@ def regrid_data( product_name, file_to_regrid, parser, substitute_fcst = False, 
             WhfLog.error('The regridding of %s was unsuccessful, \
                           return value of %s', product,return_value)
             #TO DO: Determine the proper action to take when the NCL file 
-            #fails. For now, exit.
-            return 
-        
+            #fails. For now, return an empty string
+            regridded_file = ""
 
     return regridded_file
 
@@ -447,7 +447,7 @@ def downscale_data(product_name, file_to_downscale, parser, downscale_shortwave=
                              the files.
                                   
     Returns:
-        None
+        0 for good, 1 for bad
 
         
     """
@@ -502,7 +502,7 @@ def downscale_data(product_name, file_to_downscale, parser, downscale_shortwave=
         # Find another downscaled file from the previous model/
         # init time with the same valid time as this file, then 
         # copy to this fcst 0hr file.
-        replace_fcst0hr(parser, file_to_downscale,product)
+        return replace_fcst0hr(parser, file_to_downscale,product)
 
     else:
         # Downscale as usual
@@ -522,6 +522,11 @@ def downscale_data(product_name, file_to_downscale, parser, downscale_shortwave=
                       time_param 
             downscale_cmd = ncl_exec + " -Q " + downscale_params + " " + downscale_exe 
         else:
+            if not file_to_downscale:
+                print "Here it is!!!"
+                WhfLog.debug("No File to downscale!!!")
+                return(1)
+            WhfLog.debug("File to downscale = %s", file_to_downscale)
             match = re.match(r'(.*)([0-9]{10})/([0-9]{8}([0-9]{2})00.LDASIN_DOMAIN1.*)',file_to_downscale)
             if match:
                 yr_month_day_init = match.group(2)
@@ -530,7 +535,7 @@ def downscale_data(product_name, file_to_downscale, parser, downscale_shortwave=
             else:
                 WhfLog.error("regridded file's name: %s is an unexpected format",\
                              file_to_downscale)
-                sys.exit() 
+                return(1)
   
             if zero_process == True:
                 full_downscaled_dir = downscale_output_dir_0hr + "/" + yr_month_day_init
@@ -578,8 +583,8 @@ def downscale_data(product_name, file_to_downscale, parser, downscale_shortwave=
             start = time.time()
     
             #Invoke the NCL script for performing a single downscaling.
-            return_value = os.system(downscale_cmd)
-            swdown_return_value = os.system(downscale_shortwave_cmd)
+            return_value = ncl.run(downscale_cmd)
+            swdown_return_value = ncl.run(downscale_shortwave_cmd)
             end = time.time()
             elapsed = end - start
     
@@ -592,20 +597,21 @@ def downscale_data(product_name, file_to_downscale, parser, downscale_shortwave=
                 cmd = 'rm -rf ' + file_to_downscale
                 status = os.system(cmd)
                 if status != 0:
-                  WhfLog.error('Failed to remove ' + file_to_downscale)
+                    WhfLog.error('Failed to remove ' + file_to_downscale)
                 # If output file was generated, remove it as it's corrupted/incomplete
                 if os.path.exists(full_downscaled_file):
                     cmd = 'rm -rf ' + full_downscaled_file 
                     status = os.system(cmd)
                     if status != 0:
-                      WhfLog.error('Failed to remove ' + full_downscaled_file)
-                sys.exit()
+                        WhfLog.error('Failed to remove ' + full_downscaled_file)
+                return(1)
             else: # Remove regridded file as it's no longer needed
                 cmd = 'rm -rf ' + file_to_downscale
                 status = os.system(cmd)
                 if status != 0:
-                  WhfLog.error('Failed to remove ' + file_to_downscale)
-                  return(1) 
+                    WhfLog.error('Failed to remove ' + file_to_downscale)
+                    return(1) 
+            return(0)
     
         else:
             # No additional downscaling of
@@ -615,7 +621,7 @@ def downscale_data(product_name, file_to_downscale, parser, downscale_shortwave=
             start = time.time()
     
             #Invoke the NCL script for performing the generic downscaling.
-            return_value = os.system(downscale_cmd)
+            return_value = ncl.run(downscale_cmd)
             end = time.time()
             elapsed = end - start
             WhfLog.info("Elapsed time (sec) for downscaling: %s",elapsed)
@@ -640,12 +646,9 @@ def downscale_data(product_name, file_to_downscale, parser, downscale_shortwave=
                 cmd = 'rm -rf ' + file_to_downscale
                 status = os.system(cmd)
                 if status != 0:
-                  WhfLog.error('Failed to remove ' + file_to_downscale)
-                  return(1) 
-    
-
-
-
+                    WhfLog.error('Failed to remove ' + file_to_downscale)
+                    return(1) 
+            return(0)
 
 
 
@@ -884,7 +887,7 @@ def bias_correction(product_name,file_in,cycleYYYYMMDDHH,fcstYYYYMMDDHH,
 
         # Measure how long it takes to run the NCL script for bias correction.
         start_NCL_bias = time.time()
-        return_value = os.system(ncl_cmd)
+        return_value = ncl.run(ncl_cmd)
         if return_value != 0:
             WhfLog.error('Bias correction returned an exit status of ' + str(return_value))
             sys.exit(1)
@@ -973,7 +976,7 @@ def layer_data(parser, first_data, second_data, first_data_product, second_data_
                                         + file_name_only
     full_layered_outfile = layered_outfile + ".nc"
     outFile_param = "'outFile=" + '"' + full_layered_outfile + '"' + "' "
-    print ("full_layered_outfile: %s")%(full_layered_outfile)
+    #print ("full_layered_outfile: %s")%(full_layered_outfile)
     if not os.path.exists(full_layered_outfile):
         mkdir_p(full_layered_outfile)
     init_indexFlag = "false"
@@ -988,8 +991,8 @@ def layer_data(parser, first_data, second_data, first_data_product, second_data_
                         layering_exe
     layering_cmd = ncl_exe + " " + layering_params + " " + \
                         layering_exe
-    print ("layering command: %s")%(layering_cmd)    
-    init_return_value = os.system(init_layering_cmd)
+    #print ("layering command: %s")%(layering_cmd)    
+    init_return_value = ncl.run(init_layering_cmd)
     if init_return_value != 0:
         WhfLog.error("layering was unsuccessful")
 
@@ -998,7 +1001,7 @@ def layer_data(parser, first_data, second_data, first_data_product, second_data_
         # configuration directory. 
         os.rename(full_layered_outfile, layered_outfile)
 
-    return_value = os.system(layering_cmd) 
+    return_value = ncl.run(layering_cmd) 
     
     
 def read_input():
@@ -1233,15 +1236,17 @@ def replace_fcst0hr(parser, file_to_replace, product):
 
 
           Returns:
-             None        Creates a copy of the file and saves
+             0 for good, 1 for false
+                         Creates a copy of the file and saves
                          it to the appropriate directory:
                          YYYYMMDDHH, where HH is the model/init time.
 
 
     """
     # Retrieve the date, model time,valid time, and filename from the full filename 
-    WhfLog.info("file to replace=%s", file_to_replace)
+    WhfLog.debug("file to replace=%s", file_to_replace)
     match = re.match(r'(.*)/([0-9]{8})([0-9]{2})/([0-9]{8}([0-9]{2})00.LDASIN_DOMAIN1.nc)',file_to_replace)
+    WhfLog.debug("After, file to replace=%s", file_to_replace)
     if match:
         base_dir = match.group(1)
         curr_date = match.group(2)
@@ -1250,7 +1255,7 @@ def replace_fcst0hr(parser, file_to_replace, product):
         valid_time = int(match.group(5))
     else:
         WhfLog.error("filename %s  is unexpected, exiting.", file_to_replace)
-        return
+        return(1)
 
 
     if product == 'RAP':
@@ -1291,11 +1296,11 @@ def replace_fcst0hr(parser, file_to_replace, product):
             copy_cmd = "cp " + full_path + " " + file_path_to_replace
             WhfLog.info("copying the previous model run's file: %s",copy_cmd)      
             os.system(copy_cmd)
-            return
+            return(0)
         else:
             # If we are here, we didn't find any file from a previous RAP model run...
             WhfLog.error("No previous RAP model runs found, exiting...")
-            return
+            return(1)
           
     elif product == 'GFS':
         base_dir = parser.get('layering','medium_range_output')
@@ -1321,11 +1326,11 @@ def replace_fcst0hr(parser, file_to_replace, product):
             copy_cmd = "cp " + full_path + " " + file_path_to_replace
             WhfLog.info("copying the previous model run's file: %s",copy_cmd)      
             os.system(copy_cmd)
-            return
+            return(0)
         else:
             # If we are here, we didn't find any file from a previous GFS model run...
             WhfLog.error("No previous GFS model runs found, exiting...")
-            return
+            return(1)
           
 
 

@@ -143,6 +143,9 @@ def forcing(action, prod, file, prod2=None, file2=None):
             else:
                 regridded_file = whf.regrid_data(product_data_name, file, parser, False)
                 # Downscaling...
+                if not regridded_file:
+                    WhfLog.error("Regridding failed")
+                    return
                 whf.downscale_data(product_data_name,regridded_file, parser,True, False)                
                 # Move the downscaled file to the finished area.
                 # Move the downscaled file to the finished location 

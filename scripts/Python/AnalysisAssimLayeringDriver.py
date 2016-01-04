@@ -872,7 +872,7 @@ def main(argv):
         state.write(parms._stateFile)
 
     # Normal processing situation
-    WhfLog.debug("Look for Layering....")
+    #WhfLog.debug("Look for Layering....")
     
     # read in state
     state2 = State()

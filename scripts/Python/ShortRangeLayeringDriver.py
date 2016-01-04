@@ -904,7 +904,7 @@ def main(argv):
     parms = parmRead(configFile)
 
     # query each directory to get newest thing, and update overall newest
-    WhfLog.debug("Looking in %s and %s", parms._hrrrDir, parms._rapDir)
+    #WhfLog.debug("Looking in %s and %s", parms._hrrrDir, parms._rapDir)
     newestT = newestIssueTime(parms._hrrrDir)
     newestT2 = newestIssueTime(parms._rapDir)
     if (not newestT) and (not newestT2):
@@ -913,7 +913,7 @@ def main(argv):
     
     if (newestT2 > newestT):
         newestT = newestT2
-    WhfLog.debug("Newest issue time = %s", newestT)
+    #WhfLog.debug("Newest issue time = %s", newestT)
 
     # if there is not a state file, create one now using newest
     if (not os.path.exists(parms._stateFile)):
@@ -924,7 +924,7 @@ def main(argv):
         state.write(parms._stateFile)
 
     # Normal processing situation
-    WhfLog.debug("Look for Layering....")
+    #WhfLog.debug("Look for Layering....")
     
     # read in state
     state2 = State()
