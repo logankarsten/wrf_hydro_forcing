@@ -80,3 +80,13 @@ class SystemCommandError(ForcingEngineError):
         self.parameter = value
     def __str__(self):
         return repr(self.parameter)
+
+class MissingInputError(ForcingEngineError):
+    '''Used when one or more input parameters
+       is missing.
+    '''
+    def __init__(self, value):
+        self.parameter = value
+    def __str__(self):
+        return repr(self.parameter)
+    
