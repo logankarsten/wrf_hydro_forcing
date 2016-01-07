@@ -110,7 +110,7 @@ def forcing(action, prod, file, prod2=None, file2=None):
             # in the 0hr forecasts (e.g. precip rate for RAP and radiation
             # in GFS).
     
-            WhfLog.info("Regridding and Downscaling for %s", product_data_name)
+            WhfLog.info("Regridding and Downscaling for: "+ product_data_name)
             # Determine if this is a 0hr forecast for RAP data (GFS is also missing
             # some variables for 0hr forecast, but GFS is not used for Short Range
             # forcing). We will need to substitute this file for the downscaled
