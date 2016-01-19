@@ -37,7 +37,7 @@ forcing_engine_log_dir = /d4/hydro-dm/IOC/log
 # Probably only relevant for NCAR
 ncarg_root = /opt/ncl
 # Use 6.3.0 so the grib tables are up-to-date for reading MRMS
-#ncarg_root = /opt/ncl-6.3.0
+ncarg_root = /opt/ncl
 
 # Set the NCL_DEF_LIB_DIR environment variable where all the
 # shared objects reside
