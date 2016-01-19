@@ -35,7 +35,6 @@ forcing_engine_log_dir = /d4/hydro-dm/IOC/log
 
 [default_env_vars]
 # Probably only relevant for NCAR
-ncarg_root = /opt/ncl
 # Use 6.3.0 so the grib tables are up-to-date for reading MRMS
 ncarg_root = /opt/ncl
 
@@ -120,7 +119,8 @@ analysis_assim_layering_state_file = ./State.AnalysisAssimLayering.txt
 # ESMF, NCL
 esmf_exe=/usr/local/esmf
 # Use version 6.3.0 for latest grib tables
-ncl_exe = /opt/ncl-6.3.0/bin/ncl
+# soft link to 6.3.0 on hydro-c1
+ncl_exe = /opt/ncl/bin/ncl
 
 # Bias correction
 CFS_bias_correct_mod = ../NCL/CFSv2_bias_correct_mod.ncl
