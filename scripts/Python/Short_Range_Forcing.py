@@ -6,6 +6,12 @@ import re
 from ConfigParser import SafeConfigParser
 import optparse
 import shutil
+from ForcingEngineError import MissingInputError
+from ForcingEngineError import FilenameMatchError
+from ForcingEngineError import UnrecognizedCommandError
+from ForcingEngineError import MissingFileError
+from ForcingEngineError import SystemCommandError
+from ForcingEngineError import NCLError
 
 """Short_Range_Forcing
 Performs regridding,downscaling, bias
@@ -54,11 +60,14 @@ def forcing(action, prod, file, prod2=None, file2=None):
 
     # Read the parameters from the config/param file.
     parser = SafeConfigParser()
-    parser.read('../../parm//wrf_hydro_forcing.parm')
+    parser.read('./wrf_hydro_forcing.parm')
 
     # Set up logging, environments, etc.
     forcing_config_label = "Short_Range"
-    whf.initial_setup(parser,forcing_config_label)
+    try:
+        whf.initial_setup(parser,forcing_config_label)
+    except Exceptions:
+        raise
 
 
     # Extract the date, model run time, and forecast hour from the file name
@@ -101,7 +110,7 @@ def forcing(action, prod, file, prod2=None, file2=None):
             # in the 0hr forecasts (e.g. precip rate for RAP and radiation
             # in GFS).
     
-            WhfLog.info("Regridding and Downscaling for %s", product_data_name)
+            WhfLog.info("Regridding and Downscaling for: "+ product_data_name)
             # Determine if this is a 0hr forecast for RAP data (GFS is also missing
             # some variables for 0hr forecast, but GFS is not used for Short Range
             # forcing). We will need to substitute this file for the downscaled
@@ -111,7 +120,14 @@ def forcing(action, prod, file, prod2=None, file2=None):
             # to do this for both the regridding and downscaling.
             if fcsthr == 0 and prod == 'RAP':
                 WhfLog.info("Regridding, ignoring f0 RAP files " )
-                regridded_file = whf.regrid_data(product_data_name, file, parser, True)
+                try:
+                    regridded_file = whf.regrid_data(product_data_name, file, parser, True)
+                except FilenameMatchError:
+                    WhfLog.error('file name format is unexpected')
+                    raise
+                except NCLError:
+                    WhfLog.error("FAIL could not regrid RAP file: " + file)
+                    raise
 
                 # Downscaling...
                 stat= whf.downscale_data(product_data_name,regridded_file, parser, True, True)
@@ -126,28 +142,42 @@ def forcing(action, prod, file, prod2=None, file2=None):
                             whf.mkdir_p(downscaled_dir)
                             downscaled_file = downscaled_dir + "/" + match.group(2)
                             input_file = input_dir + "/" + match.group(2)
-                            whf.move_to_finished_area(parser, prod, input_file) 
+                            try:
+                               whf.move_to_finished_area(parser, prod, input_file) 
+                            except UnrecognizedCommandError:
+                               WhfLog.error('Unsupported/unrecognized command')
+                               raise
+                            except FilenameMatchError:
+                               WhfLog.error('File move failed, name format unexpected for file %s'%input_file)
+                               raise
+                            
                     else:
                         WhfLog.error("FAIL- cannot move finished file: %s", regridded_file) 
-                        return 
+                        raise FilenameMatchError('File move failed, name format unexpected for file %s'%regridded_file)
+
                 else:
-                    WhfLog.error("FAIL dould not downscale data for hour 0 RAP")
+                    WhfLog.error("FAIL could not downscale data for hour 0 RAP")
+                    raise NCLError('NCL downscaling for hour 0 RAP failed')
                 # Remove empty 0hr regridded file if it still exists
                 if os.path.exists(regridded_file):
                     cmd = 'rm -rf ' + regridded_file
                     status = os.system(cmd)
                     if status != 0:
                         WhfLog.error("Failure to remove empty file: " + regridded_file)
-                        return
+                        raise SystemCommandError('Cleaning regridded files, failed to remove file %s'%regridded_file)
 
             else:
-                regridded_file = whf.regrid_data(product_data_name, file, parser, False)
-                # Downscaling...
-                if not regridded_file:
+                try: 
+                    regridded_file = whf.regrid_data(product_data_name, file, parser, False)
+                except FilenameMatchError:
                     WhfLog.error("Regridding failed")
-                    return
+                    raise 
+                except NCLError:
+                    WhfLog.error("Regridding failed")
+                    raise 
+
+                # Downscaling...
                 whf.downscale_data(product_data_name,regridded_file, parser,True, False)                
-                # Move the downscaled file to the finished area.
                 # Move the downscaled file to the finished location 
                 match = re.match(r'.*/([0-9]{10})/([0-9]{12}.LDASIN_DOMAIN1.nc)',regridded_file)
                 if match:
@@ -159,11 +189,16 @@ def forcing(action, prod, file, prod2=None, file2=None):
                         WhfLog.info("finished dir doesn't exist, creating it now...")
                         whf.mkdir_p(full_dir)
                     WhfLog.info("Moving now, source = %s", full_input_file)
-                    whf.move_to_finished_area(parser, prod, full_input_file)
-                    #whf.move_to_finished_area(parser, prod, full_finished_file)
+                    try:
+                        whf.move_to_finished_area(parser, prod, full_input_file)
+                        #whf.move_to_finished_area(parser, prod, full_finished_file)
+                    except UnrecognizedCommandError:
+                        raise
+                    except FilenameMatchError:
+                        raise
                 else:
                     WhfLog.error("FAIL- cannot move finished file: %s", full_finished_file) 
-                    return
+                    raise FilenameMatchError('Cannot move finished file, file %s has unexpected filename format'%full_finished_file)
 
         else:
             # Skip processing this file, exiting...
@@ -174,14 +209,25 @@ def forcing(action, prod, file, prod2=None, file2=None):
         # and two files indicated.
         if prod2 is None:
             logger.error("ERROR [Short_Range_Forcing]: layering requires two products")
-            return
+            raise MissingInputError('Layering requires two products')
         elif file2 is None:
             logger.error("ERROR [Short_Range_Forcing]: layering requires two input files")
-            return
+            raise MissingInputError('Layering requires two input files')
         else:
             # We have everything we need, request layering
-            whf.layer_data(parser,file, file2, prod, prod2, 'Short_Range')
-            whf.rename_final_files(parser,'Short_Range')
+            try:
+                whf.layer_data(parser,file, file2, prod, prod2, 'Short_Range')
+            except FilenameMatchError:
+                raise
+            except NCLError:
+                raise 
+
+            try:
+                whf.rename_final_files(parser,'Short_Range')
+            except FilenameMatchError:
+                raise
+            except UnrecognizedCommandError:
+                raise
              
     elif action_requested == 'bias':
         WhfLog.info("Bias correction requested for %s", file)
