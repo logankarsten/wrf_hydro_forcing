@@ -5,6 +5,10 @@ import sys
 from ConfigParser import SafeConfigParser
 import optparse
 import re
+from ForcingEngineError import FilenameMatchError
+from ForcingEngineError import SystemCommandError
+from ForcingEngineError import MissingFileError
+from ForcingEngineError import NCLError
 
 """Medium_Range_Forcing
 Performs regridding,downscaling, bias
@@ -54,7 +58,12 @@ def forcing(action, prod, file, prod2=None, file2=None):
 
     # Read the parameters from the config/param file.
     parser = SafeConfigParser()
-    parser.read('../../parm//wrf_hydro_forcing.parm')
+    try:
+        parser.read('./wrf_hydro_forcing.parm')
+    except (NoSectionErrorException, DuplicateSectionErrorException,\
+            DuplicateOptionErrorException,MissingSectionHeaderErrorException,\
+            ParsingErrorException) as e:
+        raise
 
     # Set up logging, environments, etc.
     forcing_config_label = 'Medium_Range'
@@ -101,64 +110,78 @@ def forcing(action, prod, file, prod2=None, file2=None):
             # to do this for both the regridding and downscaling.
             if fcsthr == 0 and prod == 'GFS':
                 WhfLog.info("Regridding (ignoring f0 GFS files) %s: ", file )
-                regridded_file = whf.regrid_data(product_data_name, file, parser, True)
-                print regridded_file
-                return(1)
-                whf.downscale_data(product_data_name,regridded_file, parser, True, True)                
+                try:
+                    regridded_file = whf.regrid_data(product_data_name, file, parser, True)
+                except (FilenameMatchError,NCLError,MissingFileError) as e:
+                    WhfLog.error('Failure:regridding of GFS (ignore 0hr fcst) file: ' + file)
+                    WhfLog.error(e) 
+                    raise
+                try:
+                    whf.downscale_data(product_data_name,regridded_file, parser, True, True)                
+                except (MissingFileError, SystemCommandError,\
+                        NCLError) as e:
+                    WhfLog.error('Downscaling GFS failed: ' + e)
+                    raise
+
                 match = re.match(r'.*/([0-9]{10})/([0-9]{12}.LDASIN_DOMAIN1.nc)',regridded_file)
-                #match2 = re.match(r'.*/([0-9]{10})/([0-9]{12}.LDASIN_DOMAIN1).*',regridded_file)
                 if match:
                     ymd_dir = match.group(1)
                     file_only = match.group(2)
                     downscaled_dir = downscale_dir + "/" + ymd_dir
                     downscaled_file = downscaled_dir + "/" + file_only
                     # Check to make sure downscaled file was created
-                    whf.file_exists(downscaled_file)
-                    whf.rename_final_files(parser,"Medium_Range")
-                    #if match2:
-                    #    newFile = match2.group(2)
-                    #    finalDirYYYYMMDD = final_dir + "/" + ymd_dir
-                    #    if not os.path.exists(finalDirYYYYMMDD):
-                    #        whf.mkdir_p(finalDirYYYYMMDD)
-                    #    finalFile = finalDirYYYYMMDD + "/" + newFile
-                    #    cmd = "mv " + downscaled_file + " " + finalFile
-                    #    status = os.system(cmd)
-                    #    if status != 0:
-                    #        WhfLog.error("Failed to move " + downscaled_file + " to " + finalFile)
+                    try:
+                        whf.file_exists(downscaled_file)
+                    except MissingFileError as mfe:
+                        WhfLog.error('Downscaling, non-existent downscaled file: ' + downscaled_file)
+                        WhfLog.error(mfe)
+                    try:
+                        whf.rename_final_files(parser,"Medium_Range")
+                    except FilenameMatchError as fme:
+                        WhfLog.error('Failed to rename final files due to unexpected filename format: ' + fme) 
+              
+                    except UnrecognizedCommandError as uce:
+                        WhfLog.error('Failed to rename final files due to unrecognized/unsupported request: ' + uce)
+                else:
+                    raise FilneameMatchError('MediumRangeForcing regridded_file %s has unexpected filename format'%regridded_file)
                 # Remove empty 0hr regridded file if it still exists
                 if os.path.exists(regridded_file):
                     cmd = 'rm -rf ' + regridded_file
                     status = os.system(cmd)
                     if status != 0:
                         WhfLog.error("Failure to remove empty file: " + regridded_file)
-                        return
+                        raise SystemCommandError('MediumRangeForcing failed to clean up regridded file %s'%(regridded_file))
             else:
-                WhfLog.info("Regridding %s: ", file )
-                regridded_file = whf.regrid_data(product_data_name, file, parser, False)
-                if not regridded_file:
-                    WhfLog.error("Regridding failed")
-                    return
-                whf.downscale_data(product_data_name,regridded_file, parser,True, False)                
+                WhfLog.info("Regridding non-zero hour fcst%s: ", file )
+                try:
+                    regridded_file = whf.regrid_data(product_data_name, file, parser, False)
+                except (FilenameMatchError, NCLError) as e:
+                    WhfLog.error('Regridding failed for GFS non-zero fcst regrid file: ' + file) 
+                    raise
+          
+                try:
+                    whf.downscale_data(product_data_name,regridded_file, parser,True, False)                
+                except (MissingFileError, SystemCommandError, NCLError):
+                    raise
+
                 match = re.match(r'.*/([0-9]{10})/([0-9]{12}.LDASIN_DOMAIN1.nc)',regridded_file)
-                match2 = re.match(r'.*/([0-9]{10})/([0-9]{12}.LDASIN_DOMAIN1).*',regridded_file)
                 if match:
                     ymd_dir = match.group(1)
                     file_only = match.group(2)
                     downscaled_dir = downscale_dir + "/" + ymd_dir
                     downscaled_file = downscaled_dir + "/" + file_only
                     # Check to make sure downscaled file was created
-                    whf.file_exists(downscaled_file)
-                    whf.rename_final_files(parser,"Medium_Range")
-                    #if match2:
-                    #    newFile = match2.group(2)
-                    #    finalDirYYYYMMDD = final_dir + "/" + ymd_dir
-                    #    if not os.path.exists(finalDirYYYYMMDD):
-                    #        whf.mkdir_p(finalDirYYYYMMDD)
-                    #    finalFile = finalDirYYYYMMDD + "/" + newFile
-                    #    cmd = "mv " + downscaled_file + " " + finalFile
-                    #    status = os.system(cmd)
-                    #    if status != 0:
-                    #        WhfLog.error("Failed to move " + downscaled_file + " to " + finalFile) 
+                    try:
+                        whf.file_exists(downscaled_file)
+                    except MissingFileError:
+                        raise
+                    try:
+                        whf.rename_final_files(parser,"Medium_Range")
+                    except (FilenameMatchError, UnrecognizedCommandError) as e:
+                        raise
+
+                else:
+                    raise FilenameMatchError('MediumRangeForcing renaming finished file failed, unexpected filename format for %s'%(regridded_file)) 
         else:
             # Skip processing this file, exiting...
             WhfLog.info("Skip processing, requested file is outside max fcst")
