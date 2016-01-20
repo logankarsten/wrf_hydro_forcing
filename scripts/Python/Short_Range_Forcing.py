@@ -64,10 +64,7 @@ def forcing(action, prod, file, prod2=None, file2=None):
 
     # Set up logging, environments, etc.
     forcing_config_label = "Short_Range"
-    try:
-        whf.initial_setup(parser,forcing_config_label)
-    except Exceptions:
-        raise
+    whf.initial_setup(parser,forcing_config_label)
 
 
     # Extract the date, model run time, and forecast hour from the file name
