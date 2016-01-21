@@ -1,4 +1,4 @@
-""" ShortRangeLayeringDriver.py
+""" AnalysisAssimLayeringDriver.py
 Checks regrid/rescale data directories for new content, and if 
 found and time to do so, initiate layering scripts.
 Keeps state in a state file that is read/written
@@ -12,10 +12,12 @@ import os
 import sys
 import datetime
 import time
+import DataFiles as df
 from ConfigParser import SafeConfigParser
 import Analysis_Assimilation_Forcing as aaf
 import WhfLog
 
+#----------------------------------------------------------------------------
 def layer(parms, itime, step, which, config):
     """ Perform layering
 
@@ -46,148 +48,6 @@ def stepStaticName(index):
     return ret
 
 #----------------------------------------------------------------------------
-def isYyyymmddhh(name):
-    """Check if a string is of format yyyymmddhh
-
-    Parameters
-    ----------
-    name : str
-       Name to check
-
-    Returns
-    -------
-    bool
-        true if name has that format
-    """
-    if (len(name) == 10):
-        if (datetime.datetime.strptime(name, '%Y%m%d%H')):
-            return 1
-    return 0
-
-#----------------------------------------------------------------------------
-def isYyyymmddhhmmss(name):
-    """Check if a string is of format yyyymmddhhmmss
-
-    Parameters
-    ----------
-    name : str
-       Name to check
-
-    Returns
-    -------
-    bool
-        true if name has that format
-    """
-    if (len(name) == 14):
-        if (datetime.datetime.strptime(name, '%Y%m%d%H%M%S')):
-            return 1
-    return 0
-
-#----------------------------------------------------------------------------
-#
-# filter a list of names to those that are dates of format yyyymmddhh
-#
-# names = list of names
-#
-# return filtered list
-#
-def datesWithHour(names):
-    """Filter a list down to elements that have format yyyymmdd
-
-    Parameters
-    ----------
-    names : list[str]
-        The names to filter
-
-    Returns
-    -------
-    list[str]
-        The filtered names
-    """
-    return [name for name in names if (isYyyymmddhh(name)==1)]
-
-    
-#----------------------------------------------------------------------------
-def getFileNames(aDir):
-   """Return the files in a directory that are not themselves subdirectories
-
-   Parameters
-   ----------
-   aDir: str
-      Full path directory name
-
-   Returns
-   -------
-   List[str]
-      the data files in the directory
-   """
-   return [name for name in os.listdir(aDir)
-           if not os.path.isdir(os.path.join(aDir, name))]
-
-#----------------------------------------------------------------------------
-def getImmediateSubdirectories(aDir):
-   """return the subdirectories of a directory
-
-   Parameters
-   ----------
-   aDir: str
-      Full path directory name
-
-   Returns
-   -------
-   list[str]
-      All subdirectories of the aDir
-
-   """
-
-   # does the dir exist?
-   if (not os.path.exists(aDir)):
-       return []
-
-   return [name for name in os.listdir(aDir)
-           if os.path.isdir(os.path.join(aDir, name))]
-
-#---------------------------------------------------------------------------
-def getYyyymmddhhSubdirectories(dir):
-   """return the 'yyyymmddhh' subdirectories of a directory
-
-   Parameters
-   ----------
-   aDir: str
-      Full path directory name
-
-   Returns
-   -------
-   list[str]
-      All subdirectories of the aDir that are of format 'yyyymmddhh'
-
-   """
-   names = getImmediateSubdirectories(dir)
-   return datesWithHour(names)
-
-#----------------------------------------------------------------------------
-def newestIssueTime(dir):
-    """return the subdirectory (yyyymmddhh) that is for the newest issue time
-
-    Parameters
-    ----------
-    dir : str
-       Directory with subdirectories
-
-    Returns
-    -------
-    str
-       The subdirectory with biggest issue time, or empty string
-    """       
-    names = getYyyymmddhhSubdirectories(dir)
-    if (not names):
-        return ""
-
-    names = sorted(names)
-    ret = names[-1]
-    return ret
-    
-#----------------------------------------------------------------------------
 def forecastExists(dir, issueTime, fcstHour):
     """ Check if forecast exists
 
@@ -211,12 +71,12 @@ def forecastExists(dir, issueTime, fcstHour):
     if (os.path.isdir(path)):
         validTime = issueTime + datetime.timedelta(hours=fcstHour)
         fname = validTime.strftime("%Y%m%d%H%M") + ".LDASIN_DOMAIN1.nc"
-        names = getFileNames(path)
+        names = df.getFileNames(path)
         for n in names:
             if (n == fname):
                 WhfLog.debug("Found %s in %s",  fname, path)
-                return 1
-    return 0
+                return True
+    return False
 
 #----------------------------------------------------------------------------
 def obsExists(dir, issueTime):
@@ -239,12 +99,12 @@ def obsExists(dir, issueTime):
     path += issueTime.strftime("%Y%m%d%H")
     if (os.path.isdir(path)):
         fname = issueTime.strftime("%Y%m%d%H%M") + ".LDASIN_DOMAIN1.nc"
-        names = getFileNames(path)
+        names = df.getFileNames(path)
         for n in names:
             if (n == fname):
                 WhfLog.debug("Found %s in %s",  fname, path)
-                return 1
-    return 0
+                return True
+    return False
 
 #----------------------------------------------------------------------------
 def parmRead(fname):
@@ -364,21 +224,21 @@ class ForecastStep:
     Attributes
     ----------
     _empty : bool
-       true if contents not set
+       True if contents not set
     _step : int
        0, 1, or 2
     _hrrr0 : bool
-       true if HRRR input is available at issue - _step, hour 0
+       True if HRRR input is available at issue - _step, hour 0
     _hrrr3 : bool
-       true if HRRR input is available at issue - _step - 3, hour 3
+       True if HRRR input is available at issue - _step - 3, hour 3
     _rap0 : bool
-       true if RAP input is available at issue - _step, hour 0
+       True if RAP input is available at issue - _step, hour 0
     _rap3 : bool
-       true if RAP input is available at issue - _step - 3, hour 3
+       True if RAP input is available at issue - _step - 3, hour 3
     _mrms : bool
-       true if MRMS input is available at issue - _step
+       True if MRMS input is available at issue - _step
     _layered : bool
-       true if this step has been layered (sent to Analysis/Assimilation)
+       True if this step has been layered (sent to Analysis/Assimilation)
     """
     def __init__(self, configString=""):
         """ Initialize by parsing a a config file  line
@@ -390,26 +250,26 @@ class ForecastStep:
         """
 
         # init to empty
-        self._empty = 1
+        self._empty = True
         self._step = 0
-        self._hrrr0 = 0
-        self._hrrr3 = 0
-        self._rap0 = 0
-        self._rap3 = 0
-        self._mrms = 0
-        self._layered = 0
+        self._hrrr0 = False
+        self._hrrr3 = False
+        self._rap0 = False
+        self._rap3 = False
+        self._mrms = False
+        self._layered = False
         if not configString:
             return
 
         # parse
-        self._empty = 0
+        self._empty = False
         self._step = int(configString[0:1])
-        self._hrrr0 = int(configString[2:3])
-        self._hrrr3 = int(configString[4:5])
-        self._rap0 = int(configString[6:7])
-        self._rap3 = int(configString[8:9])
-        self._mrms = int(configString[10:11])
-        self._layered = int(configString[12:13])
+        self._hrrr0 = bool(int(configString[2:3]))
+        self._hrrr3 = bool(int(configString[4:5]))
+        self._rap0 = bool(int(configString[6:7]))
+        self._rap3 = bool(int(configString[8:9]))
+        self._mrms = bool(int(configString[10:11]))
+        self._layered = bool(int(configString[12:13]))
     def debugPrint(self):
         """ logging debug of content
         """
@@ -428,13 +288,9 @@ class ForecastStep:
         """
         if (self._empty):
             return ""
-        ret = 's[%d] hr0[%d] hr3[%d] rp0[%d] rp3[%d] mrms[%d] lay[%d]' %(self._step,
-          self._hrrr0,
-          self._hrrr3,
-          self._rap0,
-          self._rap3,
-          self._mrms,
-          self._layered)
+        ret = 's[%d] hr0[%d] hr3[%d] rp0[%d] rp3[%d] mrms[%d] lay[%d]' %
+        (self._step, self._hrrr0, self._hrrr3, self._rap0, self._rap3,
+         self._mrms, self._layered)
         return ret
     
     def initializeContent(self, step):
@@ -445,14 +301,14 @@ class ForecastStep:
         step : int
            Step 0, 1, 2
         """
-        self._empty = 0
+        self._empty = False
         self._step = step
-        self._hrrr0 = 0
-        self._hrrr3 = 0
-        self._rap0 = 0
-        self._rap3 = 0
-        self._mrms = 0
-        self._layred = 0
+        self._hrrr0 = False
+        self._hrrr3 = False
+        self._rap0 = False
+        self._rap3 = False
+        self._mrms = False
+        self._layred = False
         
     def stepName(self):
         ret = stepStaticName(self._step)
@@ -498,15 +354,15 @@ class ForecastStep:
         time0 = issueTime - datetime.timedelta(hours=self._step)
         time3 = issueTime - datetime.timedelta(hours=(self._step + 3))
 
-        if (self._hrrr0 == 0):
+        if (not self._hrrr0):
             self._hrrr0 = forecastExists(parms._hrrr0hrDir, time0, 0)
-        if (self._hrrr3 == 0):
+        if (not self._hrrr3):
             self._hrrr3 = forecastExists(parms._hrrrDir, time3, 3)
-        if (self._rap0 == 0):
+        if (not self._rap0):
             self._rap0 = forecastExists(parms._rap0hrDir, time0, 0)
-        if (self._rap3 == 0):
+        if (not self._rap3):
             self._rap3 = forecastExists(parms._rapDir, time3, 3)
-        if (self._mrms == 0):
+        if (not self._mrms):
             self._mrms = obsExists(parms._mrmsDir, time0)
 
 
@@ -524,16 +380,16 @@ class ForecastStep:
            True if layering was done, or had previously been done
         """
         
-        if (self._layered == 1):
-            return 1
+        if (self._layered):
+            return True
         self.setAvailability(parms, itime)
-        if (self._hrrr0 == 1 and self._rap0 == 1 and
-            self._hrrr3 == 1 and self._rap3 == 1 and self._mrms == 1):
-            self._layered = 1
+        if (self._hrrr0 and self._rap0 and
+            self._hrrr3 and self._rap3 and self._mrms):
+            self._layered = True
             WhfLog.setData('RAP/HRRR/MRMS')
             layer(parms, itime, self._step, "RAP_HRRR_MRMS", config)
-            return 0
-        return 0
+            return True
+        return False
     
     def forceLayer(self, parms, config, itime):
         """  Perform layering if state is partially ready enough
@@ -549,13 +405,14 @@ class ForecastStep:
            True if layering was done, or had previously been done
         """
         
-        if (self._layered == 1):
-            return 1
+        if (self._layered):
+            return True
+
         self.setAvailability(parms, itime)
-        if (self._rap0 == 1 and self._rap3 == 1):
-            if (self._hrrr0 == 1 and self._hrrr3 == 1):
-                self._layered = 1
-                if (self._mrms == 1):
+        if (self._rap0 and self._rap3):
+            if (self._hrrr0 and self._hrrr3):
+                self._layered = True
+                if (self._mrms == True):
                     WhfLog.setData('RAP/HRRR/MRMS')
                     layer(parms, itime, self._step, "RAP_HRRR_MRMS", config)
                 else:
@@ -563,14 +420,15 @@ class ForecastStep:
                     layer(parms, itime, self._step, "RAP_HRRR", config)
                     WhfLog.setData('RAP/HRRR/MRMS')
             else:
-                self._layered = 1
+                self._layered = True
                 WhfLog.setData('RAP')
                 layer(parms, itime, self._step, "RAP", config)
                 WhfLog.setData('RAP/HRRR/MRMS')
         else:
-            self._layered = 1
+            self._layered = True
             WhfLog.warning("WARNING, no layering of %s, step=-%d",
                             itime.strftime("%Y%m%d%h"), self._step)
+        return True
     
 #----------------------------------------------------------------------------
 class State:
@@ -597,11 +455,11 @@ class State:
         """
 
         # init to empty
-        self._empty = 1
-        self._first = 1
+        self._empty = True
+        self._first = True
         self._issue = datetime.datetime
         self._step = []
-        self._layered = 0
+        self._layered = False
         self._clockTime = datetime.datetime
 
     def initFromStateFile(self, confFile):
@@ -610,17 +468,17 @@ class State:
         cf = SafeConfigParser()
         cf.read(confFile)
         self._step = []
-        self._first = 1
-        self._empty = 1
-        status = int(cf.get('status', 'first'))
-        if (status == 1):
+        self._first = True
+        self._empty = True
+        status = bool(int(cf.get('status', 'first')))
+        if (status):
             return
-        self._empty = 0
-        self._first = int(cf.get('forecast', 'first'))
+        self._empty = False
+        self._first = bool(int(cf.get('forecast', 'first')))
         stime = cf.get('forecast', 'issue_time')
         self._issue = datetime.datetime.strptime(stime, "%Y%m%d%H")
 
-        cf.get('forecast', 'layered', self._layered)
+        self._layered = bool(int(cf.get('forecast', 'layered', self._layered)))
         fs0 = ForecastStep(cf.get('forecast', stepStaticName(0)))
         fs1 = ForecastStep(cf.get('forecast', stepStaticName(1)))
         fs2 = ForecastStep(cf.get('forecast', stepStaticName(2)))
@@ -658,9 +516,9 @@ class State:
         # convert to datetime
         itime = datetime.datetime.strptime(newest, '%Y%m%d%H')
 
-        self._empty = 0
+        self._empty = False
         self._step = []
-        self._first = 1
+        self._first = True
         self.setContent(itime)
         
     def write(self, parmFile):
@@ -675,10 +533,7 @@ class State:
         config = SafeConfigParser()
 
         config.add_section('status')
-        if (self._empty == 1):
-            config.set('status', 'first', '1')
-        else:
-            config.set('status', 'first', '0')
+        config.set('status', 'first', str(int(self._empty)))
 
         # When adding sections or items, add them in the reverse order of
         # how you want them to be displayed in the actual file.
@@ -689,15 +544,10 @@ class State:
         # mode. SafeConfigParser does not allow such assignments to take place.
         config.add_section('forecast')
 
-        if (self._first == 1):
-            config.set('forecast', 'first', '1')
-        else:
-            config.set('forecast', 'first', '0')
+        
+        config.set('forecast', 'first', str(int(self._first)))
         config.set('forecast', 'issue_time', self._issue.strftime("%Y%m%d%H"))
-        if (self._layered == 1):
-            config.set('forecast', 'layered', '1')
-        else:
-            config.set('forecast', 'layered', '0')
+        config.set('forecast', 'layered', str(int(self._layered)))
         for f in self._step:
             s = f.writeConfigString()
             stepName = f.stepName()
@@ -720,10 +570,10 @@ class State:
         lt : int
             Forecast time seconds
         """
-        self._empty = 0
+        self._empty = False
         self._issue = issueTime
         self._step = []
-        self._first = 1
+        self._first = True
         fs0 = ForecastStep()
         fs0.initializeContent(0)
         self._step.append(fs0)
@@ -733,7 +583,7 @@ class State:
         fs2 = ForecastStep()
         fs2.initializeContent(2)
         self._step.append(fs2)
-        self._layered = 0
+        self._layered = False
         self._clockTime = datetime.datetime.utcnow()
         #self.debugPrint()
         
@@ -751,7 +601,7 @@ class State:
         
         """
         if (self._empty):
-            return 1
+            return True
         else:
             itime = datetime.datetime.strptime(issueTime, '%Y%m%d%H')
             return (itime > self._issue)
@@ -780,10 +630,10 @@ class State:
             return
         
         # make note if going from nothing to something
-        nothing = 1
+        nothing = True
         for f in self._step:
             if (f._layered):
-                nothing = 0
+                nothing = False
 
 
         #if (nothing):
@@ -793,19 +643,20 @@ class State:
         if (self._first):
             self._step[2].forceLayer(parms, config, self._issue)
             self._step[1].forceLayer(parms, config, self._issue)
-            self._first = 0
+            self._first = False
             
         self._step[0].layerIfReady(parms, config, self._issue)
         self._layered = self._step[0]._layered
         if (not self._layered):
             tnow = datetime.datetime.utcnow()
             diff = tnow - self._clockTime
-            idiff = (diff.microseconds + (diff.seconds + diff.days*24*3600)*10**6)/10**6
+            idiff = (diff.microseconds +
+                     (diff.seconds + diff.days*24*3600)*10**6)/10**6
             if (idiff > parms._veryLateSeconds):
                 WhfLog.warning("WARNING: Inputs for layering timeout Issue:%s",
                                 self._issue.strftime("%Y%m%d%H"))
                 self._step[0].forceLayer(parms, config, self._issue)
-                self._layered = 1
+                self._layered = True
                 
 #----------------------------------------------------------------------------
 def main(argv):
@@ -820,7 +671,7 @@ def main(argv):
     parms = parmRead(configFile)
 
     newestT = ""
-    newestT1 = newestIssueTime(parms._hrrrDir)
+    newestT1 = df.newestIssueTime(parms._hrrrDir)
     if (newestT):
         if (newestT1):
             if (newestT1 > newestT):
@@ -828,22 +679,14 @@ def main(argv):
     else:
         newestT = newestT1
         
-    newestT1 = newestIssueTime(parms._rapDir)
+    newestT1 = df.newestIssueTime(parms._rapDir)
     if (newestT):
         if (newestT1):
             if (newestT1 > newestT):
                 newestT = newestT1
     else:
         newestT = newestT1
-    newestT1 = newestIssueTime(parms._hrrr0hrDir)
-    if (newestT):
-        if (newestT1):
-            if (newestT1 > newestT):
-                newestT = newestT1
-    else:
-        newestT = newestT1
-        
-    newestT1 = newestIssueTime(parms._rap0hrDir)
+    newestT1 = df.newestIssueTime(parms._hrrr0hrDir)
     if (newestT):
         if (newestT1):
             if (newestT1 > newestT):
@@ -851,7 +694,15 @@ def main(argv):
     else:
         newestT = newestT1
         
-    newestT1 = newestIssueTime(parms._mrmsDir)
+    newestT1 = df.newestIssueTime(parms._rap0hrDir)
+    if (newestT):
+        if (newestT1):
+            if (newestT1 > newestT):
+                newestT = newestT1
+    else:
+        newestT = newestT1
+        
+    newestT1 = df.newestIssueTime(parms._mrmsDir)
     if (newestT):
         if (newestT1):
             if (newestT1 > newestT):
