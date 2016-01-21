@@ -15,6 +15,7 @@ from ForcingEngineError import FilenameMatchError
 from ForcingEngineError import MissingDataFileError
 from ForcingEngineError import MissingDirectoryError
 from ForcingEngineError import MissingFileError
+from ForcingEngineError import ZeroHourReplacementError
 from ForcingEngineError import UnrecognizedCommandError
 
 
@@ -1346,7 +1347,7 @@ def replace_fcst0hr(parser, file_to_replace, product):
             # this could be a "bootstrapping" issue, where we are requesting data 
             # that isn't available (due to scrubbing, etc.)
             WhfLog.error("No previous RAP model runs found, exiting...")
-            raise MissingZeroHourFileError('No RAP file from previous RAP model run- premature scrubbing or inavailability of data') 
+            raise ZeroHourReplacementError('No RAP file from previous RAP model run- premature scrubbing or inavailability of data') 
     elif product == 'GFS':
         base_dir = parser.get('layering','medium_range_output')
         # Get the previous directory corresponding to the previous
