@@ -25,11 +25,12 @@ file that is created in the same directory
 from where this script is executed.
 """
 
-def forcing(action, prod, file, prod2=None, file2=None):
+def forcing(configFile, action, prod, file, prod2=None, file2=None):
     """Peforms the action on the given data
        product and corresponding input file.
 
        Args:
+           configFile (string): The config file with all the settings
            action (string):  Supported actions are:
                              'regrid' - regrid and downscale
                              'bias'   - bias correction 
@@ -60,11 +61,14 @@ def forcing(action, prod, file, prod2=None, file2=None):
 
     # Read the parameters from the config/param file.
     parser = SafeConfigParser()
-    parser.read('./wrf_hydro_forcing.parm')
+    parser.read(configFile)
 
     # Set up logging, environments, etc.
     forcing_config_label = "Short_Range"
-    whf.initial_setup(parser,forcing_config_label)
+    try:
+        whf.initial_setup(parser,forcing_config_label)
+    except Exception:
+        raise
 
 
     # Extract the date, model run time, and forecast hour from the file name
