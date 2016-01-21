@@ -64,15 +64,6 @@ class MissingFileError(ForcingEngineError):
     def __str__(self):
         return repr(self.parameter)
 
-class ZeroHourReplacementError(ForcingEngineError):
-    '''Used when an expected 0hr file
-       is not found.  The 0hr file i 
-    ''' 
-    def __init__(self, value):
-        self.parameter = value
-    def __str__(self):
-        return repr(self.parameter)
-
 class UnrecognizedCommandError(ForcingEngineError):
     '''Used when an expected request
        is made.
@@ -91,6 +82,15 @@ class SystemCommandError(ForcingEngineError):
         return repr(self.parameter)
 
 class MissingInputError(ForcingEngineError):
+    '''Used when one or more input parameters
+       is missing.
+    '''
+    def __init__(self, value):
+        self.parameter = value
+    def __str__(self):
+        return repr(self.parameter)
+    
+class InvalidArgumentError(ForcingEngineError):
     '''Used when one or more input parameters
        is missing.
     '''
