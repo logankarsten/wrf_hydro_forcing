@@ -472,13 +472,15 @@ class ForecastStatus:
         else:
             return 0
 
-    def layerIfReady(self, parms):
+    def layerIfReady(self, parms, configFile):
         """  Perform layering if state is such that it should be done
 
         Parameters
         ----------
         parms : Parms
            Parameters
+        configFile : string
+           name of file with settings
 
         Returns
         -------
@@ -491,7 +493,7 @@ class ForecastStatus:
         if (self._hrrr == 0 and self._rap == 0):
             return 0
         if (self._hrrr == 1 and self._rap == 1):
-            self.layer(parms)
+            self.layer(parms, configFile)
             self._layered = 1
             return 1
         if (self._hrrr == 0 and self._rap == 1):
@@ -505,7 +507,7 @@ class ForecastStatus:
                 return 1
         return 0
             
-    def layer(self, parms):
+    def layer(self, parms, configFile):
         """ Perform layering
 
         NOTE: here is where returns status will be added and used
@@ -514,12 +516,14 @@ class ForecastStatus:
         ----------
         parms : Parms
           parameters
+        configFile : string
+          name of file with settings
 
         """        
         path = self._issue.strftime("%Y%m%d%H") + "/"
         path += self._valid.strftime("%Y%m%d%H%M") + ".LDASIN_DOMAIN1.nc"
         WhfLog.info("LAYERING %s ", path)
-        srf.forcing('layer', 'HRRR', path, 'RAP', path)
+        srf.forcing(configFile, 'layer', 'HRRR', path, 'RAP', path)
         WhfLog.info("DONE LAYERING file=%s", path)
 
     def passthroughRap(self, parms):
@@ -880,16 +884,18 @@ class State:
             if (didSet == 0):
                 WhfLog.error("No matching model for forecast")
                 
-    def layerIfReady(self, parms):
+    def layerIfReady(self, parms, configFile):
         """ Perform layering for all forecasts that indicate it should be done
 
         Parameters
         ----------
         parms : Parms
            Params
+        configFile : string
+           name of file with settings
         """
         for f in self._fState:
-            f.layerIfReady(parms)
+            f.layerIfReady(parms, configFile)
             
         
 #----------------------------------------------------------------------------
@@ -942,7 +948,7 @@ def main(argv):
     state2.setCurrentModelAvailability(parms)
 
     # layer if appropriate
-    state2.layerIfReady(parms)
+    state2.layerIfReady(parms, configFile)
 
     # write out final state
     state2.write(parms._stateFile)

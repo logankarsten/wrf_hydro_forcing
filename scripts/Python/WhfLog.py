@@ -8,6 +8,7 @@ import logging
 import sys
 import DataFiles as df
 from ConfigParser import SafeConfigParser
+from ForcingEngineError import SystemCommandError
 import inspect
 
 # global var always length 7  'Short   ', 'Medium ', 'Long   ', 'AA     '
@@ -73,11 +74,13 @@ def init(parser, logFileName, configType, action, data):
 
     # log files written to configured place with yyyymmdd subdirectory
     logging_path = parser.get('log_level', 'forcing_engine_log_dir')
-    df.makeDirIfNeeded(logging_path)
+    if (not df.makeDirIfNeeded(logging_path)):
+        raise SystemCommandError("Cannot create " + logging_path)
     logging_path += "/"
     now = datetime.datetime.utcnow()
     logging_path += now.strftime("%Y%m%d")
-    df.makeDirIfNeeded(logging_path)
+    if (not df.makeDirIfNeeded(logging_path)):
+        raise SystemCommandError("Cannot create " + logging_path)
 
     # we have two log files, one for python, one for ncl
     logging_filename =  logging_path + "/" + logFileName + ".log" 
@@ -85,7 +88,8 @@ def init(parser, logFileName, configType, action, data):
     setup_logger('main',  logging_filename, set_level)
     setup_logger('ncl',  ncl_logging_filename, set_level)
     
-    # set the global var's to inputs, padded to correct length (so logging lines up nice)
+    # set the global var's to inputs, padded to correct length
+    #(so logging lines up nice)
     global WhfConfigType
     WhfConfigType = configType
     WhfConfigType = WhfConfigType.ljust(WhfConfigTypeLen)
@@ -121,7 +125,8 @@ def setData(data):
     WhfData = WhfData.ljust(WhfDataLen)
 
 def createFormatString(status, fmt, level):
-    """  Create and return a standard format string, with input format string appeneded
+    """  Create and return a standard format string, with input format string
+         appended
     Parameters
     ----------
     status : str

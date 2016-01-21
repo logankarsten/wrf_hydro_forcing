@@ -22,11 +22,12 @@ file that is created in the same directory
 from where this script is executed.
 
 """
-def forcing(action, prod, file, prod2=None, file2=None):
+def forcing(configFile, action, prod, file, prod2=None, file2=None):
     """Peforms the action on the given data
        product and corresponding input file.
 
        Args:
+           configFile (string): name of file with settings
            action (string):  Supported actions are:
                              'regrid' - regrid and downscale
                              'bias'   - bias correction 
@@ -59,7 +60,7 @@ def forcing(action, prod, file, prod2=None, file2=None):
     # Read the parameters from the config/param file.
     parser = SafeConfigParser()
     try:
-        parser.read('./wrf_hydro_forcing.parm')
+        parser.read(configFile)
     except (NoSectionErrorException, DuplicateSectionErrorException,\
             DuplicateOptionErrorException,MissingSectionHeaderErrorException,\
             ParsingErrorException) as e:
