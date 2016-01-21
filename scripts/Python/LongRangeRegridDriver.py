@@ -16,6 +16,8 @@ import WhfLog
 import DataFiles as df
 import Long_Range_Forcing as lrf
 from ConfigParser import SafeConfigParser
+from ForcingEngineError import FileNameMatchError
+from ForcingEngineError import InvalidArgumentError
 
 #----------------------------------------------------------------------------
 def parmRead(fname):
@@ -67,7 +69,8 @@ def regridCFS(cfsFname):
    cmd += cfsFname
    WhfLog.info("command: %s", cmd)
    ret = os.system(cmd)
-   WhfLog.info("DONE REGRIDDING CFS DATA, file=%s, return status=%d", cfsFname, ret)
+   WhfLog.info("DONE REGRIDDING CFS DATA, file=%s, return status=%d",
+               cfsFname, ret)
 
 
 #----------------------------------------------------------------------------
@@ -137,10 +140,10 @@ class State:
       """
 
       if (not parmFile):
-         self._empty = 1
+         self._empty = True
          self._cfs = []
       else:
-         self._empty = 0
+         self._empty = False
          cf = SafeConfigParser()
          cf.read(parmFile)
          self._cfs = [name for name in cf.get("latest", "cfs").split()]
@@ -156,7 +159,7 @@ class State:
       -------
          true if state is not set
       """
-      return self._empty == 1
+      return self._empty
 
    def newest(self):
       """return newest file
@@ -187,7 +190,7 @@ class State:
       -------
          None
       """
-      self._empty = 0
+      self._empty = False
       self._cfs = cfs.getFnames()
 
    def debugPrint(self):
@@ -226,10 +229,10 @@ class State:
          True if added, false if already in the state
 
       """
-      ret = 0
+      ret = False
       if (not f in self._cfs):
          self._cfs.append(f)
-         ret = 1
+         ret = True
       return ret
    
    def sortFiles(self):
@@ -282,14 +285,17 @@ class State:
             WhfLog.debug("Newer time encountered")
             # see if issue time has increased and if so, purge old stuff
             # create DataFile objects
-            df0 = df.DataFile(sname[0:8], sname[9:], 'CFS')
-            df1 = df.DataFile(fnames[-1][0:8], fnames[-1][9:], 'CFS')
-            if (df0._ok and df1._ok):
-               if (df0._time.inputIsNewerIssueHour(df1._time)):
-                  WhfLog.debug("Issue hour has increased, purge now")
-                  self.update(df1._time, hoursBack)
-            else:
-               WhfLog.error("Constructing DataFile objects")
+            try:
+               df0 = df.DataFile(sname, 'CFS')
+               df1 = df.DataFile(fnames[-1], 'CFS')
+            except FileNameMatchError as fe:
+               WhfLog.debug("Skipping file use due to %s", fe)
+            except InvalidArgumentError as ie:
+               WhfLog.debug("Skipping file use due to %s", ie)
+
+            if (df0._time.inputIsNewerIssueHour(df1._time)):
+               WhfLog.debug("Issue hour has increased, purge now")
+               self.update(df1._time, hoursBack)
 
       for f in fnames:
          if (self.addFileIfNew(f)):
