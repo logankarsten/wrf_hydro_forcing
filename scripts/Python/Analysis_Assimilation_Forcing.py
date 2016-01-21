@@ -22,11 +22,12 @@ from where this script is executed.
 """
 
 
-def forcing(action, prod, file, config):
+def forcing(config, action, prod, file):
     """Peforms the action on the given data
        product and corresponding input file.
 
        Args:
+           config (string) : Config file name
            action (string):  Supported actions are:
                              'regrid' - regrid and downscale
            prod (string):  The first product [mandatory option]:
@@ -35,7 +36,6 @@ def forcing(action, prod, file, config):
                             this is derived from the Python config/
                             param file and the YYYMMDD portion of 
                             the file name.
-           config (string) : Config file name
 
        Returns:
            None           Performs the indicated action on the
