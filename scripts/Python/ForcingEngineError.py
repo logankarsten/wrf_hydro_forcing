@@ -64,6 +64,16 @@ class MissingFileError(ForcingEngineError):
     def __str__(self):
         return repr(self.parameter)
 
+class ZeroHourReplacementError(ForcingEngineError):
+    '''Used when an expected file replacement
+       file for a RAP or GFS 0hr forecast
+       is not found. 
+    ''' 
+    def __init__(self, value):
+        self.parameter = value
+    def __str__(self):
+        return repr(self.parameter)
+
 class UnrecognizedCommandError(ForcingEngineError):
     '''Used when an expected request
        is made.
