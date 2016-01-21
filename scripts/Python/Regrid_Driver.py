@@ -19,6 +19,10 @@ import WhfLog
 import Short_Range_Forcing as srf
 import Analysis_Assimilation_Forcing as aaf
 import Medium_Range_Forcing as mrf
+from ForcingEngineError import FilenameMatchError
+from ForcingEngineError import InvalidArgumentError
+from ForcingEngineError import SystemCommandError
+from ForcingEngineError import MissingDataFileError
 
 #----------------------------------------------------------------------------
 def parmRead(fname, fileType):
@@ -55,7 +59,7 @@ def parmRead(fname, fileType):
       configType = '???'
 
    WhfLog.init(parser, forcing_config_label, configType, 'Regrid', fileType)
-
+      
    dataDir = parser.get('data_dir', fileType + '_data')
    maxFcstHour = int(parser.get('fcsthr_max', fileType + '_fcsthr_max'))
    hoursBack = int(parser.get('triggering', fileType + '_hours_back'))
@@ -65,8 +69,40 @@ def parmRead(fname, fileType):
    return parms
 
 #----------------------------------------------------------------------------
+def regridIfZeroHr(configFile, fileType, fname):
+   """If it is a 0 hour forecast (RAP or HRRR) regrid in a special way
+   Parameters
+   ----------
+   configFile : str
+   configuration file with all settings
+   fileType: str
+   HRRR, RAP, ... string
+   fname: str
+   name of file to regrid and downscale, with yyyymmdd parent dir
+
+   Returns
+   -------
+   None
+   """
+
+   # check for 0 hour by creating a DataFile and checking forecast hour
+   try:
+      f = df.DataFile(fname, fileType)
+   except FilenameMatchError as fe:
+      WhfLog.debug("Cannot check for 0 hour data due to %s", fe)
+      raise
+   except InvalidArgumentError as ie:
+      WhfLog.debug("Cannot check for 0 hour data due to %s", ie)
+      raise
+   if (f._time._forecastHour == 0):
+      WhfLog.setConfigType('AA')
+      WhfLog.debug("SPECIAL 0 hour case %s", fname[9:0])
+      aaf.forcing(configFile, 'regrid', 'HRRR', fname[9:])
+      WhfLog.setConfigType('Short')
+
+#----------------------------------------------------------------------------
 def regrid(fname, fileType, configFile):
-   """Invoke HRRR regridding/downscaling (see Short_Range_Forcing.py)
+   """Invoke regridding/downscaling 
        
    Parameters
    ----------
@@ -84,36 +120,29 @@ def regrid(fname, fileType, configFile):
    """
 
    WhfLog.info("REGRIDDING %s DATA, file=%s", fileType, fname)
-   if (fileType == 'HRRR'):
-       srf.forcing('regrid', 'HRRR', fname[9:])
-       # special case, if it is a 0 hour forecast, do double regrid
-       f = df.DataFile(fname[0:8], fname[9:], 'HRRR')
-       if (f._ok):
-          if (f._time._forecastHour == 0):
-             WhfLog.setConfigType('AA')
-             WhfLog.debug("SPECIAL 0 hour case %s", fname[9:0])
-             aaf.forcing('regrid', 'HRRR', fname[9:], configFile)
-             WhfLog.setConfigType('Short')
-       else:
-          WhfLog.error("Regrid error checking for 0 hour data")
-   elif (fileType == 'RAP'):
-       srf.forcing('regrid', 'RAP', fname[9:])
-       # special case, if it is a 0 hour forecast, do double regrid
-       f = df.DataFile(fname[0:8], fname[9:], 'RAP')
-       if (f._ok):
-          if (f._time._forecastHour == 0):
-             WhfLog.setConfigType('AA')
-             WhfLog.debug("SPECIAL 0 hour case %s", fname[9:0])
-             aaf.forcing('regrid', 'RAP', fname[9:], configFile)
-             WhfLog.setConfigType('Short')
-       else:
-          WhfLog.error("Regrid error checking for 0 hour data")
-   elif (fileType == 'GFS'):
-       mrf.forcing('regrid', 'GFS', fname[9:])
-   elif (fileType == 'MRMS'):
-       aaf.forcing('regrid', 'MRMS', fname[9:], configFile)
-   else:
-       WhfLog.error("Unknown file type %s", fileType)
+   try:
+      if (fileType == 'HRRR'):
+         srf.forcing(configFile, 'regrid', 'HRRR', fname[9:])
+         # special case, if it is a 0 hour forecast, do double regrid
+         regridIfZeroHr(configFile, fileType, fname)
+      elif (fileType == 'RAP'):
+         srf.forcing(configFile, 'regrid', 'RAP', fname[9:])
+         # special case, if it is a 0 hour forecast, do double regrid
+         regridIfZeroHr(configFile, fileType, fname)
+      elif (fileType == 'GFS'):
+         mrf.forcing(configFile, 'regrid', 'GFS', fname[9:])
+      elif (fileType == 'MRMS'):
+         aaf.forcing(configFile, 'regrid', 'MRMS', fname[9:])
+      else:
+         WhfLog.info("ERROR REGRIDDING %s DATA, file=%s", fileType, fname)
+         raise InvalidArgumentError("Unknown file type " + fileType)
+   except MissingDataFileError as e:
+      WhfLog.info("ERROR REGRIDDING: %s", e)
+      WhfLog.info("Remove this forecast from state and continue")
+      return
+   except:
+      WhfLog.info("ERROR REGRIDDING %s DATA, file=%s", fileType, fname)
+      raise
 
    WhfLog.info("DONE REGRIDDING %s DATA, file=%s", fileType, fname)
     
@@ -181,10 +210,10 @@ class State:
       """
 
       if (not parmFile):
-         self._empty = 1
+         self._empty = True
          self._data = []
       else:
-         self._empty = 0
+         self._empty = False
          cf = SafeConfigParser()
          cf.read(parmFile)
          self._data = [name for name in cf.get("latest", fileType).split()]
@@ -200,8 +229,8 @@ class State:
       -------
          true if state is not set
       """
-      if (self._empty == 1):
-         return 1
+      if (self._empty):
+         return True
       return (not self._data)
 
    def newest(self):
@@ -232,7 +261,7 @@ class State:
       -------
          None
       """
-      self._empty = 0
+      self._empty = False
       self._data = data.getFnames()
 
    def debugPrint(self):
@@ -274,10 +303,10 @@ class State:
          True if added, false if already in the state
 
       """
-      ret = 0
+      ret = False
       if (not f in self._data):
           self._data.append(f)
-          ret = 1
+          ret = True
       return ret
    
    def sortFiles(self):
@@ -325,15 +354,18 @@ class State:
             WhfLog.debug("Newer time encountered")
             # see if issue time has increased and if so, purge old stuff
             # create DataFile objects
-            df0 = df.DataFile(sname[0:8], sname[9:], fileType)
-            df1 = df.DataFile(fnames[-1][0:8], fnames[-1][9:], fileType)
-            if (df0._ok and df1._ok):
-               if (df0._time.inputIsNewerIssueHour(df1._time)):
-                  WhfLog.debug("%s Issue hour has increased, purge now",
-                                fileType)
-                  self.update(df1._time, hoursBack, fileType)
-            else:
-               WhfLog.error("Constructing DataFile objects")
+            try:
+               df0 = df.DataFile(sname, fileType)
+               df1 = df.DataFile(fnames[-1], fileType)
+            except FilenameMatchError as fe:
+               WhfLog.debug("Cannot update due to %s", fe)
+            except InvalidArgumentError as ie:
+               WhfLog.debug("Cannot update due to %s", ie)
+
+            if (df0._time.inputIsNewerIssueHour(df1._time)):
+               WhfLog.debug("%s Issue hour has increased, purge now",
+                            fileType)
+               self.update(df1._time, hoursBack, fileType)
 
       for f in fnames:
          if (self.addFileIfNew(f)):
@@ -414,29 +446,30 @@ def createStateFile(parms, fileType):
    # maybe do nothing
    # maybe do all of them..for now do nothing as its easiest, just move on
 
-   # write out file
+   # write out file (at least try to)
    state.write(parms._stateFile, fileType)
 
 #----------------------------------------------------------------------------
 def main(argv):
 
     fileType = argv[0]
-    good = 0
+    good = False
     if (fileType == 'HRRR' or fileType == 'RAP' or fileType == 'MRMS' or
         fileType == 'GFS'):
-       good = 1
-    if (good == 0):
+       good = True
+    if (not good):
        print 'ERROR unknown file type command arg ', fileType
        return 1
 
     # User must pass the config file into the main driver.
     configFile = argv[1]
     if not os.path.exists(configFile):
-        print 'ERROR forcing engine config file not found.'
+        print 'ERROR forcing engine config file not found:', configFile
         return 1
     
     # read in fixed main params
     parms = parmRead(configFile, fileType)
+
     #parms.debugPrint()
 
     #if there is not a state file, create one now using newest
