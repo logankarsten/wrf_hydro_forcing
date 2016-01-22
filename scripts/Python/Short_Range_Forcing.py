@@ -131,8 +131,13 @@ def forcing(configFile, action, prod, file, prod2=None, file2=None):
                     raise
 
                 # Downscaling...
-                stat= whf.downscale_data(product_data_name,regridded_file, parser, True, True)
-                if (stat == 0):
+                try:
+                    whf.downscale_data(product_data_name,regridded_file, parser, True, True)
+                except (NCLError, ZeroHourReplacementError) as e:
+                    WhfLog.error("FAIL could not downscale data for hour 0 RAP")
+                    raise 
+
+                else:
                     # Move the finished downscaled file to the "finished" area so the triggering
                     # script can determine when to layer with other data.
                     match = re.match(r'.*/([0-9]{10})/([0-9]{12}.LDASIN_DOMAIN1.nc)',regridded_file)
@@ -157,8 +162,6 @@ def forcing(configFile, action, prod, file, prod2=None, file2=None):
                         raise FilenameMatchError('File move failed, name format unexpected for file %s'%regridded_file)
 
                 else:
-                    WhfLog.error("FAIL could not downscale data for hour 0 RAP")
-                    raise NCLError('NCL downscaling for hour 0 RAP failed')
                 # Remove empty 0hr regridded file if it still exists
                 if os.path.exists(regridded_file):
                     cmd = 'rm -rf ' + regridded_file
@@ -178,7 +181,13 @@ def forcing(configFile, action, prod, file, prod2=None, file2=None):
                     raise 
 
                 # Downscaling...
-                whf.downscale_data(product_data_name,regridded_file, parser,True, False)                
+                try:
+                    whf.downscale_data(product_data_name,regridded_file, parser,True, False)                
+                except (NCLError, ZeroHourReplacementError) as e:
+                    WhfLog.error("FAIL could not downscale data (not a 0hr file)" )
+                    raise
+              
+
                 # Move the downscaled file to the finished location 
                 match = re.match(r'.*/([0-9]{10})/([0-9]{12}.LDASIN_DOMAIN1.nc)',regridded_file)
                 if match:
