@@ -25,13 +25,13 @@ def makeDirIfNeeded(path):
 
    try:
       os.makedirs(path)
-      return 1
+      return True
    except OSError as exception:
       if exception.errno != errno.EEXIST:
          WhfLog.error("ERROR creating %s", path)
-         return 0
+         return False
       else:
-         return 1
+         return True
 
 #----------------------------------------------------------------------------
 def isYyyymmdd(name):
@@ -50,8 +50,46 @@ def isYyyymmdd(name):
    """
    if (len(name) == 8):
       if (datetime.datetime.strptime(name, '%Y%m%d')):
-         return 1
-   return 0
+         return True
+   return False
+
+#----------------------------------------------------------------------------
+def isYyyymmddhh(name):
+    """Check if a string is of format yyyymmddhh
+
+    Parameters
+    ----------
+    name : str
+       Name to check
+
+    Returns
+    -------
+    bool
+        true if name has that format
+    """
+    if (len(name) == 10):
+        if (datetime.datetime.strptime(name, '%Y%m%d%H')):
+            return True
+    return False
+
+#----------------------------------------------------------------------------
+def isYyyymmddhhmmss(name):
+    """Check if a string is of format yyyymmddhhmmss
+
+    Parameters
+    ----------
+    name : str
+       Name to check
+
+    Returns
+    -------
+    bool
+        true if name has that format
+    """
+    if (len(name) == 14):
+        if (datetime.datetime.strptime(name, '%Y%m%d%H%M%S')):
+            return True
+    return False
 
 #----------------------------------------------------------------------------
 def dates(names):
@@ -68,8 +106,32 @@ def dates(names):
       Subset of input with 'yyyymmdd' strings only
 
    """
-   return [name for name in names if (isYyyymmdd(name)==1)]
+   return [name for name in names if (isYyyymmdd(name))]
 
+#----------------------------------------------------------------------------
+#
+# filter a list of names to those that are dates of format yyyymmddhh
+#
+# names = list of names
+#
+# return filtered list
+#
+def datesWithHour(names):
+    """Filter a list down to elements that have format yyyymmdd
+
+    Parameters
+    ----------
+    names : list[str]
+        The names to filter
+
+    Returns
+    -------
+    list[str]
+        The filtered names
+    """
+    return [name for name in names if (isYyyymmddhh(name))]
+
+    
     
 #----------------------------------------------------------------------------
 def getFileNames(aDir):
@@ -128,6 +190,24 @@ def getYyyymmddSubdirectories(aDir):
    names = getImmediateSubdirectories(aDir)
    return dates(names)
 
+#---------------------------------------------------------------------------
+def getYyyymmddhhSubdirectories(dir):
+   """return the 'yyyymmddhh' subdirectories of a directory
+
+   Parameters
+   ----------
+   aDir: str
+      Full path directory name
+
+   Returns
+   -------
+   list[str]
+      All subdirectories of the aDir that are of format 'yyyymmddhh'
+
+   """
+   names = getImmediateSubdirectories(dir)
+   return datesWithHour(names)
+
 #----------------------------------------------------------------------------
 def filterWithinNHours(files, type, ftime, N):
    """Filter a list of file names with assumed format to those in a time range
@@ -164,6 +244,27 @@ def filterWithinNHours(files, type, ftime, N):
                  N, len(files), len(ret))
    return ret
         
+#----------------------------------------------------------------------------
+def newestIssueTime(dir):
+    """return the subdirectory (yyyymmddhh) that is for the newest issue time
+
+    Parameters
+    ----------
+    dir : str
+       Directory with subdirectories
+
+    Returns
+    -------
+    str
+       The subdirectory with biggest issue time, or empty string
+    """       
+    names = getYyyymmddhhSubdirectories(dir)
+    if (not names):
+        return ""
+
+    names = sorted(names)
+    return names[-1]
+    
 #---------------------------------------------------------------------------
 class DataFile:
    """DataFile is One data file
@@ -196,7 +297,7 @@ class DataFile:
       """
 
       # not yet ok
-      self._ok = 0
+      self._ok = False
 
       # copy stuff in
       self._yyyymmddDir = yyyymmdd
@@ -267,7 +368,7 @@ class DataFile:
       if (self._ok):
          return self._time.forecastHourInRange(maxFcstHour)
       else:
-         return 0
+         return False
             
    def fullPathFileName(self):
       """return full path name built from local content
@@ -289,7 +390,7 @@ class DataFile:
    def _parseNonMrmsFile(self, fileName):
       """Parse a file name to set local _time, non MRMS, store to _time
 
-      If successful, sets self._time and sets self._ok = 1
+      If successful, sets self._time and sets self._ok = true
 
       Parameters
       ----------
@@ -308,12 +409,12 @@ class DataFile:
             self._time = ForecastTime(datetime.datetime.strptime(ymd,
                                                                  '%Y%m%d'),
                                       itime, ftime)
-            self._ok = 1
+            self._ok = True
         
    def _parseMrmsFile(self, fileName):
       """Parse a file name to set local _time, MRMS, store to _time
 
-      If successful, sets self._time and sets self._ok = 1
+      If successful, sets self._time and sets self._ok = true
 
       Parameters
       ----------
@@ -332,7 +433,7 @@ class DataFile:
             self._time = ForecastTime(datetime.datetime.strptime(ymd,
                                                                  '%Y%m%d'),
                                       itime, 0)
-            self._ok = 1
+            self._ok = True
 
     
 #----------------------------------------------------------------------------
@@ -382,7 +483,7 @@ class DataFiles:
       
       Returns
       -------
-      true if successful and there is at leas one file in _current
+      true if successful and there is at least one file in _content
 
       """
 
@@ -391,9 +492,9 @@ class DataFiles:
 
       # get the newest DataFile
       newestF = self._newestDataFile()
-      if (newestF._ok == 0):
+      if (not newestF._ok):
          WhfLog.debug("setNewestFiles:No data in %s", self._topDir)
-         return 0
+         return False
 
       # create a new ForecastTime that is hoursBack 
       oldestTime = ForecastTime()
@@ -407,7 +508,7 @@ class DataFiles:
       for d in dataFiles:
          if (d.inRange(oldestTime, newestF._time)):
             self._content.append(d)
-      return 1
+      return True
 
    def getFnames(self):
       """Return the full path file names for everything in _content
@@ -647,7 +748,7 @@ class ForecastTime:
 
       """
       if (self.isEmpty()):
-         return 0
+         return False
       else:
          return self._forecastHour <= maxFcstHour
          
@@ -731,11 +832,11 @@ class ForecastTime:
       # same day, issue hour input - issue hour <= N
       if (self._fcstTime == ftime._fcstTime):
          if (self._issueHour == ftime._issueHour):
-            return 1
+            return True
          elif (ftime._issueHour-self._issueHour <= N):
-            return 1
+            return True
          else:
-            return 0
+            return False
       else:
          # create a full time from local and input states
          timeIn = ftime.ymdh()
@@ -744,9 +845,8 @@ class ForecastTime:
          maxSeconds = N*3600
          if (diff < 0):
             WhfLog.error("Unexpected data newer than newest")
-            return 0
+            return False
          else:
             return (diff <= maxSeconds)
-
 
 #----------------------------------------------------------------------------

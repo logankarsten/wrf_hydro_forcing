@@ -15,149 +15,9 @@ import datetime
 import time
 from ConfigParser import SafeConfigParser
 import Short_Range_Forcing as srf
+import DataFiles as df
 import WhfLog
 
-#----------------------------------------------------------------------------
-def isYyyymmddhh(name):
-    """Check if a string is of format yyyymmddhh
-
-    Parameters
-    ----------
-    name : str
-       Name to check
-
-    Returns
-    -------
-    bool
-        true if name has that format
-    """
-    if (len(name) == 10):
-        if (datetime.datetime.strptime(name, '%Y%m%d%H')):
-            return 1
-    return 0
-
-#----------------------------------------------------------------------------
-def isYyyymmddhhmmss(name):
-    """Check if a string is of format yyyymmddhhmmss
-
-    Parameters
-    ----------
-    name : str
-       Name to check
-
-    Returns
-    -------
-    bool
-        true if name has that format
-    """
-    if (len(name) == 14):
-        if (datetime.datetime.strptime(name, '%Y%m%d%H%M%S')):
-            return 1
-    return 0
-
-#----------------------------------------------------------------------------
-#
-# filter a list of names to those that are dates of format yyyymmddhh
-#
-# names = list of names
-#
-# return filtered list
-#
-def datesWithHour(names):
-    """Filter a list down to elements that have format yyyymmdd
-
-    Parameters
-    ----------
-    names : list[str]
-        The names to filter
-
-    Returns
-    -------
-    list[str]
-        The filtered names
-    """
-    return [name for name in names if (isYyyymmddhh(name)==1)]
-
-    
-#----------------------------------------------------------------------------
-def getFileNames(aDir):
-   """Return the files in a directory that are not themselves subdirectories
-
-   Parameters
-   ----------
-   aDir: str
-      Full path directory name
-
-   Returns
-   -------
-   List[str]
-      the data files in the directory
-   """
-   return [name for name in os.listdir(aDir)
-           if not os.path.isdir(os.path.join(aDir, name))]
-
-#----------------------------------------------------------------------------
-def getImmediateSubdirectories(aDir):
-   """return the subdirectories of a directory
-
-   Parameters
-   ----------
-   aDir: str
-      Full path directory name
-
-   Returns
-   -------
-   list[str]
-      All subdirectories of the aDir
-
-   """
-
-   # does the dir exist?
-   if (not os.path.exists(aDir)):
-       return []
-
-   return [name for name in os.listdir(aDir)
-           if os.path.isdir(os.path.join(aDir, name))]
-
-#---------------------------------------------------------------------------
-def getYyyymmddhhSubdirectories(dir):
-   """return the 'yyyymmddhh' subdirectories of a directory
-
-   Parameters
-   ----------
-   aDir: str
-      Full path directory name
-
-   Returns
-   -------
-   list[str]
-      All subdirectories of the aDir that are of format 'yyyymmddhh'
-
-   """
-   names = getImmediateSubdirectories(dir)
-   return datesWithHour(names)
-
-#----------------------------------------------------------------------------
-def newestIssueTime(dir):
-    """return the subdirectory (yyyymmddhh) that is for the newest issue time
-
-    Parameters
-    ----------
-    dir : str
-       Directory with subdirectories
-
-    Returns
-    -------
-    str
-       The subdirectory with biggest issue time, or empty string
-    """       
-    names = getYyyymmddhhSubdirectories(dir)
-    if (not names):
-        return ""
-
-    names = sorted(names)
-    return names[-1]
-    
 #----------------------------------------------------------------------------
 def parmRead(fname):
     """ Read in a param file
@@ -463,7 +323,7 @@ class ForecastStatus:
         path += self._issue.strftime("%Y%m%d%H")
         if (os.path.isdir(path)):
             fname = self._valid.strftime("%Y%m%d%H%M") + ".LDASIN_DOMAIN1.nc"
-            names = getFileNames(path)
+            names = df.getFileNames(path)
             for n in names:
                 if (n == fname):
                     WhfLog.debug("Found %s in %s",  fname, path)
@@ -911,8 +771,8 @@ def main(argv):
 
     # query each directory to get newest thing, and update overall newest
     #WhfLog.debug("Looking in %s and %s", parms._hrrrDir, parms._rapDir)
-    newestT = newestIssueTime(parms._hrrrDir)
-    newestT2 = newestIssueTime(parms._rapDir)
+    newestT = df.newestIssueTime(parms._hrrrDir)
+    newestT2 = df.newestIssueTime(parms._rapDir)
     if (not newestT) and (not newestT2):
         WhfLog.debug("NO INPUT DATA available")
         return 0

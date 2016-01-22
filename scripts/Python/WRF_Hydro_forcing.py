@@ -12,12 +12,10 @@ import DataFiles as df
 import NCL_script_run as ncl
 from ForcingEngineError import NCLError
 from ForcingEngineError import FilenameMatchError
-from ForcingEngineError import MissingDataFileError
 from ForcingEngineError import MissingDirectoryError
 from ForcingEngineError import MissingFileError
 from ForcingEngineError import ZeroHourReplacementError
 from ForcingEngineError import UnrecognizedCommandError
-
 
 
 # -----------------------------------------------------
@@ -1375,12 +1373,8 @@ def replace_fcst0hr(parser, file_to_replace, product):
         else:
             # If we are here, we didn't find any file from a previous GFS model run...
             WhfLog.error("No previous GFS model runs found, exiting...")
-            raise MissingZeroHourFileError('No GFS file from previous RAP model run- premature scrubbing or inavailability of data') 
+            raise ZeroHourReplacementError('No GFS file from previous RAP model run- premature scrubbing or inavailability of data') 
           
-
-
-
-       
 def get_past_or_future_date(curr_date, num_days = -1):
     """   Determines the date in YMD format
           (i.e. YYYYMMDD) for the day before the specified date.
