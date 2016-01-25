@@ -12,6 +12,7 @@ from ForcingEngineError import UnrecognizedCommandError
 from ForcingEngineError import MissingFileError
 from ForcingEngineError import SystemCommandError
 from ForcingEngineError import NCLError
+from ForcingEngineError import ZeroHourReplacementError
 
 """Short_Range_Forcing
 Performs regridding,downscaling, bias
@@ -161,14 +162,13 @@ def forcing(configFile, action, prod, file, prod2=None, file2=None):
                         WhfLog.error("FAIL- cannot move finished file: %s", regridded_file) 
                         raise FilenameMatchError('File move failed, name format unexpected for file %s'%regridded_file)
 
-                else:
-                # Remove empty 0hr regridded file if it still exists
-                if os.path.exists(regridded_file):
-                    cmd = 'rm -rf ' + regridded_file
-                    status = os.system(cmd)
-                    if status != 0:
-                        WhfLog.error("Failure to remove empty file: " + regridded_file)
-                        raise SystemCommandError('Cleaning regridded files, failed to remove file %s'%regridded_file)
+                    # Remove empty 0hr regridded file if it still exists
+                    if os.path.exists(regridded_file):
+                        cmd = 'rm -rf ' + regridded_file
+                        status = os.system(cmd)
+                        if status != 0:
+                            WhfLog.error("Failure to remove empty file: " + regridded_file)
+                            raise SystemCommandError('Cleaning regridded files, failed to remove file %s'%regridded_file)
 
             else:
                 try: 

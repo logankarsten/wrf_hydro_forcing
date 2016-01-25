@@ -22,7 +22,7 @@ import Medium_Range_Forcing as mrf
 from ForcingEngineError import FilenameMatchError
 from ForcingEngineError import InvalidArgumentError
 from ForcingEngineError import SystemCommandError
-from ForcingEngineError import MissingDataFileError
+from ForcingEngineError import ZeroHourReplacementError
 
 #----------------------------------------------------------------------------
 def parmRead(fname, fileType):
@@ -136,8 +136,8 @@ def regrid(fname, fileType, configFile):
       else:
          WhfLog.info("ERROR REGRIDDING %s DATA, file=%s", fileType, fname)
          raise InvalidArgumentError("Unknown file type " + fileType)
-   except MissingDataFileError as e:
-      WhfLog.info("ERROR REGRIDDING: %s", e)
+   except ZeroHourReplacementError as z:
+      WhfLog.info("ERROR REGRIDDING: %s", z)
       WhfLog.info("Remove this forecast from state and continue")
       return
    except:

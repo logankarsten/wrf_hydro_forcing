@@ -288,9 +288,13 @@ class ForecastStep:
         """
         if (self._empty):
             return ""
-        ret = 's[%d] hr0[%d] hr3[%d] rp0[%d] rp3[%d] mrms[%d] lay[%d]' %
-        (self._step, self._hrrr0, self._hrrr3, self._rap0, self._rap3,
-         self._mrms, self._layered)
+        ret = 's[%d] hr0[%d] hr3[%d] rp0[%d] rp3[%d] mrms[%d] lay[%d]'%(self._step,
+                                                                        self._hrrr0,
+                                                                        self._hrrr3,
+                                                                        self._rap0,
+                                                                        self._rap3,
+                                                                        self._mrms,
+                                                                        self._layered)
         return ret
     
     def initializeContent(self, step):
