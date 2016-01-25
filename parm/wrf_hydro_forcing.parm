@@ -159,10 +159,10 @@ Short_Range_layering = ../NCL/combine.ncl
 [bias_correction]
 
 #CFSv2-specific
-CFS_correspond = /d4/karsten/DFE/IOC_TESTING/realtime/params/bias_correction/nldas_param_cfsv2_subset_grid_correspondence.nc
-CFS_tmp_dir = /d4/hydro-dm/IOC/realtime/bias_correction/CFSv2_tmp 
-CFS_bias_parm_dir = /d4/karsten/DFE/IOC_TESTING/realtime/params/bias_correction/cfs_climo 
-NLDAS_bias_parm_dir = /d4/karsten/DFE/IOC_TESTING/realtime/params/bias_correction/nldas_climo 
+CFS_correspond = /d4/hydro-dm/IOC/realtime/param/Long_Range/nldas_param_cfsv2_subset_grid_correspondence.nc
+CFS_tmp_dir = /d4/hydro-dm/IOC/realtime/downscaled/tmp
+CFS_bias_parm_dir = /d4/hydro-dm/IOC/realtime/param/Long_Range/climo/cfsv2
+NLDAS_bias_parm_dir = /d4/hydro-dm/IOC/realtime/param/Long_Range/climo/nldas2
 
 #-------------------------------------------------
 #    Parameters needed to run regridding scripts
@@ -195,8 +195,8 @@ RAP_output_dir = /d4/hydro-dm/IOC/realtime/regridded/RAP
 RAP_output_dir_0hr = /d4/hydro-dm/IOC/realtime/regridded/RAP_0hr 
 
 #CFSv2-specific
-CFS_wgt_bilinear = /d4/karsten/DFE/IOC_TESTING/realtime/params/regridding/CFS2HYDRO_d01_weight_bilinear.nc
-CFS_dst_grid_name = /d4/karsten/DFE/IOC_TESTING/realtime/params/regridding/geo_dst.nc 
+CFS_wgt_bilinear = /d4/hydro-dm/IOC/realtime/param/Long_Range/CFS2HYDRO_d01_weight_bilinear.nc
+CFS_dst_grid_name = /d4/hydro-dm/IOC/realtime/param/geo_em.d01.nc.conus_1km 
 
 #-------------------------------------------------
 #    Parameters needed to run downscaling scripts
@@ -247,8 +247,8 @@ RAP_finished_output_dir_0hr = /d4/hydro-dm/IOC/realtime/downscaled/RAP_0hr/final
 # CFS
 # Directories that contain distribution parameter files for CFS/NLDAS
 # In addition, output directory is specified here. 
-CFS_hgt_data = /d4/karsten/DFE/IOC_TESTING/realtime/params/downscaling/cfsa_hgt1km.nc 
-CFS_geo_data = /d4/karsten/DFE/IOC_TESTING/realtime/params/regridding/geo_dst.nc  
+CFS_hgt_data = /d4/hydro-dm/IOC/realtime/param/Long_Range/cfsa_hgt1km.nc 
+CFS_geo_data = /d4/hydro-dm/IOC/realtime/param/geo_em.d01.nc.conus_1km  
 
 #-------------------------------------------------
 #

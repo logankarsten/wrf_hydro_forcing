@@ -1,4 +1,4 @@
-import WRF_Hydro_forcing as whf
+import WRF_Hydro_forcing as Whf
 import WhfLog
 import os
 import sys
@@ -25,46 +25,43 @@ takes place.
 # Inputs to wrapper configuration are as follows:
 # 1.) CFSv2 file 
 
-def forcing(argv):
+def forcing(configFile,file_in):
     """ Args:
-        1.) file (string): The file name. The full path is 
+	1.) configFile (string): The config file with all 
+	    the settings.
+        2.) file (string): The file name. The full path is 
             not necessary as full paths will be derived from
             parameter directory paths and datetime information.
         Returns:
-        1.) Status (integer): Integer value indicating whether
-            downscaling was successful (0), or failed (1). All
-            errors will be written to the log file. 
+	None - Performs indicated bias correction, regridding,
+               and downscaling of CFSv2 data. Any errors are
+               trapped and passed back to the driver.
     """
-
-    file_in = ''
-    try:
-        opts, args = getopt.getopt(argv,"hi:",["file_in="])
-    except getopt.GetoptErr:
-        print 'Long_Range_Forcing.py -i <file_in>'
-        sys.exit(2)
-    for opt, arg in opts:
-        if opt == '-h':
-            print 'Long_Range_Forcing.py -i <file_in>'
-            sys.exit(0)
-        elif opt in ("-i", "--ifile"):
-            file_in = arg
 
     WhfLog.debug("file_in = %s", file_in)
 
     # Obtain CFSv2 forcing engine parameters.
     parser = SafeConfigParser()
-    parser.read('../../parm/wrf_hydro_forcing.parm')
+    parser.read(configFile)
 
-    # Set the NCL_DEF_LIB_DIR to indicate where ALL shared objects
-    # reside.
-    ncl_def_lib_dir = parser.get('default_env_vars','ncl_def_lib_dir')
-    ncl_def_lib_dir = os.environ["NCL_DEF_LIB_DIR"] = ncl_def_lib_dir
+    # Set up logging environments, etc.
+    forcing_config_label = "Long_Range"
+    try:
+	Whf.initial_setup(parser,forcing_config_label)
+    except:
+	raise
 
     out_dir = parser.get('layering','long_range_output') 
     tmp_dir = parser.get('bias_correction','CFS_tmp_dir')
 
+    try:
+	Whf.dir_exists(out_dir)
+	Whf.dir_exists(tmp_dir)
+    except MissingDirectoryError:
+	raise
+
     # Define CFSv2 cycle date and valid time based on file name.
-    (cycleYYYYMMDD,cycleHH,fcsthr,em) = whf.extract_file_info_cfs(file_in)
+    (cycleYYYYMMDD,cycleHH,fcsthr,em) = Whf.extract_file_info_cfs(file_in)
     em_str = str(em)
 
     # Establish datetime objects
@@ -87,17 +84,12 @@ def forcing(argv):
     out_path = out_dir + "/Member_" + em_str.zfill(2) + "/" + \
                dateCycleYYYYMMDDHH.strftime("%Y%m%d%H")
 
-    whf.mkdir_p(out_path)
+    try:
+    	Whf.mkdir_p(out_path)
+    except:
+	raise
 
-    # Establish log file unique to model cycle, time, and current time
-    # This will make it possible to diagnose potential issues that 
-    # arise with data forcing engine. 
-    #log_path = out_path + "/" + dateCycleYYYYMMDDHH.strftime('%Y%m%d%H') + \
-    #           "_" + dateFcstYYYYMMDDHH.strftime('%Y%m%d%H') + \
-    #           "_" + dateCurrent.strftime('%Y%m%d%H%M%S') + '_Long_Range.log' 
-
-
-    in_fcst_range = whf.is_in_fcst_range("CFSv2",fcsthr,parser)
+    in_fcst_range = Whf.is_in_fcst_range("CFSv2",fcsthr,parser)
 
     if in_fcst_range:
         # First, bias-correct CFSv2 data and generate hourly files 
@@ -105,8 +97,12 @@ def forcing(argv):
         WhfLog.info("Bias correcting for CFSv2 cycle: " + \
                      dateCycleYYYYMMDDHH.strftime('%Y%m%d%H') + \
                      " CFSv2 forecast time: " + dateFcstYYYYMMDDHH.strftime('%Y%m%d%H'))
-        whf.bias_correction('CFSv2',file_in,dateCycleYYYYMMDDHH,
-                            dateFcstYYYYMMDDHH,parser, em = em)
+        try:
+		Whf.bias_correction('CFSV2',file_in,dateCycleYYYYMMDDHH,
+                	            dateFcstYYYYMMDDHH,parser, em = em)
+	except (MissingFileError,NCLError):
+		raise
+
         # Second, regrid to the conus IOC domain
         # Loop through each hour in a six-hour CFSv2 forecast time step, compose temporary filename 
         # generated from bias-correction and call the regridding to go to the conus domain.
@@ -126,13 +122,20 @@ def forcing(argv):
             WhfLog.info("Regridding CFSv2 to conus domain for cycle: " + \
                          dateCycleYYYYMMDDHH.strftime('%Y%m%d%H') + \
                          " forecast time: " + dateTempYYYYMMDDHH.strftime('%Y%m%d%H'))
-            fileRegridded = whf.regrid_data("CFSv2",fileBiasCorrected,parser)
+	    try:
+            	fileRegridded = Whf.regrid_data("CFSV2",fileBiasCorrected,parser)
+	    except (MissingFileError,NCLError):
+		raise
+
             # Double check to make sure file was created, delete temporary bias-corrected file
-            whf.file_exists(fileRegridded)
+	    try:
+            	Whf.file_exists(fileRegridded)
+	    except MissingFileError:
+	 	raise	
             cmd = "rm -rf " + fileBiasCorrected
             status = os.system(cmd)
             if status != 0:
-                WhfLog.error("Failure to remove " + fileBiasCorrected)
+		raise SystemCommandError('Command %s failed.'%cmd)
 
   
         # Third, perform topography downscaling to generate final
@@ -150,27 +153,35 @@ def forcing(argv):
                                 "_regridded.M" + em_str.zfill(2) + ".nc"
             LDASIN_path_tmp = tmp_dir + "/" + dateTempYYYYMMDDHH.strftime('%Y%m%d%H') + "00.LDASIN_DOMAIN1.nc"
             LDASIN_path_final = out_path + "/" + dateTempYYYYMMDDHH.strftime('%Y%m%d%H') + "00.LDASIN_DOMAIN1"
-            whf.downscale_data("CFSv2",fileRegridded,parser, out_path=LDASIN_path_tmp, \
-                               verYYYYMMDDHH=dateTempYYYYMMDDHH)
+	    try:
+           	 Whf.downscale_data("CFSv2",fileRegridded,parser, out_path=LDASIN_path_tmp, \
+                	               verYYYYMMDDHH=dateTempYYYYMMDDHH)
+	    except (MissingFileError,FilenameMatchError,NCLError,SystemCommandError):
+		raise
             # Double check to make sure file was created, delete temporary regridded file
-            whf.file_exists(LDASIN_path_tmp)
+	    try:
+            	Whf.file_exists(LDASIN_path_tmp)
+	    except MissingFileError:
+		raise
             # Rename file to conform to WRF-Hydro expectations
             cmd = "mv " + LDASIN_path_tmp + " " + LDASIN_path_final
             status = os.system(cmd)
             if status != 0:
-                WhfLog.error("Failure to rename " + LDASIN_path_tmp)
-            whf.file_exists(LDASIN_path_final)
+		raise SystemCommandError('Command %s failed.'%cmd)
+	    try:
+            	Whf.file_exists(LDASIN_path_final)
+	    except MissingFileError:
+	    	raise
             cmd = "rm -rf " + fileRegridded
             status = os.system(cmd)
             if status != 0:
-                WhfLog.error("Failure to remove " + fileRegridded)
-        
-        # Exit gracefully with an exit status of 0
-        sys.exit(0)
+		raise SystemCommandError('Command %s failed.'%cmd)
+       
+	WhfLog.info("Long_Range processing for " + cycleYYYYMMDD + cycleHH + " " + \
+	            " Forecast Hour: " + fcsthr + " Ensemble: " + em_str) 
     else:
         # Skip processing this file. Exit gracefully with a 0 exit status.
-        WhfLog.info('Requested file is outside max fcst for CFSv2')
-        sys.exit(0)
+        WhfLog.info("Requested file is outside max fcst for CFSv2")
 
 if __name__ == "__main__":
     forcing(sys.argv[1:])
