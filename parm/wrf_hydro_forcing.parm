@@ -27,6 +27,7 @@
 #   ERROR - more serious problem, code cannot perform its task
 #   CRITICAL -  serious error, the code may not be able to continue running
 forcing_engine_log_level=DEBUG
+forcing_engine_log_dir=/d4/hydro-dm/IOC/forcing_engine/log
 
 
 #--------------------------------------------------
