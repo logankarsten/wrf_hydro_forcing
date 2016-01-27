@@ -73,7 +73,6 @@ def regrid_data( product_name, file_to_regrid, parser, substitute_fcst = False, 
 
     """
 
-
     # Retrieve the values from the parm/config file
     # which are needed to invoke the regridding 
     # scripts.
@@ -289,7 +288,6 @@ def get_filepaths(dir):
             else:
                 continue
     return file_paths
-
 
 
     
@@ -547,7 +545,6 @@ def downscale_data(product_name, file_to_downscale, parser, downscale_shortwave=
         else:
 
             if not file_to_downscale:
-                print "Here it is!!!"
                 WhfLog.debug("No File to downscale!!!")
                 raise MissingFileError('No file to downscale')
 
@@ -1047,66 +1044,9 @@ def layer_data(parser, first_data, second_data, first_data_product, second_data_
         
     
     
-def read_input():
-    """Read in the command line arguments
-       Uses optparse, which is available for Python 2.6
-       (currently used in WCOSS)
- 
-       Args:
-           None
-       Returns:
-          Tuple:
-             opts (list): The list of options supplied by user
-             args (list): The list of positional arguments 
-    """
-
-
-    parser = optparse.OptionParser()
-    parser.add_option('--regrid', help='regrid and downscale',\
-                  dest='r_d_bool', default=False, action='store_true')
-    parser.add_option('--bias', help='bias correction', dest='bias_bool',\
-                  default=False, action='store_true')
-    parser.add_option('--layer', help='layer', dest='layer_bool',\
-                  default=False, action='store_true')
-
-    # tell optparse to store option's arg in specified destination
-    # member of opts
-    parser.add_option('--prod', help='data product', dest='data_prod',\
-                       action='store')
-    parser.add_option('--prod2', help='second data product \
-                      (for layering and bias correction)', dest='data_prod2',\
-                       action='store')
-    parser.add_option('--File', help='file name',dest='file_name',\
-                      action='store', nargs=1)
-    parser.add_option('--File2', help='second file name \
-                       (for layering and bias correction)',dest='file_name2',\
-                        action='store', nargs=1)
-    (opts,args) = parser.parse_args()
-
-    # Making sure all necessary options appeared
-    if opts.layer_bool:
-        if (opts.data_prod and not opts.data_prod2):
-            print "Layering requires two data products"
-            parser.print_help()
-        elif (opts.file_name and not opts.file_name2) :
-            print "Layering requires two input files"
-            parser.print_help()
-
-    if opts.r_d_bool:
-        print "Regrid and downscale requested"
-        if(not opts.data_prod or not opts.file_name):
-            print "Regrid (& downscale) requires one data product \
-                   and one file name"
-            parser.print_help()
-        else:
-            print "data prod: %s"%opts.data_prod
-            print "filename: %s"%opts.file_name
-
-    return (opts,args)
-
 
 def initial_setup(parser,forcing_config_label):
-    """  Set up any environment variables, logging levels, etc.
+    """  Set up any environment variables, etc.
          before any processing begins.
 
          Args:
