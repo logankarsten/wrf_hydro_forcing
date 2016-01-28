@@ -63,12 +63,11 @@ def forcing(configFile, action, prod, file, prod2=None, file2=None):
     # Read the parameters from the config/param file.
     parser = SafeConfigParser()
     parser.read(configFile)
+    forcing_config_label = "Short Range"
 
-    # Set up logging, environments, etc.
-    forcing_config_label = "Short_Range"
     try:
         whf.initial_setup(parser,forcing_config_label)
-    except Exception:
+    except Exception as e:
         raise
 
 
