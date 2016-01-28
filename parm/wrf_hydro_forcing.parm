@@ -26,8 +26,8 @@
 #            code is still working as expected.
 #   ERROR - more serious problem, code cannot perform its task
 #   CRITICAL -  serious error, the code may not be able to continue running
-forcing_engine_log_level=DEBUG
-forcing_engine_log_dir=/d4/hydro-dm/IOC/forcing_engine/log
+forcing_engine_log_level= DEBUG
+forcing_engine_log_dir= /d4/hydro-dm/IOC/forcing_engine/log
 
 
 #--------------------------------------------------
@@ -119,7 +119,8 @@ analysis_assim_layering_state_file = ./State.AnalysisAssimLayering.txt
 # ESMF, NCL
 esmf_exe=/usr/local/esmf
 # Use version 6.3.0 for latest grib tables
-ncl_exe = /opt/ncl-6.3.0/bin/ncl
+# in hydro-c1, /opt/ncl is soft-linked to ncl-6.3.0
+ncl_exe = /opt/ncl/bin/ncl
 
 # Bias correction
 CFS_bias_correct_mod = /d4/hydro-dm/IOC/forcing_engine/NCL/CFSv2_bias_correct_mod.ncl
