@@ -27,7 +27,7 @@
 #   ERROR - more serious problem, code cannot perform its task
 #   CRITICAL -  serious error, the code may not be able to continue running
 forcing_engine_log_level= DEBUG
-forcing_engine_log_dir= /d4/hydro-dm/IOC/forcing_engine/log
+forcing_engine_log_dir= /d4/hydro-dm/IOC_TESTING/forcing_engine/log
 
 
 #--------------------------------------------------
@@ -48,7 +48,7 @@ ncarg_root = /opt/ncl
 # https://www.ncl.ucar.edu/Document/Tools/WRAPIT.shtml
 #
 
-ncl_def_lib_dir = /d4/hydro-dm/IOC/ncl_shared_objs
+ncl_def_lib_dir = /d4/hydro-dm/IOC/forcing_engine/shared_objs
 
 #-------------------------------------------------
 #   Data Directories
