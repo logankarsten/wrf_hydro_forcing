@@ -5,6 +5,11 @@ import sys
 import datetime
 import getopt
 from ConfigParser import SafeConfigParser
+from ForcingEngineError import MissingFileError
+from ForcingEngineError import MissingDirectoryError
+from ForcingEngineError import NCLError  
+from ForcingEngineError import SystemCommandError
+from ForcingEngineError import FilenameMatchError
 
 """Long_Range_Forcing
 Performs multi-step process of applying bias-correction to CFSv2 using
@@ -47,18 +52,18 @@ def forcing(configFile,file_in):
     # Set up logging environments, etc.
     forcing_config_label = "Long_Range"
     try:
-	Whf.initial_setup(parser,forcing_config_label)
+        Whf.initial_setup(parser,forcing_config_label)
     except:
-	raise
+        raise
 
     out_dir = parser.get('layering','long_range_output') 
     tmp_dir = parser.get('bias_correction','CFS_tmp_dir')
 
     try:
-	Whf.dir_exists(out_dir)
-	Whf.dir_exists(tmp_dir)
+        Whf.dir_exists(out_dir)
+        Whf.dir_exists(tmp_dir)
     except MissingDirectoryError:
-	raise
+        raise
 
     # Define CFSv2 cycle date and valid time based on file name.
     (cycleYYYYMMDD,cycleHH,fcsthr,em) = Whf.extract_file_info_cfs(file_in)
@@ -85,9 +90,9 @@ def forcing(configFile,file_in):
                dateCycleYYYYMMDDHH.strftime("%Y%m%d%H")
 
     try:
-    	Whf.mkdir_p(out_path)
+        Whf.mkdir_p(out_path)
     except:
-	raise
+        raise
 
     in_fcst_range = Whf.is_in_fcst_range("CFSv2",fcsthr,parser)
 
@@ -98,10 +103,10 @@ def forcing(configFile,file_in):
                      dateCycleYYYYMMDDHH.strftime('%Y%m%d%H') + \
                      " CFSv2 forecast time: " + dateFcstYYYYMMDDHH.strftime('%Y%m%d%H'))
         try:
-		Whf.bias_correction('CFSV2',file_in,dateCycleYYYYMMDDHH,
-                	            dateFcstYYYYMMDDHH,parser, em = em)
-	except (MissingFileError,NCLError):
-		raise
+            Whf.bias_correction('CFSV2',file_in,dateCycleYYYYMMDDHH,
+                                dateFcstYYYYMMDDHH,parser, em = em)
+        except (MissingFileError,NCLError):
+            raise
 
         # Second, regrid to the conus IOC domain
         # Loop through each hour in a six-hour CFSv2 forecast time step, compose temporary filename 
@@ -122,16 +127,16 @@ def forcing(configFile,file_in):
             WhfLog.info("Regridding CFSv2 to conus domain for cycle: " + \
                          dateCycleYYYYMMDDHH.strftime('%Y%m%d%H') + \
                          " forecast time: " + dateTempYYYYMMDDHH.strftime('%Y%m%d%H'))
-	    try:
-            	fileRegridded = Whf.regrid_data("CFSV2",fileBiasCorrected,parser)
-	    except (MissingFileError,NCLError):
-		raise
+            try:
+                fileRegridded = Whf.regrid_data("CFSV2",fileBiasCorrected,parser)
+            except (MissingFileError,NCLError):
+                raise
 
             # Double check to make sure file was created, delete temporary bias-corrected file
-	    try:
-            	Whf.file_exists(fileRegridded)
-	    except MissingFileError:
-	 	raise	
+            try:
+                Whf.file_exists(fileRegridded)
+            except MissingFileError:
+                raise	
             cmd = "rm -rf " + fileBiasCorrected
             status = os.system(cmd)
             if status != 0:
@@ -153,29 +158,29 @@ def forcing(configFile,file_in):
                                 "_regridded.M" + em_str.zfill(2) + ".nc"
             LDASIN_path_tmp = tmp_dir + "/" + dateTempYYYYMMDDHH.strftime('%Y%m%d%H') + "00.LDASIN_DOMAIN1.nc"
             LDASIN_path_final = out_path + "/" + dateTempYYYYMMDDHH.strftime('%Y%m%d%H') + "00.LDASIN_DOMAIN1"
-	    try:
-           	 Whf.downscale_data("CFSv2",fileRegridded,parser, out_path=LDASIN_path_tmp, \
-                	               verYYYYMMDDHH=dateTempYYYYMMDDHH)
-	    except (MissingFileError,FilenameMatchError,NCLError,SystemCommandError):
-		raise
+            try:
+                Whf.downscale_data("CFSv2",fileRegridded,parser, out_path=LDASIN_path_tmp, \
+                                   verYYYYMMDDHH=dateTempYYYYMMDDHH)
+            except (MissingFileError,FilenameMatchError,NCLError,SystemCommandError):
+                raise
             # Double check to make sure file was created, delete temporary regridded file
-	    try:
-            	Whf.file_exists(LDASIN_path_tmp)
-	    except MissingFileError:
-		raise
+            try:
+                Whf.file_exists(LDASIN_path_tmp)
+            except MissingFileError:
+                raise
             # Rename file to conform to WRF-Hydro expectations
             cmd = "mv " + LDASIN_path_tmp + " " + LDASIN_path_final
             status = os.system(cmd)
             if status != 0:
-		raise SystemCommandError('Command %s failed.'%cmd)
-	    try:
-            	Whf.file_exists(LDASIN_path_final)
-	    except MissingFileError:
-	    	raise
+                raise SystemCommandError('Command %s failed.'%cmd)
+            try:
+                Whf.file_exists(LDASIN_path_final)
+            except MissingFileError:
+                raise
             cmd = "rm -rf " + fileRegridded
             status = os.system(cmd)
             if status != 0:
-		raise SystemCommandError('Command %s failed.'%cmd)
+                raise SystemCommandError('Command %s failed.'%cmd)
        
 	WhfLog.info("Long_Range processing for " + cycleYYYYMMDD + cycleHH + " " + \
 	            " Forecast Hour: " + fcsthr + " Ensemble: " + em_str) 
