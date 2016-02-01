@@ -4,6 +4,7 @@ import os
 import sys
 import datetime
 import getopt
+import DataFiles as df
 from ConfigParser import SafeConfigParser
 from ForcingEngineError import MissingFileError
 from ForcingEngineError import MissingDirectoryError
@@ -59,11 +60,10 @@ def forcing(configFile,file_in):
     out_dir = parser.get('layering','long_range_output') 
     tmp_dir = parser.get('bias_correction','CFS_tmp_dir')
 
-    try:
-        Whf.dir_exists(out_dir)
-        Whf.dir_exists(tmp_dir)
-    except MissingDirectoryError:
-        raise
+    if (not df.makeDirIfNeeded(out_dir)):
+        raise MissingDirectoryError('Dir %s cannot be created', out_dir)
+    if (not df.makeDirIfNeeded(tmp_dir)):
+        raise MissingDirectoryError('Dir %s cannot be created', tmp_dir)
 
     # Define CFSv2 cycle date and valid time based on file name.
     (cycleYYYYMMDD,cycleHH,fcsthr,em) = Whf.extract_file_info_cfs(file_in)
@@ -182,8 +182,8 @@ def forcing(configFile,file_in):
             if status != 0:
                 raise SystemCommandError('Command %s failed.'%cmd)
        
-	WhfLog.info("Long_Range processing for " + cycleYYYYMMDD + cycleHH + " " + \
-	            " Forecast Hour: " + fcsthr + " Ensemble: " + em_str) 
+	WhfLog.info("Long_Range processing for %s%d Forecast Hour: %d Ensemble: %s",
+                cycleYYYYMMDD, cycleHH, fcsthr, em_str)
     else:
         # Skip processing this file. Exit gracefully with a 0 exit status.
         WhfLog.info("Requested file is outside max fcst for CFSv2")

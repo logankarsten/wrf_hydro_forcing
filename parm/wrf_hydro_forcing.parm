@@ -27,7 +27,7 @@
 #   ERROR - more serious problem, code cannot perform its task
 #   CRITICAL -  serious error, the code may not be able to continue running
 forcing_engine_log_level= DEBUG
-forcing_engine_log_dir= /d4/hydro-dm/IOC_TESTING/forcing_engine/log
+forcing_engine_log_dir= /d4/hydro-dm/DAVE_TESTING/forcing_engine/log
 
 
 #--------------------------------------------------
@@ -171,28 +171,28 @@ NLDAS_bias_parm_dir = /d4/karsten/DFE/IOC_TESTING/realtime/params/bias_correctio
 [regridding]
 
 #HRRR-specific
-HRRR_wgt_bilinear  = /d4/hydro-dm/IOC/forcing_engine/weighting_files/HRRR2HYDRO_d01_weight_bilinear.nc
+HRRR_wgt_bilinear  = /d4/hydro-dm/IOC/forcing_engine/weighting_files/regridding/HRRR2HYDRO_d01_weight_bilinear.nc
 HRRR_dst_grid_name = /d4/hydro-dm/IOC/forcing_engine/weighting_files/regridding/geo_dst.nc
-HRRR_output_dir = /d4/hydro-dm/IOC_TESTING/regridded/HRRR 
-HRRR_output_dir_0hr = /d4/hydro-dm/IOC_TESTING/regridded/HRRR_0hr 
+HRRR_output_dir = /d4/hydro-dm/DAVE_TESTING/regridded/HRRR 
+HRRR_output_dir_0hr = /d4/hydro-dm/DAVE_TESTING/regridded/HRRR_0hr 
 
 #MRMS-specific
-MRMS_wgt_bilinear =  /d4/hydro-dm/IOC/forcing_engine/weighting_files/RADAR2HYDRO_d01_weight_bilinear.nc
+MRMS_wgt_bilinear =  /d4/hydro-dm/IOC/forcing_engine/weighting_files/regridding/RADAR2HYDRO_d01_weight_bilinear.nc
 MRMS_dst_grid_name = /d4/hydro-dm/IOC/forcing_engine/weighting_files/regridding/geo_dst.nc
-MRMS_output_dir = /d4/hydro-dm/IOC_TESTING/regridded/MRMS 
-MRMS_finished_output_dir = /d4/hydro-dm/IOC_TESTING/downscaled/MRMS/final 
+MRMS_output_dir = /d4/hydro-dm/DAVE_TESTING/regridded/MRMS 
+MRMS_finished_output_dir = /d4/hydro-dm/DAVE_TESTING/downscaled/MRMS/final 
 
 #GFS-specific
 #For GFS_0.25 data
 GFS_wgt_bilinear = /d4/hydro-dm/IOC/forcing_engine/weighting_files/regridding/GFS2HYDRO_d01_weight_bilinear.nc
 GFS_dst_grid_name = /d4/hydro-dm/IOC/forcing_engine/weighting_files/regridding/geo_dst.nc 
-GFS_output_dir = /d4/hydro-dm/IOC_TESTING/regridded/GFS 
+GFS_output_dir = /d4/hydro-dm/DAVE_TESTING/regridded/GFS 
 
 #RAP-specific
 RAP_wgt_bilinear = /d4/hydro-dm/IOC/forcing_engine/weighting_files/regridding/RAP2HYDRO_d01_weight_bilinear.nc
 RAP_dst_grid_name = /d4/hydro-dm/IOC/forcing_engine/weighting_files/regridding/geo_dst.nc 
-RAP_output_dir = /d4/hydro-dm/IOC_TESTING/regridded/RAP 
-RAP_output_dir_0hr = /d4/hydro-dm/IOC_TESTING/regridded/RAP_0hr 
+RAP_output_dir = /d4/hydro-dm/DAVE_TESTING/regridded/RAP 
+RAP_output_dir_0hr = /d4/hydro-dm/DAVE_TESTING/regridded/RAP_0hr 
 
 #CFSv2-specific
 CFS_wgt_bilinear = /d4/hydro-dm/IOC/forcing_engine/weighting_files/regridding/CFS2HYDRO_d01_weight_bilinear.nc
@@ -213,36 +213,36 @@ lapse_rate_file = /d4/hydro-dm/IOC/forcing_engine/weighting_files/downscaling/NA
 # HRRR
 # Currently, this is NAM227, as required by NCEP
 # Directory where regridded HRRR data to BE DOWNSCALED is located
-HRRR_data_to_downscale = /d4/hydro-dm/IOC_TESTING/regridded/HRRR
+HRRR_data_to_downscale = /d4/hydro-dm/DAVE_TESTING/regridded/HRRR
 HRRR_hgt_data = /d4/hydro-dm/IOC/forcing_engine/weighting_files/downscaling/HRRRhgt.nc
 HRRR_geo_data = /d4/hydro-dm/IOC/forcing_engine/weighting_files/regridding/geo_dst.nc 
 # Directory where downscaled data should be saved
-HRRR_downscale_output_dir = /d4/hydro-dm/IOC_TESTING/downscaled/HRRR/staging 
-HRRR_downscale_output_dir_0hr = /d4/hydro-dm/IOC_TESTING/downscaled/downscaled/HRRR_0hr/staging 
-HRRR_finished_output_dir = /d4/hydro-dm/IOC_TESTING/downscaled/HRRR/final
-HRRR_finished_output_dir_0hr = /d4/hydro-dm/IOC_TESTING/downscaled/HRRR_0hr/final
+HRRR_downscale_output_dir = /d4/hydro-dm/DAVE_TESTING/downscaled/HRRR/staging 
+HRRR_downscale_output_dir_0hr = /d4/hydro-dm/DAVE_TESTING/downscaled/downscaled/HRRR_0hr/staging 
+HRRR_finished_output_dir = /d4/hydro-dm/DAVE_TESTING/downscaled/HRRR/final
+HRRR_finished_output_dir_0hr = /d4/hydro-dm/DAVE_TESTING/downscaled/HRRR_0hr/final
 
 # GFS 
 # Currently GFS 0.25 degree data
 # Directory where regridded GFS data to BE DOWNSCALED is located
-GFS_data_to_downscale = /d4/hydro-dm/IOC_TESTING/regridded/GFS  
+GFS_data_to_downscale = /d4/hydro-dm/DAVE_TESTING/regridded/GFS  
 GFS_hgt_data = /d4/hydro-dm/IOC/forcing_engine/weighting_files/downscaling/GFShgt.nc
 GFS_geo_data = /d4/hydro-dm/IOC/forcing_engine/weighting_files/regridding/geo_dst.nc 
 # Directory where downscaled data should be saved
-GFS_downscale_output_dir = /d4/hydro-dm/IOC_TESTING/downscaled/GFS/staging 
-GFS_finished_output_dir = /d4/hydro-dm/IOC_TESTING/downscaled/GFS/final
+GFS_downscale_output_dir = /d4/hydro-dm/DAVE_TESTING/downscaled/GFS/staging 
+GFS_finished_output_dir = /d4/hydro-dm/DAVE_TESTING/downscaled/GFS/final
 
 
 # RAP
 # Directory where regridded RAP data to BE DOWNSCALED is located
-RAP_data_to_downscale = /d4/hydro-dm/IOC_TESTING/regridded/RAP 
+RAP_data_to_downscale = /d4/hydro-dm/DAVE_TESTING/regridded/RAP 
 RAP_hgt_data = /d4/karsten/DFE/IOC_TESTING/realtime/params/downscaling/RAPhgt.nc
 RAP_geo_data = /d4/hydro-dm/IOC/forcing_engine/weighting_files/regridding/geo_dst.nc 
 # Directory where downscaled data should be saved
-RAP_downscale_output_dir = /d4/hydro-dm/IOC_TESTING/downscaled/RAP/staging 
-RAP_downscale_output_dir_0hr = /d4/hydro-dm/IOC_TESTING/downscaled/RAP_0hr/staging
-RAP_finished_output_dir = /d4/hydro-dm/IOC_TESTING/downscaled/RAP/final 
-RAP_finished_output_dir_0hr = /d4/hydro-dm/IOC_TESTING/downscaled/RAP_0hr/final
+RAP_downscale_output_dir = /d4/hydro-dm/DAVE_TESTING/downscaled/RAP/staging 
+RAP_downscale_output_dir_0hr = /d4/hydro-dm/DAVE_TESTING/downscaled/RAP_0hr/staging
+RAP_finished_output_dir = /d4/hydro-dm/DAVE_TESTING/downscaled/RAP/final 
+RAP_finished_output_dir_0hr = /d4/hydro-dm/DAVE_TESTING/downscaled/RAP_0hr/final
 
 # CFS
 # Directories that contain distribution parameter files for CFS/NLDAS
@@ -260,17 +260,17 @@ CFS_geo_data = /d4/hydro-dm/IOC/forcing_engine/weighting_files/regridding/geo_ds
 #-------------------------------------------------
 [layering]
 
-short_range_primary = /d4/hydro-dm/IOC_TESTING/downscaled/HRRR/final 
+short_range_primary = /d4/hydro-dm/DAVE_TESTING/downscaled/HRRR/final 
 
-short_range_secondary = /d4/hydro-dm/IOC_TESTING/downscaled/RAP/final 
+short_range_secondary = /d4/hydro-dm/DAVE_TESTING/downscaled/RAP/final 
 
 
-analysis_assimilation_tmp = /d4/hydro-dm/IOC_TESTING/downscaled/tmp 
-analysis_assimilation_output = /d4/hydro-dm/IOC_TESTING/final/Anal_Assim 
-qpe_combine_parm_dir = /d4/hydro-dm/IOC_TESTING/params/layering/combine_params
+analysis_assimilation_tmp = /d4/hydro-dm/DAVE_TESTING/downscaled/tmp 
+analysis_assimilation_output = /d4/hydro-dm/DAVE_TESTING/final/Anal_Assim 
+qpe_combine_parm_dir = /d4/hydro-dm/DAVE_TESTING/params/layering/combine_params
 
-short_range_output = /d4/hydro-dm/IOC_TESTING/final/Short_Range
+short_range_output = /d4/hydro-dm/DAVE_TESTING/final/Short_Range
 
-medium_range_output = /d4/hydro-dm/IOC_TESTING/final/Medium_Range
+medium_range_output = /d4/hydro-dm/DAVE_TESTING/final/Medium_Range
 
-long_range_output =  /d4/hydro-dm/IOC_TESTING/final/Long_Range
+long_range_output =  /d4/hydro-dm/DAVE_TESTING/final/Long_Range

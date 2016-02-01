@@ -16,7 +16,7 @@ import WhfLog
 import DataFiles as df
 import Long_Range_Forcing as lrf
 from ConfigParser import SafeConfigParser
-from ForcingEngineError import FileNameMatchError
+from ForcingEngineError import FilenameMatchError
 from ForcingEngineError import InvalidArgumentError
 
 #----------------------------------------------------------------------------
@@ -51,11 +51,13 @@ def parmRead(fname):
    return parms
 
 #----------------------------------------------------------------------------
-def regridCFS(cfsFname):
+def regridCFS(parmFile, cfsFname):
    """Invoke CFS regridding (see Long_Range_Forcing.py)
 
    Parameters
    ----------
+   parmFile : str
+      name of param file
    fname: str
       name of file to regrid and downscale, with yyyymmdd parent dir
 
@@ -65,13 +67,13 @@ def regridCFS(cfsFname):
 
    """
    WhfLog.info("REGRIDDING CFS DATA, file=%s", cfsFname)
-   cmd = "python Long_Range_Forcing.py -i "
-   cmd += cfsFname
-   WhfLog.info("command: %s", cmd)
-   ret = os.system(cmd)
-   WhfLog.info("DONE REGRIDDING CFS DATA, file=%s, return status=%d",
-               cfsFname, ret)
-
+   try:
+      lrf.forcing(parmFile, cfsFname)    
+   except:
+      WhfLog.info("ERROR REGRIDDING CFS DATA, file=%s", cfsFname)
+      raise
+      
+   WhfLog.info("DONE REGRIDDING CFS DATA, file=%s", cfsFname)
 
 #----------------------------------------------------------------------------
 class Parms:
@@ -288,7 +290,7 @@ class State:
             try:
                df0 = df.DataFile(sname, 'CFS')
                df1 = df.DataFile(fnames[-1], 'CFS')
-            except FileNameMatchError as fe:
+            except FilenameMatchError as fe:
                WhfLog.debug("Skipping file use due to %s", fe)
             except InvalidArgumentError as ie:
                WhfLog.debug("Skipping file use due to %s", ie)
@@ -396,7 +398,7 @@ def main(argv):
 
     # read in fixed main params
     parms = parmRead(configFile)
-    parms.debugPrint()
+    #parms.debugPrint()
 
     #if there is not a state file, create one now using newest
     if (not os.path.exists(parms._stateFile)):
@@ -421,7 +423,7 @@ def main(argv):
     # Same with CFS
     toProcess = state.updateWithNew(cfs, parms._hoursBackCfs)
     for f in toProcess:
-        regridCFS(f)
+        regridCFS(configFile, f)
 
     # write out state and exit
     #state.debugPrint()
