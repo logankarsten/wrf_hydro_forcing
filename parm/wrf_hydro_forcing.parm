@@ -172,13 +172,13 @@ NLDAS_bias_parm_dir = /d4/karsten/DFE/IOC_TESTING/realtime/params/bias_correctio
 
 #HRRR-specific
 HRRR_wgt_bilinear  = /d4/hydro-dm/IOC/forcing_engine/weighting_files/HRRR2HYDRO_d01_weight_bilinear.nc
-HRRR_dst_grid_name = /d4/hydro-dm/IOC/forcing_engine/weighting_files/geo_dst.nc
+HRRR_dst_grid_name = /d4/hydro-dm/IOC/forcing_engine/weighting_files/regridding/geo_dst.nc
 HRRR_output_dir = /d4/hydro-dm/IOC_TESTING/regridded/HRRR 
 HRRR_output_dir_0hr = /d4/hydro-dm/IOC_TESTING/regridded/HRRR_0hr 
 
 #MRMS-specific
 MRMS_wgt_bilinear =  /d4/hydro-dm/IOC/forcing_engine/weighting_files/RADAR2HYDRO_d01_weight_bilinear.nc
-MRMS_dst_grid_name = /d4/hydro-dm/IOC/forcing_engine/weighting_files/geo_dst.nc
+MRMS_dst_grid_name = /d4/hydro-dm/IOC/forcing_engine/weighting_files/regridding/geo_dst.nc
 MRMS_output_dir = /d4/hydro-dm/IOC_TESTING/regridded/MRMS 
 MRMS_finished_output_dir = /d4/hydro-dm/IOC_TESTING/downscaled/MRMS/final 
 
