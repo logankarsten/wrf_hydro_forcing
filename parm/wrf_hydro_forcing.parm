@@ -161,8 +161,8 @@ Short_Range_layering = /d4/hydro-dm/IOC/forcing_engine/NCL/combine.ncl
 #CFSv2-specific
 CFS_correspond = /d4/karsten/DFE/IOC_TESTING/realtime/params/bias_correction/nldas_param_cfsv2_subset_grid_correspondence.nc
 CFS_tmp_dir = /d4/karsten/DFE/IOC_TESTING/realtime/bias_correction/CFSv2_tmp 
-CFS_bias_parm_dir = /d4/karsten/DFE/IOC_TESTING/realtime/params/bias_correction/cfs_climo 
-NLDAS_bias_parm_dir = /d4/karsten/DFE/IOC_TESTING/realtime/params/bias_correction/nldas_climo 
+CFS_bias_parm_dir = /d4/hydro-dm/IOC/forcing_engine/weighting/bias_correction/cfs_climo 
+NLDAS_bias_parm_dir = /d4/hydro-dm/IOC/forcing_engine/weighting/bias_correction/nldas_climo 
 
 #-------------------------------------------------
 #    Parameters needed to run regridding scripts
