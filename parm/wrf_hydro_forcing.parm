@@ -236,7 +236,7 @@ GFS_finished_output_dir = /d4/hydro-dm/IOC_TESTING/downscaled/GFS/final
 # RAP
 # Directory where regridded RAP data to BE DOWNSCALED is located
 RAP_data_to_downscale = /d4/hydro-dm/IOC_TESTING/regridded/RAP 
-RAP_hgt_data = /d4/karsten/DFE/IOC_TESTING/realtime/params/downscaling/RAPhgt.nc
+RAP_hgt_data = /d4/hydro-dm/IOC/forcing_engine/weighting_files/downscaling/RAPhgt.nc
 RAP_geo_data = /d4/hydro-dm/IOC/forcing_engine/weighting_files/regridding/geo_dst.nc 
 # Directory where downscaled data should be saved
 RAP_downscale_output_dir = /d4/hydro-dm/IOC_TESTING/downscaled/RAP/staging 
