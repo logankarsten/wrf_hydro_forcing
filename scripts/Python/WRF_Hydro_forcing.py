@@ -913,7 +913,6 @@ def bias_correction(product_name,file_in,cycleYYYYMMDDHH,fcstYYYYMMDDHH,
                       '"' + "' " + \
                       "'prevYYYYMMDDHH=" + '"' + prevYYYYMMDDHH.strftime("%Y%m%d%H") + \
                       '"' + "' " + \
-                      "'modFile=" + '"' + CFS_bias_mod + '"' + "' " + \
                       "'corrFile=" + '"' + CFS_corr_file + '"' + "' " + \
                       "'fileInPrev=" + '"' + file_in_path_prev + '"' + "' " + \
                       "'em=" + '"' + em_str + '"' + "' "  
