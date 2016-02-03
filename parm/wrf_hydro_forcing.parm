@@ -35,9 +35,9 @@ forcing_engine_log_dir= /d4/hydro-dm/IOC_TESTING/forcing_engine/log
 #-------------------------------------------------
 
 [default_env_vars]
-ncarg_root = /opt/ncl
-# Use 6.3.0 so the grib tables are up-to-date for reading MRMS
-#ncarg_root = /opt/ncl-6.3.0
+# Feb,3, 2016, per Tor's instructions:
+# Don't forget to put /opt/ncl-gcc-6.3.0/bin in your path
+ncarg_root = /opt/ncl-gcc-6.3.0
 
 # Set the NCL_DEF_LIB_DIR environment variable where all the
 # shared objects reside, used with WRAPIT to call a Fortran
@@ -119,8 +119,9 @@ analysis_assim_layering_state_file = ./State.AnalysisAssimLayering.txt
 # ESMF, NCL
 esmf_exe=/usr/local/esmf
 # Use version 6.3.0 for latest grib tables
-# in hydro-c1, /opt/ncl is soft-linked to ncl-6.3.0
-ncl_exe = /opt/ncl/bin/ncl
+# in hydro-c1; use the version built without 
+# linking to GDAL
+ncl_exe = /opt/ncl-gcc-6.3.0/bin
 
 # Bias correction
 CFS_bias_correct_mod = /d4/hydro-dm/IOC/forcing_engine/NCL/CFSv2_bias_correct_mod.ncl
