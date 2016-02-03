@@ -124,7 +124,8 @@ ncl_exe = /opt/ncl/bin/ncl
 
 # Bias correction
 CFS_bias_correct_mod = /d4/hydro-dm/IOC/forcing_engine/NCL/CFSv2_bias_correct_mod.ncl
-CFS_bias_correct_exe = /d4/hydro-dm/IOC/forcing_engine/NCL/CFSv2_bias_correct.ncl
+CFS_bias_correct_exe = /d4/karsten/DFE/wrf_hydro_forcing/scripts/NCL/CFSv2_bias_correct.ncl
+#CFS_bias_correct_exe = /d4/hydro-dm/IOC/forcing_engine/NCL/CFSv2_bias_correct.ncl
 
 # Regridding
 HRRR_regridding_exe = /d4/hydro-dm/IOC/forcing_engine/NCL/HRRR-2-WRF_Hydro_ESMF_regrid.ncl
@@ -159,10 +160,10 @@ Short_Range_layering = /d4/hydro-dm/IOC/forcing_engine/NCL/combine.ncl
 [bias_correction]
 
 #CFSv2-specific
-CFS_correspond = /d4/karsten/DFE/IOC_TESTING/realtime/params/bias_correction/nldas_param_cfsv2_subset_grid_correspondence.nc
-CFS_tmp_dir = /d4/karsten/DFE/IOC_TESTING/realtime/bias_correction/CFSv2_tmp 
-CFS_bias_parm_dir = /d4/karsten/DFE/IOC_TESTING/realtime/params/bias_correction/cfs_climo 
-NLDAS_bias_parm_dir = /d4/karsten/DFE/IOC_TESTING/realtime/params/bias_correction/nldas_climo 
+CFS_correspond = /d4/hydro-dm/IOC/forcing_engine/weighting_files/bias_correction/nldas_param_cfsv2_subset_grid_correspondence.nc
+CFS_tmp_dir = /d4/hydro-dm/IOC_TESTING/bias_correction/CFSv2_tmp
+CFS_bias_parm_dir = /d4/hydro-dm/IOC/forcing_engine/weighting_files/bias_correction/cfs_climo
+NLDAS_bias_parm_dir = /d4/hydro-dm/IOC/forcing_engine/weighting_files/bias_correction/nldas_climo
 
 #-------------------------------------------------
 #    Parameters needed to run regridding scripts

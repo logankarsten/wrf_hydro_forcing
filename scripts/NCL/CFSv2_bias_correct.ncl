@@ -57,7 +57,6 @@
 ;               'cycleYYYYMMDDHH="2015111318"'
 ;               'fcstYYYYMMDDHH="2015112918"'
 ;               'prevYYYYMMDDHH="2015112912"'
-;               'modFile="./CFSv2_bias_correct_mod.ncl"'
 ;               'corrFile="./nldas_param_cfsv2_subset_grid_correspondence.nc"'
 ;               'fileInPrev="./CFSv2/20151113/18/04/flxf2015112918.04.2015111312.grb2"'
 ;               'em="02"'
@@ -73,8 +72,8 @@ load "$NCARG_ROOT/lib/ncarg/nclscripts/esmf/ESMF_regridding.ncl"
 begin
 
   ; Load bias correction module file containing correction/combine routines
-  load "/d4/karsten/DFE/wrf_hydro_forcing/scripts/NCL/CFSv2_bias_correct_mod.ncl"
-  ;loadscript(modFile)
+  modFile = getenv("CFS_NCL_BIAS_MOD")
+  load modFile
 
   ; Determine if this is a initial time step or not.
   if (toint(cycleYYYYMMDDHH) .eq. toint(fcstYYYYMMDDHH))

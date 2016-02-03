@@ -69,6 +69,11 @@ def forcing(configFile,file_in):
     (cycleYYYYMMDD,cycleHH,fcsthr,em) = Whf.extract_file_info_cfs(file_in)
     em_str = str(em)
 
+    # Pull path to NCL bias correction module file. Export this as an 
+    # environmental variable NCL refers to later. 
+    nclBiasMod = parser.get('exe','CFS_bias_correct_mod')
+    os.environ["CFS_NCL_BIAS_MOD"] = nclBiasMod
+
     # Establish datetime objects
     dateCurrent = datetime.datetime.today()
     dateCycleYYYYMMDDHH = datetime.datetime(year=int(cycleYYYYMMDD[0:4]),
