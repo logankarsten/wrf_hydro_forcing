@@ -125,7 +125,6 @@ ncl_exe = /opt/ncl/bin/ncl
 # Bias correction
 CFS_bias_correct_mod = /d4/hydro-dm/IOC/forcing_engine/NCL/CFSv2_bias_correct_mod.ncl
 CFS_bias_correct_exe = /d4/karsten/DFE/wrf_hydro_forcing/scripts/NCL/CFSv2_bias_correct.ncl
-#CFS_bias_correct_exe = /d4/hydro-dm/IOC/forcing_engine/NCL/CFSv2_bias_correct.ncl
 
 # Regridding
 HRRR_regridding_exe = /d4/hydro-dm/IOC/forcing_engine/NCL/HRRR-2-WRF_Hydro_ESMF_regrid.ncl
