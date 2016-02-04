@@ -121,7 +121,7 @@ esmf_exe=/usr/local/esmf
 # Use version 6.3.0 for latest grib tables
 # in hydro-c1; use the version built without 
 # linking to GDAL
-ncl_exe = /opt/ncl-gcc-6.3.0/bin
+ncl_exe = /opt/ncl-gcc-6.3.0/bin/ncl
 
 # Bias correction
 CFS_bias_correct_mod = /d4/hydro-dm/IOC/forcing_engine/NCL/CFSv2_bias_correct_mod.ncl
