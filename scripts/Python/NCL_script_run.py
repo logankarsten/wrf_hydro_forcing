@@ -28,8 +28,26 @@ def run(cmd):
     exitcode = proc.returncode
 
     if err:
-        # Log errors PRIOR to logging output
-        WhfLog.error_ncl(err)
+        # get rid of annoying error about not making directory that exists
+        header = 'mkdir: cannot create directory'
+        tail = 'File exists'
+        ltail = len(tail)
+        i = err.find(header)
+        if (i >= 0):
+            j = err.find(tail)
+            if (j > i):
+                err = err[0:i] + err[j+ltail:]
+                k = err.find('\n')
+                if (k ==0):
+                    if (len(err) > 1):
+                        # multi line error, not just this annoying one
+                        err = err[1:]
+                    else:
+                        # just the annoying line
+                        err = ""
+        if (err):
+            # Log errors PRIOR to logging output
+            WhfLog.error_ncl(err)
     if out:
         # Go ahead and log the output, which is usually some big multiline string
         WhfLog.debug_ncl(out)
