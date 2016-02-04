@@ -25,7 +25,10 @@
 ;
 ;------------------------------------------------------------------------------------------
 
-external TOPO_ADJF90 "/d4/karsten/DFE/IOC_TESTING/long_range/programs/topo_adjf90.so"
+; DO NOT hard-code the location of the shared object, use the NCL_DEF_LIB_DIR, defined
+; in the wrf_hydro_forcing.parm file to indicate the directory where ALL shared objects
+; will reside.
+;external TOPO_ADJF90 "/d4/karsten/DFE/IOC_TESTING/long_range/programs/topo_adjf90.so"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_code.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_csm.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl"
@@ -96,7 +99,7 @@ begin
   swdown_in = tofloat(swdown_in_double)
   swdown_out = tofloat(swdown_out_double)
   
-  TOPO_ADJF90:: topo_adj(HGT_dst,xlat,xlong,dx,dy,nx,ny,cosa,sina,xtime, \
+  topo_adj(HGT_dst,xlat,xlong,dx,dy,nx,ny,cosa,sina,xtime, \
                 julian,swdown_in,swdown_out)
   
   ;---------------------------------

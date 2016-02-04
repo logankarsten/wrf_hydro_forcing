@@ -15,8 +15,7 @@
 ;------------------------
 ;!!!!!WARNING!!!!!
 ;Cannot hard-code the location of the executable when used 
-;in an operational environment. Will we be able to place 
-;the topo_adjf90.so in a pre-determined library directory?
+;in an operational environment. 
 ; In the wrf_hydro_forcing.parm file, indicate where all
 ; shared objects should reside. 
 ;external TOPO_ADJF90 "$HOME/HYDRO/REGRID/DOWN/topo_adjf90.so"

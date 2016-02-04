@@ -1,15 +1,21 @@
 import os
 import errno
-import logging
+import WhfLog
 import re
 import time
-import numpy as np
 import optparse
 import datetime
 import shutil
 import sys
 from ConfigParser import SafeConfigParser
-
+import DataFiles as df
+import NCL_script_run as ncl
+from ForcingEngineError import NCLError
+from ForcingEngineError import FilenameMatchError
+from ForcingEngineError import MissingDirectoryError
+from ForcingEngineError import MissingFileError
+from ForcingEngineError import ZeroHourReplacementError
+from ForcingEngineError import UnrecognizedCommandError
 
 
 # -----------------------------------------------------
@@ -67,7 +73,6 @@ def regrid_data( product_name, file_to_regrid, parser, substitute_fcst = False, 
 
     """
 
-
     # Retrieve the values from the parm/config file
     # which are needed to invoke the regridding 
     # scripts.
@@ -116,16 +121,23 @@ def regrid_data( product_name, file_to_regrid, parser, substitute_fcst = False, 
        file_exists(wgt_file)
        # Don't need to check temporary directory as this was done
        # in bias-correction step.
-       file_exists(regridding_exec)
-       file_exists(dst_grid_name)
+       try:
+           file_exists(regridding_exec)
+           file_exists(dst_grid_name)
+       except MissingFileError as mfe:
+           raise
 
     # If this is a 0hr forecast and the data product is either GFS or RAP, then do
     # nothing for now, it will need to be replaced during the
     # downscaling step.
     if substitute_fcst:
-        (date,model,fcsthr) = extract_file_info(file_to_regrid)  
-        data_file_to_regrid= data_dir + "/" + date + "/" + file_to_regrid 
-        (date,model,fcsthr) = extract_file_info(file_to_regrid)  
+        try:
+            (date,model,fcsthr) = extract_file_info(file_to_regrid)  
+            data_file_to_regrid= data_dir + "/" + date + "/" + file_to_regrid 
+        except FilenameMatchError as fme:
+            # pass this exception up to the code that called it, so the
+            # decision can be made by the original caller.
+            raise
         (subdir_file_path,hydro_filename) = \
             create_output_name_and_subdir(product,data_file_to_regrid,data_dir)
         output_file_dir = output_dir_root + "/" + subdir_file_path
@@ -152,16 +164,21 @@ def regrid_data( product_name, file_to_regrid, parser, substitute_fcst = False, 
        
         if product == "CFSV2":
             # Check for existence of input file.
-            file_exists(file_to_regrid)
+            try:
+                file_exists(file_to_regrid)
+            except MissingFileError as mfe:
+                # re-throw up the call stack, the original
+                # caller decides what should be done.
+                raise
             
             path_split = file_to_regrid.split('.')
             # Compose output file name, which will be in temporary directory. 
             regridded_file = path_split[0] + "_regridded." + path_split[1] + \
                              "." + path_split[2]
             srcfilename_param =  "'srcfilename=" + '"' + file_to_regrid +  \
-                                     '"' + "' "
+                                 '"' + "' "
             wgtFileName_in_param =  "'wgtFileName=" + '"' + wgt_file + \
-                                        '"' + "' "
+                                    '"' + "' "
             dstGridName_param =  "'dstGridName=" + '"' + dst_grid_name + '"' + "' "
             outfilename_param = "'outfilename=" + '"' + regridded_file + \
                                 '"' + "' "
@@ -179,8 +196,11 @@ def regrid_data( product_name, file_to_regrid, parser, substitute_fcst = False, 
    
             # Create the output filename following the 
             # naming convention for the WRF-Hydro model 
-            (subdir_file_path,hydro_filename) = \
+            try:
+                (subdir_file_path,hydro_filename) = \
                 create_output_name_and_subdir(product,data_file_to_regrid,data_dir)
+            except FilenameMatchError:
+                raise
        
             # Create the full path to the output directory
             # and assign it to the output directory parameter
@@ -218,23 +238,20 @@ def regrid_data( product_name, file_to_regrid, parser, substitute_fcst = False, 
             regrid_prod_cmd = ncl_exec + " -Q "  + regrid_params + " " + \
                               regridding_exec
     
-        #logging.debug("regridding command: %s",regrid_prod_cmd)
+        WhfLog.debug("regridding command: %s",regrid_prod_cmd)
 
         # Measure how long it takes to run the NCL script for regridding.
         start_NCL_regridding = time.time()
-        return_value = os.system(regrid_prod_cmd)
+        return_value = ncl.run(regrid_prod_cmd)
         end_NCL_regridding = time.time()
         elapsed_time_sec = end_NCL_regridding - start_NCL_regridding
-        logging.info("Time(sec) to regrid file  %s" %  elapsed_time_sec)
+        WhfLog.info("Time(sec) to regrid file  %s" %  elapsed_time_sec)
         
         if return_value != 0:
-            logging.info('ERROR: The regridding of %s was unsuccessful, \
+            WhfLog.error('The regridding of %s was unsuccessful, \
                           return value of %s', product,return_value)
-            #TO DO: Determine the proper action to take when the NCL file 
-            #fails. For now, exit.
-            return 
-        
 
+            raise NCLError('NCL regridding of %s unsuccessful with return value %s'%(product,return_value))
     return regridded_file
 
 def get_filepaths(dir):
@@ -271,7 +288,6 @@ def get_filepaths(dir):
             else:
                 continue
     return file_paths
-
 
 
     
@@ -337,8 +353,8 @@ def create_output_name_and_subdir(product, filename, input_data_file):
             init_hr_str = (str(init_hr)).rjust(2,'0')
             year_month_day_subdir = year_month_day + init_hr_str
         else:
-            logging.error("ERROR [create_output_name_and_subdir]: %s has an unexpected name." ,filename) 
-            return
+            WhfLog.error("%s has an unexpected name." ,filename) 
+            raise FilenameMatchError('%s has unexpected filename format'%filename)
  
     elif product == 'MRMS':
         match = re.match(r'.*([0-9]{8})_([0-9]{2}).*',filename) 
@@ -351,10 +367,9 @@ def create_output_name_and_subdir(product, filename, input_data_file):
            valid_time = int(init_hr)
            year_month_day_subdir = year_month_day + init_hr 
         else:
-           logging.error("ERROR: MRMS data filename %s \
-                          has an unexpected file name.",\
-                          filename) 
-           return
+           WhfLog.error("MRMS data filename %s has an unexpected file name.",\
+                        filename) 
+           raise FilenameMatchError('%s has unexpected filename format'%filename)
 
    
     if valid_time >= 24:
@@ -391,7 +406,8 @@ def mkdir_p(dir):
     except OSError as exc:
         if exc.errno == errno.EEXIST and os.path.isdir(dir):
             pass
-        else: raise            
+        else:
+            raise            
 
 
 def downscale_data(product_name, file_to_downscale, parser, downscale_shortwave=False,
@@ -447,7 +463,7 @@ def downscale_data(product_name, file_to_downscale, parser, downscale_shortwave=
                              the files.
                                   
     Returns:
-        None
+         None
 
         
     """
@@ -488,9 +504,8 @@ def downscale_data(product_name, file_to_downscale, parser, downscale_shortwave=
         hgt_data_file = parser.get('downscaling','CFS_hgt_data')
         geo_data_file = parser.get('downscaling','CFS_geo_data')
         downscale_exe = parser.get('exe','CFS_downscaling_exe')
-        #Double check for existence of directories/files
     else:
-        logging.info("Requested downscaling of unsupported data product %s", product)
+        WhfLog.info("Requested downscaling of unsupported data product %s", product)
  
      
     # If this is a fcst 0hr file and is either RAP or GFS, then search for
@@ -502,13 +517,19 @@ def downscale_data(product_name, file_to_downscale, parser, downscale_shortwave=
         # Find another downscaled file from the previous model/
         # init time with the same valid time as this file, then 
         # copy to this fcst 0hr file.
-        replace_fcst0hr(parser, file_to_downscale,product)
+        try:
+            replace_fcst0hr(parser, file_to_downscale,product)
+        except:
+            raise
 
     else:
         # Downscale as usual
         if product == "CFSV2":
             # Double check to make sure input file exists
-            file_exists(file_to_downscale)
+            try:
+                file_exists(file_to_downscale)
+            except:
+                raise
 
             # Create input NCL command components
             input_file1_param = "'hgtFileSrc=" + '"' + hgt_data_file + '"' + "' "
@@ -522,16 +543,22 @@ def downscale_data(product_name, file_to_downscale, parser, downscale_shortwave=
                       time_param 
             downscale_cmd = ncl_exec + " -Q " + downscale_params + " " + downscale_exe 
         else:
+
+            if not file_to_downscale:
+                WhfLog.debug("No File to downscale!!!")
+                raise MissingFileError('No file to downscale')
+
+            WhfLog.debug("File to downscale = %s", file_to_downscale)
             match = re.match(r'(.*)([0-9]{10})/([0-9]{8}([0-9]{2})00.LDASIN_DOMAIN1.*)',file_to_downscale)
             if match:
                 yr_month_day_init = match.group(2)
                 regridded_file = match.group(3)
                 valid_hr = match.group(4)
             else:
-                logging.error("ERROR: regridded file's name: %s is an unexpected format",\
-                                   file_to_downscale)
-                sys.exit() 
+                WhfLog.error("regridded file's name: %s is an unexpected format",\
+                             file_to_downscale)
   
+                raise FilenameMatchError('%s has an unexpected filename format'%file_to_downscale)
             if zero_process == True:
                 full_downscaled_dir = downscale_output_dir_0hr + "/" + yr_month_day_init
             else: 
@@ -561,7 +588,7 @@ def downscale_data(product_name, file_to_downscale, parser, downscale_shortwave=
         # Downscale the shortwave radiation, if requested...
         # Key-value pairs for downscaling SWDOWN, shortwave radiation.
         if downscale_shortwave:
-            logging.info("Shortwave downscaling requested...")
+            WhfLog.info("Shortwave downscaling requested...")
             downscale_swdown_exe = parser.get('exe', 'shortwave_downscaling_exe') 
             swdown_output_file_param = "'outFile=" + '"' + \
                                        full_downscaled_file + '"' + "' "
@@ -570,7 +597,7 @@ def downscale_data(product_name, file_to_downscale, parser, downscale_shortwave=
             swdown_params = swdown_geo_file_param + " " + swdown_output_file_param
             downscale_shortwave_cmd = ncl_exec + " -Q " + swdown_params + " " \
                                       + downscale_swdown_exe 
-            logging.info("SWDOWN downscale command: %s", downscale_shortwave_cmd)
+            WhfLog.info("SWDOWN downscale command: %s", downscale_shortwave_cmd)
   
             # Crude measurement of performance for downscaling.
             # Wall clock time used to determine the elapsed time
@@ -578,34 +605,36 @@ def downscale_data(product_name, file_to_downscale, parser, downscale_shortwave=
             start = time.time()
     
             #Invoke the NCL script for performing a single downscaling.
-            return_value = os.system(downscale_cmd)
-            swdown_return_value = os.system(downscale_shortwave_cmd)
+            return_value = ncl.run(downscale_cmd)
+            swdown_return_value = ncl.run(downscale_shortwave_cmd)
             end = time.time()
             elapsed = end - start
     
             # Check for successful or unsuccessful downscaling
             # of the required and shortwave radiation
             if return_value != 0 or swdown_return_value != 0:
-                logging.info('ERROR: The downscaling of %s was unsuccessful, \
+                WhfLog.error('The downscaling of %s was unsuccessful, \
                              return value of %s', product,return_value)
                 # Remove regridded file and downscaled file 
                 cmd = 'rm -rf ' + file_to_downscale
                 status = os.system(cmd)
                 if status != 0:
-                  logging.error('ERROR: Failed to remove ' + file_to_downscale)
+                    WhfLog.error('Failed to remove ' + file_to_downscale)
                 # If output file was generated, remove it as it's corrupted/incomplete
                 if os.path.exists(full_downscaled_file):
                     cmd = 'rm -rf ' + full_downscaled_file 
                     status = os.system(cmd)
                     if status != 0:
-                      logging.error('ERROR: Failed to remove ' + full_downscaled_file)
-                sys.exit()
+                        WhfLog.error('Failed to remove ' + full_downscaled_file)
+                raise NCLError('NCL downscaling of %s failed with return value %s'%(product,return_value))
             else: # Remove regridded file as it's no longer needed
                 cmd = 'rm -rf ' + file_to_downscale
                 status = os.system(cmd)
                 if status != 0:
-                  logging.error('ERROR: Failed to remove ' + file_to_downscale)
-                  return(1) 
+                    WhfLog.error('Failed to remove ' + file_to_downscale)
+                    raise SystemCommandError('Could not remove %s'%file_to_downscale)
+                    
+            return
     
         else:
             # No additional downscaling of
@@ -615,37 +644,38 @@ def downscale_data(product_name, file_to_downscale, parser, downscale_shortwave=
             start = time.time()
     
             #Invoke the NCL script for performing the generic downscaling.
-            return_value = os.system(downscale_cmd)
+            return_value = ncl.run(downscale_cmd)
             end = time.time()
             elapsed = end - start
-            logging.info("Elapsed time (sec) for downscaling: %s",elapsed)
+            WhfLog.info("Elapsed time (sec) for downscaling: %s",elapsed)
     
             # Check for successful or unsuccessful downscaling
             if return_value != 0:
-                logging.info('ERROR: The downscaling of %s was unsuccessful, \
-                             return value of %s', product,return_value)
+                # Unsuccessful downscaling, perform clean-up operations.
                 # Remove regridded file and downscaled SW file
                 cmd = 'rm -rf ' + file_to_downscale
                 status = os.system(cmd)
                 if status != 0:
-                  logging.error('ERROR: Failed to remove ' + file_to_downscale)
+                    WhfLog.error('Failed to remove ' + file_to_downscale )
+                    raise SystemCommandError('Cleaning unsuccessful downscaling, failed to remove file %s'%file_to_downscale) 
                 # If output file was generated, remove it as it's corrupted/incomplete
                 if os.path.exists(full_downscaled_file):
                     cmd = 'rm -rf ' + full_downscaled_file
                     status = os.system(cmd)
                     if status != 0:
-                      logging.error('ERROR: Failed to remove ' + full_downscaled_file)
-                return(1) 
+                      WhfLog.error('Failed to remove ' + full_downscaled_file)
+                      raise SystemCommandError('Failed to remove corrupted/incomplete output file and path %s'%full_downscaled_file)
+                # Raise exception for failed NCL downscaling
+                WhfLog.error('The downscaling of %s was unsuccessful, \
+                             return value of %s', product,return_value)
+                raise NCLError('NCL downscaling for %s unsuccessful with return value %s', product, return_value)
             else: # Remove regridded file as it's no longer needed
                 cmd = 'rm -rf ' + file_to_downscale
                 status = os.system(cmd)
                 if status != 0:
-                  logging.error('ERROR: Failed to remove ' + file_to_downscale)
-                  return(1) 
-    
-
-
-
+                    WhfLog.error('Failed to remove ' + file_to_downscale)
+                    raise SystemCommandError('Finished with regridded files, failed to remove %s'%file_to_downscale)
+            return
 
 
 
@@ -694,14 +724,35 @@ def bias_correction(product_name,file_in,cycleYYYYMMDDHH,fcstYYYYMMDDHH,
             ncarg_root = os.environ["NCARG_ROOT"] = ncarg_root
 
         # Sanity check to ensure all directories/executables are on system.
-        dir_exists(ncarg_root)
-        dir_exists(CFS_in_dir)
-        file_exists(CFS_bias_exe)
-        file_exists(CFS_bias_mod)
-        dir_exists(tmp_dir)
-        dir_exists(CFS_bias_dir)
-        dir_exists(NLDAS_bias_dir)
-        file_exists(CFS_corr_file)
+        try:
+            dir_exists(ncarg_root)
+            dir_exists(CFS_in_dir)
+        except MissingDirectoryError:
+            WhfLog.error("Missing ncarg_root or CFS_in_dir directories")
+            raise
+        try:
+            file_exists(CFS_bias_exe)
+            file_exists(CFS_bias_mod)
+        except MissingFileError:
+            WhfLog.error("Missing CFS_bias_exe or CFS_bias_mod file")
+            raise
+
+        # try to create the temp dir if it is not there, since it sometimes isn't
+        # before seeing if it exists
+        df.makeDirIfNeeded(tmp_dir)
+        try:
+            dir_exists(tmp_dir)
+            dir_exists(CFS_bias_dir)
+            dir_exists(NLDAS_bias_dir)
+        except MissingDirectoryError:
+           WhfLog.error("Missing tmp_dir, CFS_bias_dir, or NLDAS_bias_dir")
+           raise
+  
+        try:
+            file_exists(CFS_corr_file)
+        except MissingFileError:
+            WhfLog.error("Missing CFS_corr_file file")
+            raise   
 
         # Compose previous forecast CFSv2 forecast time step. This is done as the
         # previous time step of data is used in interpolation. If the two time
@@ -737,9 +788,11 @@ def bias_correction(product_name,file_in,cycleYYYYMMDDHH,fcstYYYYMMDDHH,
                             "." + em_str + "." + cycleYYYYMMDDHH.strftime("%Y%m%d%H") + \
                             ".grb2"
         #XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-
-        file_exists(file_in_path)
-        file_exists(file_in_path_prev)
+        try:
+            file_exists(file_in_path)
+            file_exists(file_in_path_prev)
+        except MissingFileError:
+            raise 
 
         # Determine hourly sub-time steps between six-hour CFSv2 forecasts
         datePrevYYYYMMDDHH = fcstYYYYMMDDHH - datetime.timedelta(seconds=6*3600)
@@ -763,12 +816,12 @@ def bias_correction(product_name,file_in,cycleYYYYMMDDHH,fcstYYYYMMDDHH,
         dateSub3YYYYMMDDHHtmp = dateSub2YYYYMMDDHHtmp + datetime.timedelta(seconds=3600)
         dateSub4YYYYMMDDHHtmp = dateSub3YYYYMMDDHHtmp + datetime.timedelta(seconds=3600)
         dateSub5YYYYMMDDHHtmp = dateSub4YYYYMMDDHHtmp + datetime.timedelta(seconds=3600)
-
+    
         # Establish hourly NLDAS parameter files used for bias correction and interpolation
         NLDAS_param_path_1 = NLDAS_bias_dir + "/nldas2_" + \
                              dateSub1YYYYMMDDHHtmp.strftime('%m%d%H') + '_dist_params.nc'
         NLDAS_param_path_2 = NLDAS_bias_dir + "/nldas2_" + \
-                             dateSub2YYYYMMDDHHtmp.strftime('%m%d%H') + '_dist_params.nc'
+                         dateSub2YYYYMMDDHHtmp.strftime('%m%d%H') + '_dist_params.nc'
         NLDAS_param_path_3 = NLDAS_bias_dir + "/nldas2_" + \
                              dateSub3YYYYMMDDHHtmp.strftime('%m%d%H') + '_dist_params.nc'
         NLDAS_param_path_4 = NLDAS_bias_dir + "/nldas2_" + \
@@ -777,14 +830,16 @@ def bias_correction(product_name,file_in,cycleYYYYMMDDHH,fcstYYYYMMDDHH,
                              dateSub5YYYYMMDDHHtmp.strftime('%m%d%H') + '_dist_params.nc'
         NLDAS_param_path_6 = NLDAS_bias_dir + "/nldas2_" + \
                              fcstYYYYMMDDHHtmp.strftime('%m%d%H') + '_dist_params.nc' 
-
-        # Ensure files are present on system
-        file_exists(NLDAS_param_path_1)
-        file_exists(NLDAS_param_path_2)
-        file_exists(NLDAS_param_path_3)
-        file_exists(NLDAS_param_path_4)
-        file_exists(NLDAS_param_path_5)
-        file_exists(NLDAS_param_path_6)
+        try: 
+            # Ensure files are present on system
+            file_exists(NLDAS_param_path_1)
+            file_exists(NLDAS_param_path_2)
+            file_exists(NLDAS_param_path_3)
+            file_exists(NLDAS_param_path_4)
+            file_exists(NLDAS_param_path_5)
+            file_exists(NLDAS_param_path_6)
+        except MissingFileError:
+            raise
 
         # Establish CFS parameter files used for bias correction and interpolation.
         # There will be two parameter files for each variable being downscaled.
@@ -813,7 +868,7 @@ def bias_correction(product_name,file_in,cycleYYYYMMDDHH,fcstYYYYMMDDHH,
         CFS_param_U_path1 = CFS_bias_dir + "/cfs_ugrd_" + dateFcstMMDDtmp + \
                               "_" + dateFcstHHtmp + "_dist_params.nc"
         CFS_param_V_path0 = CFS_bias_dir + "/cfs_vgrd_" + datePrevMMDDtmp + \
-                              "_" + datePrevHHtmp + "_dist_params.nc"
+                                  "_" + datePrevHHtmp + "_dist_params.nc"
         CFS_param_V_path1 = CFS_bias_dir + "/cfs_vgrd_" + dateFcstMMDDtmp + \
                               "_" + dateFcstHHtmp + "_dist_params.nc"
         CFS_param_2mQ_path0 = CFS_bias_dir + "/cfs_q2m_" + datePrevMMDDtmp + \
@@ -821,23 +876,27 @@ def bias_correction(product_name,file_in,cycleYYYYMMDDHH,fcstYYYYMMDDHH,
         CFS_param_2mQ_path1 = CFS_bias_dir + "/cfs_q2m_" + dateFcstMMDDtmp + \
                               "_" + dateFcstHHtmp + "_dist_params.nc"
 
-        # Ensure parameter files are on the system
-        file_exists(CFS_param_2mT_path0)
-        file_exists(CFS_param_2mT_path1)
-        file_exists(CFS_param_SW_path0)
-        file_exists(CFS_param_SW_path1)
-        file_exists(CFS_param_LW_path0)
-        file_exists(CFS_param_LW_path1)
-        file_exists(CFS_param_PCP_path0)
-        file_exists(CFS_param_PCP_path1)
-        file_exists(CFS_param_PRES_path0)
-        file_exists(CFS_param_PRES_path1)
-        file_exists(CFS_param_U_path0)
-        file_exists(CFS_param_U_path1)
-        file_exists(CFS_param_V_path0)
-        file_exists(CFS_param_V_path1)
-        file_exists(CFS_param_2mQ_path0)
-        file_exists(CFS_param_2mQ_path1)
+        try:
+            # Ensure parameter files are on the system
+            file_exists(CFS_param_2mT_path0)
+            file_exists(CFS_param_2mT_path1)
+            file_exists(CFS_param_SW_path0)
+            file_exists(CFS_param_SW_path1)
+            file_exists(CFS_param_LW_path0)
+            file_exists(CFS_param_LW_path1)
+            file_exists(CFS_param_PCP_path0)
+            file_exists(CFS_param_PCP_path1)
+            file_exists(CFS_param_PRES_path0)
+            file_exists(CFS_param_PRES_path1)
+            file_exists(CFS_param_U_path0)
+            file_exists(CFS_param_U_path1)
+            file_exists(CFS_param_V_path0)
+            file_exists(CFS_param_V_path1)
+            file_exists(CFS_param_2mQ_path0)
+            file_exists(CFS_param_2mQ_path1)
+
+        except MissingFileError:
+            raise
 
         # Compose NCL command that calls bias-correction program.
         bias_params = "'fileIn=" + '"' + file_in_path + '"' + "' " + \
@@ -870,22 +929,21 @@ def bias_correction(product_name,file_in,cycleYYYYMMDDHH,fcstYYYYMMDDHH,
                       '"' + "' " + \
                       "'prevYYYYMMDDHH=" + '"' + prevYYYYMMDDHH.strftime("%Y%m%d%H") + \
                       '"' + "' " + \
-                      "'modFile=" + '"' + CFS_bias_mod + '"' + "' " + \
                       "'corrFile=" + '"' + CFS_corr_file + '"' + "' " + \
                       "'fileInPrev=" + '"' + file_in_path_prev + '"' + "' " + \
                       "'em=" + '"' + em_str + '"' + "' "  
         ncl_cmd = "ncl -Q " + CFS_bias_exe + " " + bias_params
-        #logging.debug("Bias command: %s",ncl_cmd)
+        #WhfLog.debug("Bias command: %s",ncl_cmd)
 
         # Measure how long it takes to run the NCL script for bias correction.
         start_NCL_bias = time.time()
-        return_value = os.system(ncl_cmd)
+        return_value = ncl.run(ncl_cmd)
         if return_value != 0:
-            logging.error('Bias correction returned an exit status of ' + str(return_value))
-            sys.exit(1)
+            WhfLog.error('Bias correction returned an exit status of ' + str(return_value))
+            raise NCLError('NCL bias correction failed with return value %s'%return_value)
         end_NCL_bias = time.time()
         elapsed_time_sec = end_NCL_bias - start_NCL_bias
-        logging.info('Time(sec) to bias correct file %s' % elapsed_time_sec)  
+        WhfLog.info('Time(sec) to bias correct file %s' % elapsed_time_sec)  
         
 def layer_data(parser, first_data, second_data, first_data_product, second_data_product, forcing_type):
     """Invokes the NCL script, combine.ncl
@@ -944,7 +1002,7 @@ def layer_data(parser, first_data, second_data, first_data_product, second_data_
     # Create the destination directory in case it doesn't already exist.
     if not os.path.exists(layered_output_dir):
         mkdir_p(layered_output_dir)
-    logging.info('Layered output dir: %s', layered_output_dir)
+    WhfLog.info('Layered output dir: %s', layered_output_dir)
 
     # Retrieve just the file name portion of the first data file (the file name
     # portion of the first and second data file will be identical, they differ
@@ -956,8 +1014,8 @@ def layer_data(parser, first_data, second_data, first_data_product, second_data_
     if match:
         file_name_only = match.group(1)
     else:
-        logging.error("ERROR[layer_data]: File name format is not what was expected")
-        return
+        WhfLog.error("File name format is not what was expected")
+        raise FilenameMatchError('%s filename format is unexpecte'%first_data)
 
     # Create the key-value pair of
     # input needed to run the NCL layering script.
@@ -968,7 +1026,7 @@ def layer_data(parser, first_data, second_data, first_data_product, second_data_
                                         + file_name_only
     full_layered_outfile = layered_outfile + ".nc"
     outFile_param = "'outFile=" + '"' + full_layered_outfile + '"' + "' "
-    print ("full_layered_outfile: %s")%(full_layered_outfile)
+    #print ("full_layered_outfile: %s")%(full_layered_outfile)
     if not os.path.exists(full_layered_outfile):
         mkdir_p(full_layered_outfile)
     init_indexFlag = "false"
@@ -983,79 +1041,27 @@ def layer_data(parser, first_data, second_data, first_data_product, second_data_
                         layering_exe
     layering_cmd = ncl_exe + " " + layering_params + " " + \
                         layering_exe
-    print ("layering command: %s")%(layering_cmd)    
-    init_return_value = os.system(init_layering_cmd)
+    #print ("layering command: %s")%(layering_cmd)    
+    init_return_value = ncl.run(init_layering_cmd)
     if init_return_value != 0:
-        logging.error("ERROR[layer_data]: layering was unsuccessful")
-
+        WhfLog.error("initial layering was unsuccessful")
+        raise NCLError('initial NCL Layering unsuccessful, return value %s'%init_return_value)
     else:
         # Move/rename the processed files to the corresponding forcing
         # configuration directory. 
         os.rename(full_layered_outfile, layered_outfile)
 
-    return_value = os.system(layering_cmd) 
+    return_value = ncl.run(layering_cmd) 
+   
+    if return_value != 0:
+        WhfLog.error("layering was unsuccessful")
+        raise NCLError('NCL Layering unsuccessful, return value %s'%return_value)
+        
     
     
-def read_input():
-    """Read in the command line arguments
-       Uses optparse, which is available for Python 2.6
-       (currently used in WCOSS)
- 
-       Args:
-           None
-       Returns:
-          Tuple:
-             opts (list): The list of options supplied by user
-             args (list): The list of positional arguments 
-    """
-
-
-    parser = optparse.OptionParser()
-    parser.add_option('--regrid', help='regrid and downscale',\
-                  dest='r_d_bool', default=False, action='store_true')
-    parser.add_option('--bias', help='bias correction', dest='bias_bool',\
-                  default=False, action='store_true')
-    parser.add_option('--layer', help='layer', dest='layer_bool',\
-                  default=False, action='store_true')
-
-    # tell optparse to store option's arg in specified destination
-    # member of opts
-    parser.add_option('--prod', help='data product', dest='data_prod',\
-                       action='store')
-    parser.add_option('--prod2', help='second data product \
-                      (for layering and bias correction)', dest='data_prod2',\
-                       action='store')
-    parser.add_option('--File', help='file name',dest='file_name',\
-                      action='store', nargs=1)
-    parser.add_option('--File2', help='second file name \
-                       (for layering and bias correction)',dest='file_name2',\
-                        action='store', nargs=1)
-    (opts,args) = parser.parse_args()
-
-    # Making sure all necessary options appeared
-    if opts.layer_bool:
-        if (opts.data_prod and not opts.data_prod2):
-            print "Layering requires two data products"
-            parser.print_help()
-        elif (opts.file_name and not opts.file_name2) :
-            print "Layering requires two input files"
-            parser.print_help()
-
-    if opts.r_d_bool:
-        print "Regrid and downscale requested"
-        if(not opts.data_prod or not opts.file_name):
-            print "Regrid (& downscale) requires one data product \
-                   and one file name"
-            parser.print_help()
-        else:
-            print "data prod: %s"%opts.data_prod
-            print "filename: %s"%opts.file_name
-
-    return (opts,args)
-
 
 def initial_setup(parser,forcing_config_label):
-    """  Set up any environment variables, logging levels, etc.
+    """  Set up any environment variables, etc.
          before any processing begins.
 
          Args:
@@ -1067,15 +1073,13 @@ def initial_setup(parser,forcing_config_label):
                                           the forcing configuration.
                             
          Returns:
-            logging (logging):  The logging object to which we can
-                                write.   
+            none
                                            
     """
 
     #Read in all relevant params from the config/param file
     ncl_exec = parser.get('exe', 'ncl_exe')
     ncarg_root = parser.get('default_env_vars', 'ncarg_root')
-    logging_level = parser.get('log_level', 'forcing_engine_log_level')
 
     # Check for the NCARG_ROOT environment variable. If it is not set,
     # use an appropriate default, defined in the configuration file.
@@ -1087,24 +1091,7 @@ def initial_setup(parser,forcing_config_label):
     # reside.
     ncl_def_lib_dir = parser.get('default_env_vars','ncl_def_lib_dir')
     ncl_def_lib_dir = os.environ["NCL_DEF_LIB_DIR"] = ncl_def_lib_dir
-
-    # Set the logging level based on what was defined in the parm/config file
-    if logging_level == 'DEBUG':
-        set_level = logging.DEBUG
-    elif logging_level == 'INFO':
-        set_level = logging.INFO
-    elif logging_level == 'WARNING':
-        set_level = logging.WARNING
-    elif logging_level == 'ERROR':
-        set_level = logging.ERROR
-    else:
-        set_level = logging.CRITICAL
-
-    logging_filename =  forcing_config_label + ".log"
-    logging.basicConfig(format='%(asctime)s %(message)s',
-                         filename=logging_filename, level=set_level)
-
-    return logging     
+   
 
 def extract_file_info(input_file):
 
@@ -1139,8 +1126,10 @@ def extract_file_info(input_file):
        fcst_hr = int(0)
        return (date, model_run, fcst_hr)
     else:
-        logging.error("ERROR [extract_file_info]: File name doesn't follow expected format")
+        WhfLog.error("File name doesn't follow expected format")
+        raise FilenameMatchError('Unexpected filename format for %s'%input_file)
 
+    
 def extract_file_info_cfs(input_file):
 
     """ Extract file date, model run time (UTC),
@@ -1166,15 +1155,15 @@ def extract_file_info_cfs(input_file):
         date = match.group(1)
         date2 = match.group(1)
         if date != date2:
-            logging.error("ERROR [extract_file_info_cfs]: File name doesn't follow expected format")
+            WhfLog.error("File name doesn't follow expected format")
             sys.exit(1)
         model_run = int(match.group(3))
         fcst_hr = int(match.group(4))
         em = int(match.group(5))
         return (date, model_run, fcst_hr, em)
     else:
-        logging.error("ERROR [extract_file_info]:2File name doesn't follow expected format")
-        sys.exit(1)
+        WhfLog.error("2File name doesn't follow expected format")
+        raise FilenameMatchError('Unexpected filename format for %s'%input_file)
 
 def is_in_fcst_range(product_name,fcsthr, parser):
     """  Determine if this current file to be processed has a forecast
@@ -1210,7 +1199,7 @@ def is_in_fcst_range(product_name,fcsthr, parser):
         
       
     if int(fcsthr) > fcst_max:
-        logging.info("Skip file, fcst hour %d is outside of fcst max %d",fcsthr,fcst_max)
+        WhfLog.info("Skip file, fcst hour %d is outside of fcst max %d",fcsthr,fcst_max)
         return False
     else:
         return True
@@ -1248,15 +1237,16 @@ def replace_fcst0hr(parser, file_to_replace, product):
 
 
           Returns:
-             None        Creates a copy of the file and saves
+             None:       Creates a copy of the file and saves
                          it to the appropriate directory:
                          YYYYMMDDHH, where HH is the model/init time.
 
 
     """
     # Retrieve the date, model time,valid time, and filename from the full filename 
-    logging.info("INFO[replace_fcst0hr]: file to replace=%s", file_to_replace)
+    WhfLog.debug("file to replace=%s", file_to_replace)
     match = re.match(r'(.*)/([0-9]{8})([0-9]{2})/([0-9]{8}([0-9]{2})00.LDASIN_DOMAIN1.nc)',file_to_replace)
+    WhfLog.debug("After, file to replace=%s", file_to_replace)
     if match:
         base_dir = match.group(1)
         curr_date = match.group(2)
@@ -1264,8 +1254,8 @@ def replace_fcst0hr(parser, file_to_replace, product):
         file_only = match.group(4) 
         valid_time = int(match.group(5))
     else:
-        logging.error("ERROR[replace_fcst0hr]: filename %s  is unexpected, exiting.", file_to_replace)
-        return
+        WhfLog.error("filename %s  is unexpected, exiting.", file_to_replace)
+        raise FilenameMatchError('Unexpected filename format for %s'%input_file)
 
 
     if product == 'RAP':
@@ -1295,7 +1285,7 @@ def replace_fcst0hr(parser, file_to_replace, product):
 
         full_path = base_dir + '/' + date + prev_model_time_str + "/" + \
                     file_only
-        logging.info("INFO [replace_fcst0hr]: full path = %s", full_path)
+        WhfLog.info("full path = %s", full_path)
         if os.path.isfile(full_path):
             # Make a copy
             file_dir_fcst0hr = base_dir + "/" + curr_date + (str(model_time)).rjust(2,'0') 
@@ -1304,14 +1294,14 @@ def replace_fcst0hr(parser, file_to_replace, product):
                 mkdir_p(file_dir_fcst0hr)
             file_path_to_replace = file_dir_fcst0hr + "/" + file_only
             copy_cmd = "cp " + full_path + " " + file_path_to_replace
-            logging.info("copying the previous model run's file: %s",copy_cmd)      
+            WhfLog.info("copying the previous model run's file: %s",copy_cmd)      
             os.system(copy_cmd)
-            return
         else:
             # If we are here, we didn't find any file from a previous RAP model run...
-            logging.error("ERROR: No previous RAP model runs found, exiting...")
-            return
-          
+            # this could be a "bootstrapping" issue, where we are requesting data 
+            # that isn't available (due to scrubbing, etc.)
+            WhfLog.error("No previous RAP model runs found, exiting...")
+            raise ZeroHourReplacementError('No RAP file from previous RAP model run- premature scrubbing or inavailability of data') 
     elif product == 'GFS':
         base_dir = parser.get('layering','medium_range_output')
         # Get the previous directory corresponding to the previous
@@ -1334,18 +1324,13 @@ def replace_fcst0hr(parser, file_to_replace, product):
                 mkdir_p(file_dir_fcst0hr)
             file_path_to_replace = file_dir_fcst0hr + "/" + file_only
             copy_cmd = "cp " + full_path + " " + file_path_to_replace
-            logging.info("copying the previous model run's file: %s",copy_cmd)      
+            WhfLog.info("copying the previous model run's file: %s",copy_cmd)      
             os.system(copy_cmd)
-            return
         else:
             # If we are here, we didn't find any file from a previous GFS model run...
-            logging.error("ERROR: No previous GFS model runs found, exiting...")
-            return
+            WhfLog.error("No previous GFS model runs found, exiting...")
+            raise ZeroHourReplacementError('No GFS file from previous RAP model run- premature scrubbing or inavailability of data') 
           
-
-
-
-       
 def get_past_or_future_date(curr_date, num_days = -1):
     """   Determines the date in YMD format
           (i.e. YYYYMMDD) for the day before the specified date.
@@ -1384,8 +1369,8 @@ def dir_exists(dir):
     """
 
     if not os.path.isdir(dir):
-        logging.error('Directory: ' + dir + ' not found.')
-        sys.exit(1)  
+        WhfLog.error('Directory: ' + dir + ' not found.')
+        raise MissingDirectoryError('Directory %s not found'%dir)
 
 def file_exists(file):    
     """ Check for file (or symbolic link) existence
@@ -1395,8 +1380,8 @@ def file_exists(file):
     
     # Using ispath instead of isfile to account for symbolic links
     if not os.path.exists(file):
-        logging.error('File: ' + file + ' not found.')
-        return(1) 
+        WhfLog.error('File: ' + file + ' not found.')
+        raise MissingFileError('File %s not found'%file)
 
     
 def rename_final_files(parser, forcing_type):
@@ -1429,7 +1414,7 @@ def rename_final_files(parser, forcing_type):
     """    
 
     parser = SafeConfigParser()
-    parser.read('/d4/karsten/DFE/wrf_hydro_forcing/parm/wrf_hydro_forcing.parm')
+    parser.read('../../parm//wrf_hydro_forcing.parm')
 
 
     forcing_type = forcing_type.upper()
@@ -1452,9 +1437,8 @@ def rename_final_files(parser, forcing_type):
                 shutil.move(file, destination)
 
             else:
-               logging.WARNING("[rename_final_files]:filename is of unexpected format: %s", file)
-               continue
-       
+               WhfLog.warning("filename is of unexpected format: %s", file)
+               raise FilenameMatchError('Renaming file %s for %s, unexpected filename format'%(file,forcing_type)) 
         # Move the MRMS files to their own location.
         for mrms in mrms_dir:
             # Get the filename without the .nc extension
@@ -1469,8 +1453,8 @@ def rename_final_files(parser, forcing_type):
                 src = mrms_dir + "/" + ymd_dir + "/" + file
                 os.rename(src, destination)
             else:
-               logging.WARNING("[rename_final_files]:filename is of unexpected format: %s", mrms)
-               continue
+               WhfLog.warning("filename is of unexpected format: %s", mrms)
+               raise FilenameMatchError('Renaming file %s for %s, unexpected filename format'%(file,forcing_type)) 
              
         
 
@@ -1490,8 +1474,8 @@ def rename_final_files(parser, forcing_type):
                 os.rename(file, destination)
 
             else:
-               logging.WARNING("[rename_final_files]:filename is of unexpected format :%s", file)
-               continue
+               WhfLog.warning("filename is of unexpected format :%s", file)
+               raise FilenameMatchError('Renaming file %s for %s, unexpected filename format'%(file,forcing_type)) 
 
 
     elif forcing_type == 'MEDIUM_RANGE':
@@ -1512,15 +1496,16 @@ def rename_final_files(parser, forcing_type):
                     mkdir_p(destination_dir)
                 os.rename(file, destination)
             else:
-               logging.WARNING("[rename_final_files]:filename is of unexpected format :%s", file)
-               continue
+               WhfLog.warning("filename is of unexpected format :%s", file)
+               raise FilenameMatchError('Renaming file %s for %s, unexpected filename format'%(file,forcing_type)) 
 
     elif forcing_type == 'LONG_RANGE':
         # Already renamed and moved within the Long_Range_Forcing script.
-        logging.info("[rename_final_files]: request renaming of Long Range files")
+        WhfLog.info("request renaming of Long Range files")
 
     else:
         print "Forcing type is not recognized or is unsupported. Try again."
+        raise UnrecognizedCommandError('Forcing type %s not supported/unrecognized'%forcing_type) 
 
 
     
@@ -1591,7 +1576,8 @@ def move_to_finished_area(parser, product, src, zero_move = False):
     elif product == "GFS":
         dest_dir = parser.get('downscaling', 'GFS_finished_output_dir')
     else:
-        logging.error("[move_to_finished_area]: %s is unsupported",product) 
+        WhfLog.error("%s is unsupported",product) 
+        raise UnrecognizedCommandError('Cannot move files for unsupported/unrecognized product %s'%product)
     # Get the YYYYMMDDHH subdirectory from the full file path and
     # name (src).
     match = re.match(r'.*/([0-9]{10})/([0-9]{12}.LDASIN_DOMAIN1.nc)',src)
@@ -1605,15 +1591,16 @@ def move_to_finished_area(parser, product, src, zero_move = False):
         if not os.path.exists(finished_dir):
             mkdir_p(finished_dir) 
         finished_dest = finished_dir + "/" + file_only
-        logging.info("moving %s", src)
-        logging.info("...to %s", finished_dest)
+        WhfLog.info("moving %s", src)
+        WhfLog.info("...to %s", finished_dest)
         shutil.move(src, finished_dest) 
         #cmd = "mv "+ src + " " + finished_dest
-        #logging.info(cmd)
+        #WhfLog.info(cmd)
         #status = os.system(cmd)
-        #logging.info("Stataus = %d", status)
+        #WhfLog.info("Stataus = %d", status)
     else:
-        logging.error("[move_to_finished_area]: can't match filename")
+        WhfLog.error("can't match filename")
+        raise FilenameMatchError('Cannot find match to filename %s'%src)
 
 
 #--------------------Define the Workflow -------------------------
