@@ -238,7 +238,7 @@ def regrid_data( product_name, file_to_regrid, parser, substitute_fcst = False, 
             regrid_prod_cmd = ncl_exec + " -Q "  + regrid_params + " " + \
                               regridding_exec
     
-        #WhfLog.debug("regridding command: %s",regrid_prod_cmd)
+        WhfLog.debug("regridding command: %s",regrid_prod_cmd)
 
         # Measure how long it takes to run the NCL script for regridding.
         start_NCL_regridding = time.time()
@@ -724,19 +724,35 @@ def bias_correction(product_name,file_in,cycleYYYYMMDDHH,fcstYYYYMMDDHH,
             ncarg_root = os.environ["NCARG_ROOT"] = ncarg_root
 
         # Sanity check to ensure all directories/executables are on system.
-        dir_exists(ncarg_root)
-        dir_exists(CFS_in_dir)
-        file_exists(CFS_bias_exe)
-        file_exists(CFS_bias_mod)
+        try:
+            dir_exists(ncarg_root)
+            dir_exists(CFS_in_dir)
+        except MissingDirectoryError:
+            WhfLog.error("Missing ncarg_root or CFS_in_dir directories")
+            raise
+        try:
+            file_exists(CFS_bias_exe)
+            file_exists(CFS_bias_mod)
+        except MissingFileError:
+            WhfLog.error("Missing CFS_bias_exe or CFS_bias_mod file")
+            raise
 
         # try to create the temp dir if it is not there, since it sometimes isn't
         # before seeing if it exists
         df.makeDirIfNeeded(tmp_dir)
-        dir_exists(tmp_dir)
-
-        dir_exists(CFS_bias_dir)
-        dir_exists(NLDAS_bias_dir)
-        file_exists(CFS_corr_file)
+        try:
+            dir_exists(tmp_dir)
+            dir_exists(CFS_bias_dir)
+            dir_exists(NLDAS_bias_dir)
+        except MissingDirectoryError:
+           WhfLog.error("Missing tmp_dir, CFS_bias_dir, or NLDAS_bias_dir")
+           raise
+  
+        try:
+            file_exists(CFS_corr_file)
+        except MissingFileError:
+            WhfLog.error("Missing CFS_corr_file file")
+            raise   
 
         # Compose previous forecast CFSv2 forecast time step. This is done as the
         # previous time step of data is used in interpolation. If the two time
@@ -1076,6 +1092,7 @@ def initial_setup(parser,forcing_config_label):
     # reside.
     ncl_def_lib_dir = parser.get('default_env_vars','ncl_def_lib_dir')
     ncl_def_lib_dir = os.environ["NCL_DEF_LIB_DIR"] = ncl_def_lib_dir
+   
 
 def extract_file_info(input_file):
 
