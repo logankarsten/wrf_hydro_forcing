@@ -7,6 +7,12 @@ import sys
 import datetime
 import getopt
 import re
+from ForcingEngineError import NCLError
+from ForcingEngineError import MissingFileError
+from ForcingEngineError import MissingDirectoryError
+from ForcingEngineError import FilenameMatchError
+from ForcingEngineError import UnrecognizedCommandError
+from ForcingEngineError import SystemCommandError
 
 """Analysis_Assimilation_Forcing
 Performs regridding and downscaling, then bias
@@ -74,10 +80,26 @@ def forcing(config, action, prod, file):
 
         if fcsthr == 0 and prod == "HRRR":
             downscale_dir = parser.get('downscaling', 'HRRR_downscale_output_dir_0hr')
-            regridded_file = whf.regrid_data(product_data_name,file,parser,False, \
-                             zero_process=True)
-            whf.downscale_data(product_data_name,regridded_file, parser,False, False, \
-                               zero_process=True)
+            try:
+                regridded_file = whf.regrid_data(product_data_name,file,parser,False, \
+                                 zero_process=True)
+            except (FilenameMatchError, NCLError ) as e:
+                WhfLog.error("Unexpected filename format encountered while regridding 0hr HRRR")
+                raise
+            except NCLError:
+                WhfLog.error("NCL error encountered while regridding 0hr HRRR")
+                raise
+            try:
+                whf.downscale_data(product_data_name,regridded_file, parser,False, False, \
+                                 zero_process=True)
+
+            except (FilenameMatchError, NCLError ) as e:
+                WhfLog.error("Unexpected filename format encountered while downscaling 0hr HRRR")
+                raise
+            except NCLError:
+                WhfLog.error("NCL error encountered while downscaling 0hr HRRR")
+                raise
+      
 
             # Move downscaled file to staging area where triggering will monitor
             match = re.match(r'.*/([0-9]{10})/([0-9]{12}.LDASIN_DOMAIN1.nc)',regridded_file)
@@ -85,36 +107,93 @@ def forcing(config, action, prod, file):
                 full_dir = downscale_dir + "/" + match.group(1)
                 full_finished_file = full_dir + "/" + match.group(2)
                 # File should have been created in downscale_data step.
-                whf.file_exists(full_finished_file)
-                whf.move_to_finished_area(parser, prod, full_finished_file, zero_move=True)
+                try:
+                    whf.file_exists(full_finished_file)
+                except UnrecognizedCommandError:
+                    WhfLog.error("File move failed for regridded/downscaled 0hr HRRR , filename format unexpected")
+                    raise
+                try: 
+                    whf.move_to_finished_area(parser, prod, full_finished_file, zero_move=True)
+                except:
+                    WhfLog.error('Unsupported/unrecognized command encountered while moving file to finished area.')
+                    raise
+            else:
+                WhfLog.error("File name format is unexpected")
+                raise FilenameMatchError("File name format is unexpected")
         elif fcsthr == 0 and prod == "RAP":
             downscale_dir = parser.get('downscaling', 'RAP_downscale_output_dir_0hr')
-            regridded_file = whf.regrid_data(product_data_name,file,parser,False, \
-                             zero_process=True)
-            whf.downscale_data(product_data_name,regridded_file, parser,False, False, \
-                               zero_process=True)
+            try:
+                regridded_file = whf.regrid_data(product_data_name,file,parser,False, \
+                                 zero_process=True)
+            except NCLError:
+                WhfLog.error("NCL error while regridding 0hr RAP")
+                raise
+            except FilenameMatchError:
+                WhfLog.error("Unexpected filename format encountered, cannot regrid 0hr RAP")
+                raise
+
+            try:
+                whf.downscale_data(product_data_name,regridded_file, parser,False, False, \
+                                   zero_process=True)
+            except (NCLError) as e:
+                WhfLog.error("NCL error encountered while regridding 0hr RAP")
+                raise 
+
             # Move downscaled file to staging area where triggering will monitor
             match = re.match(r'.*/([0-9]{10})/([0-9]{12}.LDASIN_DOMAIN1.nc)',regridded_file)
             if match:
                 full_dir = downscale_dir + "/" + match.group(1)
                 full_finished_file = full_dir + "/" + match.group(2)
                 # File should have been created in downscale_data step.
-                whf.file_exists(full_finished_file)
-                whf.move_to_finished_area(parser, prod, full_finished_file, zero_move=True) 
+                try:
+                    whf.file_exists(full_finished_file)
+                except MissingFileError as mfe:
+                    WhfLog.error("Missing file encountered while moving 0hr RAP file to staging area.")
+                    raise 
+                try:
+                    whf.move_to_finished_area(parser, prod, full_finished_file, zero_move=True) 
+                except UnrecognizedCommandError:
+                    WhfLog.error("Unrecognized command error while trying to move 0hr RAP file to finished area")
+                    raise
+                except FilenameMatchError:
+                    WhfLog.error("File name's format is unexpected.  Cannot move file to finished area")
+                    raise
+            else:
+                WhfLog.error("File name's format is unexpected")
+                raise FilenameMatchError('File name format is unexpected')
+             
         elif prod == "MRMS":
-            regridded_file = whf.regrid_data(product_data_name,file,parser,False)
-
+            try:
+                regridded_file = whf.regrid_data(product_data_name,file,parser,False)
+            except NCLError:
+                WhfLog.error("NCL error encountered while regridding MRMS")
+                raise
+            except FilenameMatchError:
+                WhfLog.error("File name's format is unexpected, cannot regrid MRMS")
+                raise
             # Move regridded file to staging area where triggering will monitor
             # First make sure file exists
-            whf.file_exists(regridded_file)
-            whf.move_to_finished_area(parser, prod, regridded_file, zero_move=False)
+            try:
+                whf.file_exists(regridded_file)
+            except MissingFileError as mfe:
+                WhfLog.error("Missing file encountered while moving regridded MRMS file")
+                raise
+           
+            try:
+                whf.move_to_finished_area(parser, prod, regridded_file, zero_move=False)
+            except UnrecognizedCommandError:
+                WhfLog.error("Unrecognized command error while trying to move MRMS file to finished area")
+                raise
+            except FilenameMatchError:
+                WhfLog.error("File name's format is unexpecte.  Cannot move file to finished area")
+                raise
         else:
             WhfLog.error("Either invalid forecast hour or invalid product chosen")
             WhfLog.error("Only 00hr forecast files, and RAP/HRRR/MRMS valid")
-            return(1)
+            raise
     else: # Invalid action selected
         WhfLog.error("ERROR [Anal_Assim_Forcing]- Invalid action selected")
-        return(1)
+        raise UnrecognizedCommandError("Invalid action selection within Analysis and Assimilation regridding and downscaling")
 
 def anal_assim_layer(cycleYYYYMMDDHH,fhr,action,config):
     """ Analysis and Assimilation layering
@@ -154,8 +233,8 @@ def anal_assim_layer(cycleYYYYMMDDHH,fhr,action,config):
                 hour=hourCycle)
     validDate = cycleDate + datetime.timedelta(seconds=fhr*3600)
     fcstWindowDate = validDate + datetime.timedelta(seconds=-3*3600) # Used for 3-hr forecast
-                     # HRRR/RAP files necessary for fluxes and precipitation data.
-  
+
+    # HRRR/RAP files necessary for fluxes and precipitation data.
     # Obtain analysis and assimiltation configuration parameters.
     parser = SafeConfigParser()
     parser.read(config)
@@ -175,15 +254,20 @@ def anal_assim_layer(cycleYYYYMMDDHH,fhr,action,config):
     df.makeDirIfNeeded(tmp_dir)
 
     # Sanity checking
-    whf.dir_exists(out_dir)
-    whf.dir_exists(tmp_dir)
-    whf.dir_exists(qpe_parm_dir)
-    whf.dir_exists(hrrr_ds_dir_3hr)
-    whf.dir_exists(hrrr_ds_dir_0hr)
-    whf.dir_exists(rap_ds_dir_3hr)
-    whf.dir_exists(rap_ds_dir_0hr)
-    whf.dir_exists(mrms_ds_dir)
-    whf.file_exists(layer_exe)
+    try:
+        whf.dir_exists(out_dir)
+        whf.dir_exists(tmp_dir)
+        whf.dir_exists(qpe_parm_dir)
+        whf.dir_exists(hrrr_ds_dir_3hr)
+        whf.dir_exists(hrrr_ds_dir_0hr)
+        whf.dir_exists(rap_ds_dir_3hr)
+        whf.dir_exists(rap_ds_dir_0hr)
+        whf.dir_exists(mrms_ds_dir)
+        whf.file_exists(layer_exe)
+    except MissingFileError:
+        WhfLog.error("Missing file during preliminary checking of Analysis Assimilation layering")
+        raise
+    
 
     # Establish final output directories to hold 'LDASIN' files used for
     # WRF-Hydro long-range forecasting. If the directory does not exist,
@@ -217,12 +301,17 @@ def anal_assim_layer(cycleYYYYMMDDHH,fhr,action,config):
                  validDate.strftime("%m") + "_v7_wrf1km.grb2"
 
     # Sanity checking on parameter data
-    whf.file_exists(hrrrBiasPath)
-    whf.file_exists(hrrrWgtPath)
-    whf.file_exists(mrmsBiasPath)
-    whf.file_exists(mrmsWgtPath)
-    whf.file_exists(rapBiasPath)
-    whf.file_exists(rapWgtPath) 
+    try:
+        whf.file_exists(hrrrBiasPath)
+        whf.file_exists(hrrrWgtPath)
+        whf.file_exists(mrmsBiasPath)
+        whf.file_exists(mrmsWgtPath)
+        whf.file_exists(rapBiasPath)
+        whf.file_exists(rapWgtPath) 
+    except MissingFileError:
+        WhfLog.error("Missing file encountered while checking parameter data for AA")
+        raise
+
 
     # Compose output file paths
     LDASIN_path_tmp = tmp_dir + "/" + validDate.strftime('%Y%m%d%H') + "00.LDASIN_DOMAIN1_TMP.nc"
@@ -233,30 +322,44 @@ def anal_assim_layer(cycleYYYYMMDDHH,fhr,action,config):
                      cycleDate.strftime("%Y%m%d%H") + " valid date: " + \
                      validDate.strftime("%Y%m%d%H"))
         # Check for existence of input files
-        whf.file_exists(rap0Path)
-        whf.file_exists(rap3Path)
+        try:
+            whf.file_exists(rap0Path)
+            whf.file_exists(rap3Path)
+        except MissingFileError :
+            WhfLog.error("Missing RAP files for layering")
+            raise
+            
     elif process == 2:  # HRRR and RAP only 
         WhfLog.info("Layering and Combining RAP and HRRR for cycle date: " + \
                      cycleDate.strftime("%Y%m%d%H") + " valid date: " + \
                      validDate.strftime("%Y%m%d%H"))
         # Check for existence of input files
-        whf.file_exists(rap0Path)
-        whf.file_exists(rap3Path)
-        whf.file_exists(hrrr0Path)
-        whf.file_exists(hrrr3Path)
+        try:
+            whf.file_exists(rap0Path)
+            whf.file_exists(rap3Path)
+            whf.file_exists(hrrr0Path)
+            whf.file_exists(hrrr3Path)
+        except MissingFileError:
+            WhfLog.error("Missing RAP or HRRR files for layering")
+            raise
     elif process == 3:  # HRRR, RAP, and MRMS
         WhfLog.info("Layering and Combining RAP/HRRR/MRMS for cycle date: " + \
                      cycleDate.strftime("%Y%m%d%H") + " valid date: " + \
                      validDate.strftime("%Y%m%d%H"))
         # Check for existence of input files
-        whf.file_exists(rap0Path)
-        whf.file_exists(rap3Path)
-        whf.file_exists(hrrr0Path)
-        whf.file_exists(hrrr3Path)
-        whf.file_exists(mrmsPath)
+        try:
+            whf.file_exists(rap0Path)
+            whf.file_exists(rap3Path)
+            whf.file_exists(hrrr0Path)
+            whf.file_exists(hrrr3Path)
+            whf.file_exists(mrmsPath)
+        except MissingFileError:
+            WhfLog.error("Missing RAP or HRRR or MRMS files for layering")
+            raise
+           
     else:  # Error out
-        WhfLog.error("Invalid input action selected")
-        return(1)
+        WhfLog.error("Invalid input action selected, invalid layer combination provided in AA.")
+        raise UnrecognizedCommandError
 
     hrrrB_param = "'hrrrBFile=" + '"' + hrrrBiasPath + '"' + "' "
     mrmsB_param = "'mrmsBFile=" + '"' + mrmsBiasPath + '"' + "' "
@@ -281,7 +384,7 @@ def anal_assim_layer(cycleYYYYMMDDHH,fhr,action,config):
 
     if status != 0:
         WhfLog.error("Error in combinining NCL program")
-        return(1)
+        raise NCLError("NCL error encountered while combining in AA")
    
     # Double check to make sure file was created, delete temporary regridded file
     whf.file_exists(LDASIN_path_tmp)
@@ -290,14 +393,16 @@ def anal_assim_layer(cycleYYYYMMDDHH,fhr,action,config):
     status = os.system(cmd)
     if status != 0:
         WhfLog.error("Failure to rename " + LDASIN_path_tmp)
-    whf.file_exists(LDASIN_path_final)
+    try:
+        whf.file_exists(LDASIN_path_final)
+    except MissingFileError:
+        WhfLog.error("Missing LDASIN_path_final file")
+        raise
     cmd = "rm -rf " + LDASIN_path_tmp 
     status = os.system(cmd)
     if status != 0:
         WhfLog.error("Failure to remove " + LDASIN_path_tmp)
-        return(1)
-    # Exit gracefully with an exit status of 0. Will need to refine.
-    return(0)
+        raise SystemCommandError
 
 if __name__ == "__main__":
     forcing()
