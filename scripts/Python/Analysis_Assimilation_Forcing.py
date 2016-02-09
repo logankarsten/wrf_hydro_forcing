@@ -13,6 +13,7 @@ from ForcingEngineError import MissingDirectoryError
 from ForcingEngineError import FilenameMatchError
 from ForcingEngineError import UnrecognizedCommandError
 from ForcingEngineError import SystemCommandError
+from ForcingEngineError import InvalidArgumentError
 
 """Analysis_Assimilation_Forcing
 Performs regridding and downscaling, then bias
@@ -189,8 +190,8 @@ def forcing(config, action, prod, file):
                 raise
         else:
             WhfLog.error("Either invalid forecast hour or invalid product chosen")
-            WhfLog.error("Only 00hr forecast files, and RAP/HRRR/MRMS valid")
-            raise
+            WhfLog.error("Only 00hr forecast files, and RAP or HRRR or MRMS are valid choices")
+            raise InvalidArgumentError("Either invalid forecast hour %s or invalid product requested %s"%(fcsthr,prod))
     else: # Invalid action selected
         WhfLog.error("ERROR [Anal_Assim_Forcing]- Invalid action selected")
         raise UnrecognizedCommandError("Invalid action selection within Analysis and Assimilation regridding and downscaling")
