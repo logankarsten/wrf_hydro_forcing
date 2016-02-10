@@ -219,7 +219,7 @@ HRRR_hgt_data = /d4/hydro-dm/IOC/forcing_engine/weighting_files/downscaling/HRRR
 HRRR_geo_data = /d4/hydro-dm/IOC/forcing_engine/weighting_files/regridding/geo_dst.nc 
 # Directory where downscaled data should be saved
 HRRR_downscale_output_dir = /d4/hydro-dm/IOC_TESTING/downscaled/HRRR/staging 
-HRRR_downscale_output_dir_0hr = /d4/hydro-dm/IOC_TESTING/downscaled/downscaled/HRRR_0hr/staging 
+HRRR_downscale_output_dir_0hr = /d4/hydro-dm/IOC_TESTING/downscaled/HRRR_0hr/staging 
 HRRR_finished_output_dir = /d4/hydro-dm/IOC_TESTING/downscaled/HRRR/final
 HRRR_finished_output_dir_0hr = /d4/hydro-dm/IOC_TESTING/downscaled/HRRR_0hr/final
 
