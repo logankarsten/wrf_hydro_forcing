@@ -360,7 +360,7 @@ def anal_assim_layer(cycleYYYYMMDDHH,fhr,action,config):
            
     else:  # Error out
         WhfLog.error("Invalid input action selected, invalid layer combination provided in AA.")
-        raise UnrecognizedCommandError
+        raise UnrecognizedCommandError("invalid layer combination requested in AA")
 
     hrrrB_param = "'hrrrBFile=" + '"' + hrrrBiasPath + '"' + "' "
     mrmsB_param = "'mrmsBFile=" + '"' + mrmsBiasPath + '"' + "' "
@@ -403,7 +403,7 @@ def anal_assim_layer(cycleYYYYMMDDHH,fhr,action,config):
     status = os.system(cmd)
     if status != 0:
         WhfLog.error("Failure to remove " + LDASIN_path_tmp)
-        raise SystemCommandError
+        raise SystemCommandError("failed to remove LDASIN_path_tmp: %s"%LDASIN_path_tmp)
 
 if __name__ == "__main__":
     forcing()
