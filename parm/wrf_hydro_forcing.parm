@@ -268,7 +268,7 @@ short_range_secondary = /d4/hydro-dm/IOC_TESTING/downscaled/RAP/final
 
 analysis_assimilation_tmp = /d4/hydro-dm/IOC_TESTING/downscaled/tmp 
 analysis_assimilation_output = /d4/hydro-dm/IOC_TESTING/final/Anal_Assim 
-qpe_combine_parm_dir = /d4/hydro-dm/IOC_TESTING/params/layering/combine_params
+qpe_combine_parm_dir = /d4/karsten/DFE/IOC_TESTING/anal_assim/combine_params
 
 short_range_output = /d4/hydro-dm/IOC_TESTING/final/Short_Range
 
