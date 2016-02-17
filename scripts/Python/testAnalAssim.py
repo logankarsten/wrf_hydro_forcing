@@ -146,15 +146,15 @@ def main():
     parser.read(config_file)    
 
     # Set up logger
-    wlog.init(parser, "testAA", "AA","Regrid","MRMS")
+    #wlog.init(parser, "testAA", "AA","Regrid","MRMS")
 
     # Start and end dates 
     if is_yellowstone:
          start_dt = datetime.datetime.strptime("20151004","%Y%m%d")
          end_dt = datetime.datetime.strptime("20151005","%Y%m%d")
     else:
-         start_dt = datetime.datetime.strptime("20160206","%Y%m%d")
-         end_dt = datetime.datetime.strptime("20160209","%Y%m%d")
+         start_dt = datetime.datetime.strptime("20160215","%Y%m%d")
+         end_dt = datetime.datetime.strptime("20160216","%Y%m%d")
 
     # Set the directory where the input data resides.
     # For running on yellowstone:
@@ -187,8 +187,11 @@ def main():
     HRRR_files_with_path = [x for x in all_HRRR_files_with_path if is_within_time_range(start_dt,end_dt,x,"HRRR",is_yellowstone)]
     MRMS_files_with_path = [x for x in all_MRMS_files_with_path if is_within_time_range(start_dt,end_dt,x,"MRMS",is_yellowstone)]
 
+    wlog.init(parser, "testAA", "AA","Regrid","RAP")
     do_regrid(config_file, RAP_dir_base,'RAP', RAP_files_with_path)
+    wlog.init(parser, "testAA", "AA","Regrid","HRRR")
     do_regrid(config_file, HRRR_dir_base, 'HRRR', HRRR_files_with_path)
+    wlog.init(parser, "testAA", "AA","Regrid","MRMS")
     do_regrid(config_file,MRMS_dir_base, 'MRMS', MRMS_files_with_path)
 #    do_layering(config_file, parser, RAP_0hr_downscale_dir, None, None, 0)
     #do_layering(config_file, parser, RAP_downscale_dir, None, None, -1)
