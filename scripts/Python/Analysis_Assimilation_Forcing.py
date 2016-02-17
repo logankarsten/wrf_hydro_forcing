@@ -265,8 +265,8 @@ def anal_assim_layer(cycleYYYYMMDDHH,fhr,action,config):
         whf.dir_exists(rap_ds_dir_0hr)
         whf.dir_exists(mrms_ds_dir)
         whf.file_exists(layer_exe)
-    except MissingFileError:
-        WhfLog.error("Missing file during preliminary checking of Analysis Assimilation layering")
+    except MissingDirectoryError:
+        WhfLog.error("Missing directory during preliminary checking of Analysis Assimilation layering")
         raise
     
 
@@ -360,7 +360,7 @@ def anal_assim_layer(cycleYYYYMMDDHH,fhr,action,config):
            
     else:  # Error out
         WhfLog.error("Invalid input action selected, invalid layer combination provided in AA.")
-        raise UnrecognizedCommandError("invalid layer combination requested in AA")
+        raise UnrecognizedCommandError
 
     hrrrB_param = "'hrrrBFile=" + '"' + hrrrBiasPath + '"' + "' "
     mrmsB_param = "'mrmsBFile=" + '"' + mrmsBiasPath + '"' + "' "
@@ -403,7 +403,7 @@ def anal_assim_layer(cycleYYYYMMDDHH,fhr,action,config):
     status = os.system(cmd)
     if status != 0:
         WhfLog.error("Failure to remove " + LDASIN_path_tmp)
-        raise SystemCommandError("failed to remove LDASIN_path_tmp: %s"%LDASIN_path_tmp)
+        raise SystemCommandError
 
 if __name__ == "__main__":
     forcing()
