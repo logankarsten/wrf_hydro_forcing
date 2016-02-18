@@ -27,7 +27,7 @@
 #   ERROR - more serious problem, code cannot perform its task
 #   CRITICAL -  serious error, the code may not be able to continue running
 forcing_engine_log_level= DEBUG
-forcing_engine_log_dir= /d4/hydro-dm/IOC_TESTING/forcing_engine/log
+forcing_engine_log_dir= /d8/hydro-dm/IOC_TESTING/forcing_engine/log
 
 
 #--------------------------------------------------
@@ -48,7 +48,7 @@ ncarg_root = /opt/ncl-gcc-6.3.0
 # https://www.ncl.ucar.edu/Document/Tools/WRAPIT.shtml
 #
 
-ncl_def_lib_dir = /d4/hydro-dm/IOC/forcing_engine/shared_objs
+ncl_def_lib_dir = /d8/hydro-dm/IOC/forcing_engine/shared_objs
 
 #-------------------------------------------------
 #   Data Directories
@@ -124,34 +124,34 @@ esmf_exe=/usr/local/esmf
 ncl_exe = /opt/ncl-gcc-6.3.0/bin/ncl
 
 # Bias correction
-CFS_bias_correct_mod = /d4/hydro-dm/IOC/forcing_engine/NCL/CFSv2_bias_correct_mod.ncl
-CFS_bias_correct_exe = /d4/hydro-dm/IOC/forcing_engine/NCL/CFSv2_bias_correct.ncl
+CFS_bias_correct_mod = /d8/hydro-dm/IOC/forcing_engine/NCL/CFSv2_bias_correct_mod.ncl
+CFS_bias_correct_exe = /d8/hydro-dm/IOC/forcing_engine/NCL/CFSv2_bias_correct.ncl
 
 # Regridding
-HRRR_regridding_exe = /d4/hydro-dm/IOC/forcing_engine/NCL/HRRR-2-WRF_Hydro_ESMF_regrid.ncl
-HRRR_regridding_exe_0hr = /d4/hydro-dm/IOC/forcing_engine/NCL/HRRR-2-WRF_Hydro_ESMF_regrid_0hr.ncl
-MRMS_regridding_exe = /d4/hydro-dm/IOC/forcing_engine/NCL/MRMS-2-WRF_Hydro_ESMF_regrid.ncl
-GFS_regridding_exe = /d4/hydro-dm/IOC/forcing_engine/NCL/GFS2Hydro_forcing_ESMFregrid.ncl
-RAP_regridding_exe = /d4/hydro-dm/IOC/forcing_engine/NCL/RAP-2-WRF_Hydro_ESMF_regrid.ncl
-RAP_regridding_exe_0hr = /d4/hydro-dm/IOC/forcing_engine/NCL/RAP-2-WRF_Hydro_ESMF_regrid_0hr.ncl
-CFS_regridding_exe = /d4/hydro-dm/IOC/forcing_engine/NCL/CFSv2_regrid_conus.ncl
+HRRR_regridding_exe = /d8/hydro-dm/IOC/forcing_engine/NCL/HRRR-2-WRF_Hydro_ESMF_regrid.ncl
+HRRR_regridding_exe_0hr = /d8/hydro-dm/IOC/forcing_engine/NCL/HRRR-2-WRF_Hydro_ESMF_regrid_0hr.ncl
+MRMS_regridding_exe = /d8/hydro-dm/IOC/forcing_engine/NCL/MRMS-2-WRF_Hydro_ESMF_regrid.ncl
+GFS_regridding_exe = /d8/hydro-dm/IOC/forcing_engine/NCL/GFS2Hydro_forcing_ESMFregrid.ncl
+RAP_regridding_exe = /d8/hydro-dm/IOC/forcing_engine/NCL/RAP-2-WRF_Hydro_ESMF_regrid.ncl
+RAP_regridding_exe_0hr = /d8/hydro-dm/IOC/forcing_engine/NCL/RAP-2-WRF_Hydro_ESMF_regrid_0hr.ncl
+CFS_regridding_exe = /d8/hydro-dm/IOC/forcing_engine/NCL/CFSv2_regrid_conus.ncl
 
 # Downscaling
 # Use the same downscaling script for all products. The hgt file, geo file, and
 # input file (data to downscale) are the only input and these are all defined in # this config file.
-HRRR_downscaling_exe = /d4/hydro-dm/IOC/forcing_engine/NCL/All_WRF_Hydro_downscale.ncl
-HRRR_downscaling_exe_0hr = /d4/hydro-dm/IOC/forcing_engine/NCL/All_WRF_Hydro_downscale_0hr.ncl
-GFS_downscaling_exe = /d4/hydro-dm/IOC/forcing_engine/NCL/All_WRF_Hydro_downscale.ncl
-RAP_downscaling_exe = /d4/hydro-dm/IOC/forcing_engine/NCL/All_WRF_Hydro_downscale.ncl
-RAP_downscaling_exe_0hr = /d4/hydro-dm/IOC/forcing_engine/NCL/All_WRF_Hydro_downscale_0hr.ncl
-CFS_downscaling_exe = /d4/hydro-dm/IOC/forcing_engine/NCL/CFSv2_downscale_conus.ncl 
+HRRR_downscaling_exe = /d8/hydro-dm/IOC/forcing_engine/NCL/All_WRF_Hydro_downscale.ncl
+HRRR_downscaling_exe_0hr = /d8/hydro-dm/IOC/forcing_engine/NCL/All_WRF_Hydro_downscale_0hr.ncl
+GFS_downscaling_exe = /d8/hydro-dm/IOC/forcing_engine/NCL/All_WRF_Hydro_downscale.ncl
+RAP_downscaling_exe = /d8/hydro-dm/IOC/forcing_engine/NCL/All_WRF_Hydro_downscale.ncl
+RAP_downscaling_exe_0hr = /d8/hydro-dm/IOC/forcing_engine/NCL/All_WRF_Hydro_downscale_0hr.ncl
+CFS_downscaling_exe = /d8/hydro-dm/IOC/forcing_engine/NCL/CFSv2_downscale_conus.ncl 
 
-topo_adj_fortran_exe = /d4/hydro-dm/IOC/forcing_engine/shared_objs/topo_adjf90.so
-shortwave_downscaling_exe = /d4/hydro-dm/IOC/forcing_engine/NCL/topo_adj.ncl
+topo_adj_fortran_exe = /d8/hydro-dm/IOC/forcing_engine/shared_objs/topo_adjf90.so
+shortwave_downscaling_exe = /d8/hydro-dm/IOC/forcing_engine/NCL/topo_adj.ncl
 
 # Layering and contingency
-Analysis_Assimilation_layering = /d4/hydro-dm/IOC/forcing_engine/NCL/layer_anal_assim.ncl
-Short_Range_layering = /d4/hydro-dm/IOC/forcing_engine/NCL/combine.ncl
+Analysis_Assimilation_layering = /d8/hydro-dm/IOC/forcing_engine/NCL/layer_anal_assim.ncl
+Short_Range_layering = /d8/hydro-dm/IOC/forcing_engine/NCL/combine.ncl
 
 #-------------------------------------------------
 #    Parameters needed to run bias correction
@@ -160,10 +160,10 @@ Short_Range_layering = /d4/hydro-dm/IOC/forcing_engine/NCL/combine.ncl
 [bias_correction]
 
 #CFSv2-specific
-CFS_correspond = /d4/hydro-dm/IOC/forcing_engine/weighting_files/bias_correction/nldas_param_cfsv2_subset_grid_correspondence.nc
-CFS_tmp_dir = /d4/hydro-dm/IOC_TESTING/bias_correction/CFSv2_tmp
-CFS_bias_parm_dir = /d4/hydro-dm/IOC/forcing_engine/weighting_files/bias_correction/cfs_climo
-NLDAS_bias_parm_dir = /d4/hydro-dm/IOC/forcing_engine/weighting_files/bias_correction/nldas_climo
+CFS_correspond = /d8/hydro-dm/IOC/forcing_engine/weighting_files/bias_correction/nldas_param_cfsv2_subset_grid_correspondence.nc
+CFS_tmp_dir = /d8/hydro-dm/IOC_TESTING/bias_correction/CFSv2_tmp
+CFS_bias_parm_dir = /d8/hydro-dm/IOC/forcing_engine/weighting_files/bias_correction/cfs_climo
+NLDAS_bias_parm_dir = /d8/hydro-dm/IOC/forcing_engine/weighting_files/bias_correction/nldas_climo
 
 #-------------------------------------------------
 #    Parameters needed to run regridding scripts
@@ -172,32 +172,32 @@ NLDAS_bias_parm_dir = /d4/hydro-dm/IOC/forcing_engine/weighting_files/bias_corre
 [regridding]
 
 #HRRR-specific
-HRRR_wgt_bilinear  = /d4/hydro-dm/IOC/forcing_engine/weighting_files/regridding/HRRR2HYDRO_d01_weight_bilinear.nc
-HRRR_dst_grid_name = /d4/hydro-dm/IOC/forcing_engine/weighting_files/regridding/geo_dst.nc
-HRRR_output_dir = /d4/hydro-dm/IOC_TESTING/regridded/HRRR 
-HRRR_output_dir_0hr = /d4/hydro-dm/IOC_TESTING/regridded/HRRR_0hr 
+HRRR_wgt_bilinear  = /d8/hydro-dm/IOC/forcing_engine/weighting_files/regridding/HRRR2HYDRO_d01_weight_bilinear.nc
+HRRR_dst_grid_name = /d8/hydro-dm/IOC/forcing_engine/weighting_files/regridding/geo_dst.nc
+HRRR_output_dir = /d8/hydro-dm/IOC_TESTING/regridded/HRRR 
+HRRR_output_dir_0hr = /d8/hydro-dm/IOC_TESTING/regridded/HRRR_0hr 
 
 #MRMS-specific
-MRMS_wgt_bilinear =  /d4/hydro-dm/IOC/forcing_engine/weighting_files/regridding/RADAR2HYDRO_d01_weight_bilinear.nc
-MRMS_dst_grid_name = /d4/hydro-dm/IOC/forcing_engine/weighting_files/regridding/geo_dst.nc
-MRMS_output_dir = /d4/hydro-dm/IOC_TESTING/regridded/MRMS 
-MRMS_finished_output_dir = /d4/hydro-dm/IOC_TESTING/downscaled/MRMS/final 
+MRMS_wgt_bilinear =  /d8/hydro-dm/IOC/forcing_engine/weighting_files/regridding/RADAR2HYDRO_d01_weight_bilinear.nc
+MRMS_dst_grid_name = /d8/hydro-dm/IOC/forcing_engine/weighting_files/regridding/geo_dst.nc
+MRMS_output_dir = /d8/hydro-dm/IOC_TESTING/regridded/MRMS 
+MRMS_finished_output_dir = /d8/hydro-dm/IOC_TESTING/downscaled/MRMS/final 
 
 #GFS-specific
 #For GFS_0.25 data
-GFS_wgt_bilinear = /d4/hydro-dm/IOC/forcing_engine/weighting_files/regridding/GFS2HYDRO_d01_weight_bilinear.nc
-GFS_dst_grid_name = /d4/hydro-dm/IOC/forcing_engine/weighting_files/regridding/geo_dst.nc 
-GFS_output_dir = /d4/hydro-dm/IOC_TESTING/regridded/GFS 
+GFS_wgt_bilinear = /d8/hydro-dm/IOC/forcing_engine/weighting_files/regridding/GFS2HYDRO_d01_weight_bilinear.nc
+GFS_dst_grid_name = /d8/hydro-dm/IOC/forcing_engine/weighting_files/regridding/geo_dst.nc 
+GFS_output_dir = /d8/hydro-dm/IOC_TESTING/regridded/GFS 
 
 #RAP-specific
-RAP_wgt_bilinear = /d4/hydro-dm/IOC/forcing_engine/weighting_files/regridding/RAP2HYDRO_d01_weight_bilinear.nc
-RAP_dst_grid_name = /d4/hydro-dm/IOC/forcing_engine/weighting_files/regridding/geo_dst.nc 
-RAP_output_dir = /d4/hydro-dm/IOC_TESTING/regridded/RAP 
-RAP_output_dir_0hr = /d4/hydro-dm/IOC_TESTING/regridded/RAP_0hr 
+RAP_wgt_bilinear = /d8/hydro-dm/IOC/forcing_engine/weighting_files/regridding/RAP2HYDRO_d01_weight_bilinear.nc
+RAP_dst_grid_name = /d8/hydro-dm/IOC/forcing_engine/weighting_files/regridding/geo_dst.nc 
+RAP_output_dir = /d8/hydro-dm/IOC_TESTING/regridded/RAP 
+RAP_output_dir_0hr = /d8/hydro-dm/IOC_TESTING/regridded/RAP_0hr 
 
 #CFSv2-specific
-CFS_wgt_bilinear = /d4/hydro-dm/IOC/forcing_engine/weighting_files/regridding/CFS2HYDRO_d01_weight_bilinear.nc
-CFS_dst_grid_name = /d4/hydro-dm/IOC/forcing_engine/weighting_files/regridding/geo_dst.nc 
+CFS_wgt_bilinear = /d8/hydro-dm/IOC/forcing_engine/weighting_files/regridding/CFS2HYDRO_d01_weight_bilinear.nc
+CFS_dst_grid_name = /d8/hydro-dm/IOC/forcing_engine/weighting_files/regridding/geo_dst.nc 
 
 #-------------------------------------------------
 #    Parameters needed to run downscaling scripts
@@ -208,48 +208,48 @@ CFS_dst_grid_name = /d4/hydro-dm/IOC/forcing_engine/weighting_files/regridding/g
 [downscaling]
 
 # Common to all products for downscaling
-lapse_rate_file = /d4/hydro-dm/IOC/forcing_engine/weighting_files/downscaling/NARRlapse1km.nc
+lapse_rate_file = /d8/hydro-dm/IOC/forcing_engine/weighting_files/downscaling/NARRlapse1km.nc
 
 
 # HRRR
 # Currently, this is NAM227, as required by NCEP
 # Directory where regridded HRRR data to BE DOWNSCALED is located
-HRRR_data_to_downscale = /d4/hydro-dm/IOC_TESTING/regridded/HRRR
-HRRR_hgt_data = /d4/hydro-dm/IOC/forcing_engine/weighting_files/downscaling/HRRRhgt.nc
-HRRR_geo_data = /d4/hydro-dm/IOC/forcing_engine/weighting_files/regridding/geo_dst.nc 
+HRRR_data_to_downscale = /d8/hydro-dm/IOC_TESTING/regridded/HRRR
+HRRR_hgt_data = /d8/hydro-dm/IOC/forcing_engine/weighting_files/downscaling/HRRRhgt.nc
+HRRR_geo_data = /d8/hydro-dm/IOC/forcing_engine/weighting_files/regridding/geo_dst.nc 
 # Directory where downscaled data should be saved
-HRRR_downscale_output_dir = /d4/hydro-dm/IOC_TESTING/downscaled/HRRR/staging 
-HRRR_downscale_output_dir_0hr = /d4/hydro-dm/IOC_TESTING/downscaled/downscaled/HRRR_0hr/staging 
-HRRR_finished_output_dir = /d4/hydro-dm/IOC_TESTING/downscaled/HRRR/final
-HRRR_finished_output_dir_0hr = /d4/hydro-dm/IOC_TESTING/downscaled/HRRR_0hr/final
+HRRR_downscale_output_dir = /d8/hydro-dm/IOC_TESTING/downscaled/HRRR/staging 
+HRRR_downscale_output_dir_0hr = /d8/hydro-dm/IOC_TESTING/downscaled/HRRR_0hr/staging 
+HRRR_finished_output_dir = /d8/hydro-dm/IOC_TESTING/downscaled/HRRR/final
+HRRR_finished_output_dir_0hr = /d8/hydro-dm/IOC_TESTING/downscaled/HRRR_0hr/final
 
 # GFS 
 # Currently GFS 0.25 degree data
 # Directory where regridded GFS data to BE DOWNSCALED is located
-GFS_data_to_downscale = /d4/hydro-dm/IOC_TESTING/regridded/GFS  
-GFS_hgt_data = /d4/hydro-dm/IOC/forcing_engine/weighting_files/downscaling/GFShgt.nc
-GFS_geo_data = /d4/hydro-dm/IOC/forcing_engine/weighting_files/regridding/geo_dst.nc 
+GFS_data_to_downscale = /d8/hydro-dm/IOC_TESTING/regridded/GFS  
+GFS_hgt_data = /d8/hydro-dm/IOC/forcing_engine/weighting_files/downscaling/GFShgt.nc
+GFS_geo_data = /d8/hydro-dm/IOC/forcing_engine/weighting_files/regridding/geo_dst.nc 
 # Directory where downscaled data should be saved
-GFS_downscale_output_dir = /d4/hydro-dm/IOC_TESTING/downscaled/GFS/staging 
-GFS_finished_output_dir = /d4/hydro-dm/IOC_TESTING/downscaled/GFS/final
+GFS_downscale_output_dir = /d8/hydro-dm/IOC_TESTING/downscaled/GFS/staging 
+GFS_finished_output_dir = /d8/hydro-dm/IOC_TESTING/downscaled/GFS/final
 
 
 # RAP
 # Directory where regridded RAP data to BE DOWNSCALED is located
-RAP_data_to_downscale = /d4/hydro-dm/IOC_TESTING/regridded/RAP 
-RAP_hgt_data = /d4/hydro-dm/IOC/forcing_engine/weighting_files/downscaling/RAPhgt.nc
-RAP_geo_data = /d4/hydro-dm/IOC/forcing_engine/weighting_files/regridding/geo_dst.nc 
+RAP_data_to_downscale = /d8/hydro-dm/IOC_TESTING/regridded/RAP 
+RAP_hgt_data = /d8/hydro-dm/IOC/forcing_engine/weighting_files/downscaling/RAPhgt.nc
+RAP_geo_data = /d8/hydro-dm/IOC/forcing_engine/weighting_files/regridding/geo_dst.nc 
 # Directory where downscaled data should be saved
-RAP_downscale_output_dir = /d4/hydro-dm/IOC_TESTING/downscaled/RAP/staging 
-RAP_downscale_output_dir_0hr = /d4/hydro-dm/IOC_TESTING/downscaled/RAP_0hr/staging
-RAP_finished_output_dir = /d4/hydro-dm/IOC_TESTING/downscaled/RAP/final 
-RAP_finished_output_dir_0hr = /d4/hydro-dm/IOC_TESTING/downscaled/RAP_0hr/final
+RAP_downscale_output_dir = /d8/hydro-dm/IOC_TESTING/downscaled/RAP/staging 
+RAP_downscale_output_dir_0hr = /d8/hydro-dm/IOC_TESTING/downscaled/RAP_0hr/staging
+RAP_finished_output_dir = /d8/hydro-dm/IOC_TESTING/downscaled/RAP/final 
+RAP_finished_output_dir_0hr = /d8/hydro-dm/IOC_TESTING/downscaled/RAP_0hr/final
 
 # CFS
 # Directories that contain distribution parameter files for CFS/NLDAS
 # In addition, output directory is specified here. 
-CFS_hgt_data = /d4/hydro-dm/IOC/forcing_engine/weighting_files/downscaling/cfsa_hgt1km.nc 
-CFS_geo_data = /d4/hydro-dm/IOC/forcing_engine/weighting_files/regridding/geo_dst.nc  
+CFS_hgt_data = /d8/hydro-dm/IOC/forcing_engine/weighting_files/downscaling/cfsa_hgt1km.nc 
+CFS_geo_data = /d8/hydro-dm/IOC/forcing_engine/weighting_files/regridding/geo_dst.nc  
 
 #-------------------------------------------------
 #
@@ -261,17 +261,17 @@ CFS_geo_data = /d4/hydro-dm/IOC/forcing_engine/weighting_files/regridding/geo_ds
 #-------------------------------------------------
 [layering]
 
-short_range_primary = /d4/hydro-dm/IOC_TESTING/downscaled/HRRR/final 
+short_range_primary = /d8/hydro-dm/IOC_TESTING/downscaled/HRRR/final 
 
-short_range_secondary = /d4/hydro-dm/IOC_TESTING/downscaled/RAP/final 
+short_range_secondary = /d8/hydro-dm/IOC_TESTING/downscaled/RAP/final 
 
 
-analysis_assimilation_tmp = /d4/hydro-dm/IOC_TESTING/downscaled/tmp 
-analysis_assimilation_output = /d4/hydro-dm/IOC_TESTING/final/Anal_Assim 
-qpe_combine_parm_dir = /d4/hydro-dm/IOC_TESTING/params/layering/combine_params
+analysis_assimilation_tmp = /d8/hydro-dm/IOC_TESTING/downscaled/tmp 
+analysis_assimilation_output = /d8/hydro-dm/IOC_TESTING/final/Anal_Assim 
+qpe_combine_parm_dir = /d8/hydro-dm/IOC_TESTING/params/anal_assim/combine_params
 
-short_range_output = /d4/hydro-dm/IOC_TESTING/final/Short_Range
+short_range_output = /d8/hydro-dm/IOC_TESTING/final/Short_Range
 
-medium_range_output = /d4/hydro-dm/IOC_TESTING/final/Medium_Range
+medium_range_output = /d8/hydro-dm/IOC_TESTING/final/Medium_Range
 
-long_range_output =  /d4/hydro-dm/IOC_TESTING/final/Long_Range
+long_range_output =  /d8/hydro-dm/IOC_TESTING/final/Long_Range
